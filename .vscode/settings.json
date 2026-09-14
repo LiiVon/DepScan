@@ -1,0 +1,18 @@
+{
+  "terminal.integrated.profiles.windows": {
+    "DepScan PowerShell": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": ["-NoLogo", "-NoProfile"]
+    },
+    "DepScan Cmd": {
+      "path": "C:\\Windows\\System32\\cmd.exe",
+      "args": []
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "DepScan PowerShell",
+  "terminal.integrated.automationProfile.windows": {
+    "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "args": ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass"]
+},
+"cmake.sourceDirectory": "C:/Users/Lc_x7/Desktop/zw_lz/DepScan/engine"
+}

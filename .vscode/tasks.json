@@ -1,0 +1,119 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "core:configure",
+			"type": "shell",
+			"command": "cmake",
+			"args": [
+				"-S",
+				"engine",
+				"-B",
+				"engine/build",
+				"-DCMAKE_BUILD_TYPE=Release"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "core:build",
+			"type": "shell",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"engine/build",
+				"--config",
+				"Release",
+				"--parallel"
+			],
+			"dependsOn": [
+				"core:configure"
+			],
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "core:test",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"scripts/test-core.mjs"
+			],
+			"dependsOn": [
+				"core:build"
+			]
+		},
+		{
+			"label": "npm:build",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "npm:test",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"group": "test",
+			"problemMatcher": []
+		},
+		{
+			"label": "depscan:package",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"package"
+			],
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "stress:clean",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"scripts/clean-stress.mjs"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "samples:clean",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"scripts/clean-sample.mjs"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "git:status",
+			"type": "shell",
+			"command": "git status --short; Write-Output '--- log ---'; git log --oneline -5 2>&1; Write-Output '--- remote ---'; git remote -v; Write-Output '--- branch ---'; git branch --show-current; Write-Output '--- identity ---'; git config user.name; git config user.email",
+			"problemMatcher": []
+		},
+		{
+			"label": "git:commit",
+			"type": "shell",
+			"command": "git add -A; Write-Output '--- staged count ---'; (git diff --cached --name-only | Measure-Object -Line).Lines; Write-Output '--- commit ---'; git commit -F engine/build/commit-msg.txt; Write-Output '--- branch ---'; git branch -M main; git branch --show-current; Write-Output '--- remote ---'; git remote add origin https://github.com/LiiVon/DepScan.git; git remote -v",
+			"problemMatcher": []
+		},
+		{
+			"label": "git:amend",
+			"type": "shell",
+			"command": "git rm -r --cached samples/demo/.vscode/depscan-cache 2>&1 | Out-Null; git add -A; git commit --amend -F engine/build/commit-msg.txt --quiet; Write-Output '--- files ---'; (git ls-files | Measure-Object -Line).Lines; Write-Output '--- utf8 names ---'; git -c core.quotepath=false ls-files docs/ samples/; Write-Output '--- head ---'; git log --oneline -1",
+			"problemMatcher": []
+		}
+	]
+}

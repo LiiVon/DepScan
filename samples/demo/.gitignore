@@ -1,0 +1,12 @@
+# CMake / CMake Tools 就地配置产物（示例项目保持干净）
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CMakeUserPresets.json
+*.dir/
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.slnx
+compile_commands.json

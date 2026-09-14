@@ -1,0 +1,403 @@
+{
+  "name": "depscan",
+  "displayName": "DepScan - C/C++ 依赖分析与可视化",
+  "description": "对大型 C/C++ 项目做 include / 调用 / 继承 / 符号 / 链接 五类依赖分析，并在 Webview 中交互式可视化（图 · 树 · 表格联动、导出 PNG/SVG/JSON、增量索引）。",
+  "version": "0.1.0",
+  "publisher": "lize",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LiiVon/DepScan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LiiVon/DepScan/issues"
+  },
+  "homepage": "https://github.com/LiiVon/DepScan#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "c++",
+    "dependency",
+    "call graph",
+    "include graph",
+    "clang",
+    "visualization",
+    "architecture"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/*.{cpp,cxx,cc,h,hpp,hh,hxx}"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "depscan.indexWorkspace",
+        "title": "%cmd.indexWorkspace%",
+        "category": "DepScan",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "depscan.cancelIndex",
+        "title": "%cmd.cancelIndex%",
+        "category": "DepScan",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "depscan.clearCache",
+        "title": "%cmd.clearCache%",
+        "category": "DepScan",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "depscan.showIndexStatus",
+        "title": "%cmd.showIndexStatus%",
+        "category": "DepScan"
+      },
+      {
+        "command": "depscan.showGraph",
+        "title": "%cmd.showGraph%",
+        "category": "DepScan",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "depscan.showGraphForSymbol",
+        "title": "%cmd.showGraphForSymbol%",
+        "category": "DepScan"
+      },
+      {
+        "command": "depscan.exportJson",
+        "title": "%cmd.exportJson%",
+        "category": "DepScan"
+      },
+      {
+        "command": "depscan.exportImage",
+        "title": "%cmd.exportImage%",
+        "category": "DepScan"
+      },
+      {
+        "command": "depscan.prepareCompileCommands",
+        "title": "%cmd.prepareCompileCommands%",
+        "category": "DepScan"
+      },
+      {
+        "command": "depscan.openDocs",
+        "title": "%cmd.openDocs%",
+        "category": "DepScan"
+      },
+      {
+        "command": "depscan.refreshDependencyView",
+        "title": "%cmd.refreshDependencyView%",
+        "category": "DepScan",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "depscan",
+          "title": "DepScan",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "depscan": [
+        {
+          "id": "depscan.indexView",
+          "name": "%view.index%",
+          "icon": "media/activitybar.svg"
+        },
+        {
+          "id": "depscan.dependencyView",
+          "name": "%view.dependencies%",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "depscan.dependencyView",
+        "contents": "%welcome.dependencies%"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "depscan.indexWorkspace",
+          "when": "view == depscan.indexView || view == depscan.dependencyView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "depscan.cancelIndex",
+          "when": "view == depscan.indexView && depscan.indexing",
+          "group": "navigation@2"
+        },
+        {
+          "command": "depscan.clearCache",
+          "when": "view == depscan.indexView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "depscan.refreshDependencyView",
+          "when": "view == depscan.dependencyView",
+          "group": "navigation@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "depscan.showGraph",
+          "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
+          "group": "depscan@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "depscan.showGraph",
+          "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
+          "group": "depscan@1"
+        },
+        {
+          "command": "depscan.showGraphForSymbol",
+          "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
+          "group": "depscan@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "depscan.showGraphForSymbol",
+          "when": "editorLangId == cpp || editorLangId == c"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DepScan",
+      "properties": {
+        "depscan.ui.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "zh",
+            "en"
+          ],
+          "enumDescriptions": [
+            "%cfg.ui.language.auto%",
+            "%cfg.ui.language.zh%",
+            "%cfg.ui.language.en%"
+          ],
+          "default": "auto",
+          "description": "%cfg.ui.language%"
+        },
+        "depscan.engine.path": {
+          "type": "string",
+          "default": "",
+          "description": "%cfg.engine.path%"
+        },
+        "depscan.index.onStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.index.onStartup%"
+        },
+        "depscan.index.autoRebuildOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.index.autoRebuildOnSave%"
+        },
+        "depscan.index.parallelism": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "%cfg.index.parallelism%"
+        },
+        "depscan.index.maxFiles": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 1,
+          "description": "%cfg.index.maxFiles%"
+        },
+        "depscan.index.fileSizeLimitKB": {
+          "type": "number",
+          "default": 2048,
+          "minimum": 1,
+          "description": "%cfg.index.fileSizeLimitKB%"
+        },
+        "depscan.files.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*.{c,cc,cpp,cxx,h,hh,hpp,hxx,inl,ipp}"
+          ],
+          "description": "%cfg.files.include%"
+        },
+        "depscan.files.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/node_modules/**",
+            "**/.git/**",
+            "**/build/**",
+            "**/out/**",
+            "**/cmake-build-*/**",
+            "**/.cache/**"
+          ],
+          "description": "%cfg.files.exclude%"
+        },
+        "depscan.compile.commandsPath": {
+          "type": "string",
+          "default": "",
+          "description": "%cfg.compile.commandsPath%"
+        },
+        "depscan.compile.includePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%cfg.compile.includePaths%"
+        },
+        "depscan.compile.defines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%cfg.compile.defines%"
+        },
+        "depscan.compile.systemIncludePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "%cfg.compile.systemIncludePaths%"
+        },
+        "depscan.deps.includes": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.deps.includes%"
+        },
+        "depscan.deps.calls": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.deps.calls%"
+        },
+        "depscan.deps.types": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.deps.types%"
+        },
+        "depscan.deps.symbols": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.deps.symbols%"
+        },
+        "depscan.deps.links": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.deps.links%"
+        },
+        "depscan.graph.defaultDepth": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 6,
+          "description": "%cfg.graph.defaultDepth%"
+        },
+        "depscan.graph.direction": {
+          "type": "string",
+          "enum": [
+            "both",
+            "upstream",
+            "downstream"
+          ],
+          "default": "both",
+          "description": "%cfg.graph.direction%"
+        },
+        "depscan.graph.maxNodes": {
+          "type": "number",
+          "default": 800,
+          "minimum": 50,
+          "description": "%cfg.graph.maxNodes%"
+        },
+        "depscan.graph.clusterByDirectory": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.graph.clusterByDirectory%"
+        },
+        "depscan.cache.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.cache.enabled%"
+        },
+        "depscan.cache.directory": {
+          "type": "string",
+          "default": "",
+          "description": "%cfg.cache.directory%"
+        },
+        "depscan.log.level": {
+          "type": "string",
+          "enum": [
+            "off",
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
+          "default": "info",
+          "description": "%cfg.log.level%"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "depscan-dot",
+        "extensions": [
+          ".depscan"
+        ],
+        "aliases": [
+          "DepScan"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build:prod",
+    "clean": "node scripts/clean.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:webview": "node scripts/build-webview.mjs",
+    "check:webview": "node scripts/check-webview.mjs",
+    "build:core": "node scripts/build-core.mjs",
+    "compile": "node esbuild.mjs",
+    "build": "npm run typecheck && npm run compile && npm run build:webview && npm run check:webview",
+    "build:prod": "npm run typecheck && node esbuild.mjs --production && node scripts/build-webview.mjs --production && node scripts/check-webview.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "npm run build:prod && node scripts/package.mjs",
+    "test:core": "node scripts/test-core.mjs",
+    "test:rpc": "node scripts/test-rpc.mjs",
+    "test:webview": "node scripts/check-webview.mjs",
+    "test": "npm run test:core && npm run test:rpc && npm run test:webview",
+    "icon": "node scripts/make-icon.mjs",
+    "probe": "node scripts/probe.mjs engine/build/probe --edges",
+    "stress:gen": "node scripts/gen-stress.mjs stress 3000 100",
+    "stress:gen:1m": "node scripts/gen-stress.mjs stress1m 3000 100 37",
+    "stress": "node scripts/stress-test.mjs stress engine/build/stress-report.md",
+    "stress:1m": "node scripts/stress-test.mjs stress1m engine/build/stress-report-1m.md"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.4"
+  }
+}

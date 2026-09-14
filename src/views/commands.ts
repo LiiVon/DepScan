@@ -1,0 +1,223 @@
+import * as path from 'path';
+import * as vscode from 'vscode';
+
+import { readConfig } from '../config';
+import { s } from '../i18n';
+import type { IndexService } from '../index/indexer';
+import type { Logger } from '../util/log';
+import { GraphPanel } from './graphPanel';
+import type { DependencyTreeProvider, IndexTreeProvider } from './treeProvider';
+
+export interface CommandDeps {
+  context: vscode.ExtensionContext;
+  indexer: IndexService;
+  indexTree: IndexTreeProvider;
+  dependencyTree: DependencyTreeProvider;
+  logger: Logger;
+}
+
+const SUPPORTED = /\.(c|cc|cpp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|inl|ipp|tcc|inc)$/i;
+
+export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
+  const { context, indexer, indexTree, dependencyTree, logger } = deps;
+  const commands: vscode.Disposable[] = [];
+
+  /** 确保已有索引；返回是否可用 */
+  const ensureIndex = async (): Promise<boolean> => {
+    if (indexer.currentStatus.stats) return true;
+    const stats = await indexer.scan(false);
+    return !!stats;
+  };
+
+  // 打开源码位置（供侧边栏树 / 表格 / 图内点击复用）
+  commands.push(
+    vscode.commands.registerCommand('depscan.openNode', async (relFile: string, line = 1, column = 1) => {
+      const root = indexer.root;
+      if (!root || !relFile) return;
+      const abs = path.isAbsolute(relFile) ? relFile : path.join(root, relFile);
+      try {
+        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(abs));
+        const editor = await vscode.window.showTextDocument(doc, { preview: true });
+        const position = new vscode.Position(Math.max(0, line - 1), Math.max(0, column - 1));
+        editor.selection = new vscode.Selection(position, position);
+        editor.revealRange(
+          new vscode.Range(position, position),
+          vscode.TextEditorRevealType.InCenterIfOutsideViewport
+        );
+      } catch (err) {
+        logger.warn(`无法打开 ${abs}: ${String(err)}`);
+      }
+    })
+  );
+
+  // 右键 / 命令面板：查看依赖图
+  commands.push(
+    vscode.commands.registerCommand('depscan.showGraph', async (uri?: vscode.Uri) => {
+      const cfg = readConfig();
+      const target = uri?.fsPath ?? vscode.window.activeTextEditor?.document.uri.fsPath;
+      if (!target) {
+        void vscode.window.showWarningMessage(s().errors.noActiveFile);
+        return;
+      }
+      if (!SUPPORTED.test(target)) {
+        void vscode.window.showWarningMessage(s().errors.unsupportedFile);
+        return;
+      }
+      const rel = indexer.toRelPath(target);
+      if (!rel) {
+        void vscode.window.showWarningMessage(s().errors.noActiveFile);
+        return;
+      }
+      dependencyTree.refresh(rel);
+      if (!(await ensureIndex())) return;
+      GraphPanel.createOrShow(context, indexer, logger, {
+        focusId: `file:${rel}`,
+        label: rel,
+        depth: cfg.graphDepth,
+        direction: cfg.graphDirection
+      });
+    })
+  );
+
+  // 当前符号（光标位置）的依赖图
+  commands.push(
+    vscode.commands.registerCommand('depscan.showGraphForSymbol', async () => {
+      const cfg = readConfig();
+      const active = indexer.activeRelFile();
+      if (!active) {
+        void vscode.window.showWarningMessage(s().errors.noActiveFile);
+        return;
+      }
+      if (!(await ensureIndex())) return;
+      const result = await indexer.symbolGraph(active.rel, active.line, cfg.graphDepth, cfg.graphDirection);
+      if (!result?.focus) {
+        void vscode.window.showWarningMessage(s().errors.focusMissing(`${active.rel}:${active.line}`));
+        return;
+      }
+      GraphPanel.createOrShow(context, indexer, logger, {
+        focusId: result.focus,
+        label: `${active.rel}:${active.line}`,
+        depth: cfg.graphDepth,
+        direction: cfg.graphDirection
+      });
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.indexWorkspace', async () => {
+      await indexer.scan(true);
+      indexTree.refresh();
+      dependencyTree.refresh();
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.cancelIndex', async () => {
+      await indexer.cancel();
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.clearCache', async () => {
+      const ok = await indexer.clearCache();
+      void vscode.window.showInformationMessage(ok ? s().cache.cleared : s().cache.none);
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.refreshDependencyView', () => {
+      dependencyTree.refresh();
+      indexTree.refresh();
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.showIndexStatus', async () => {
+      const status = indexer.currentStatus;
+      const stats = status.stats;
+      const lines: string[] = [];
+      lines.push(`${s().graph.focusLabel}: ${status.message || status.state}`);
+      if (stats) {
+        lines.push(s().index.summary(stats));
+        lines.push(
+          `${s().table.precision}: ${stats.compileCommandsFound ? s().precision.exact : s().precision.approx}`
+        );
+        lines.push(`compile_commands: ${stats.compileCommandsFound ? stats.compileCommandsPath : '—'}`);
+        for (const w of stats.warnings ?? []) lines.push(`⚠ ${w}`);
+      }
+      const engine = indexer.engineLocation;
+      if (engine) lines.push(`engine: ${engine.path}`);
+      lines.push(`cache: ${indexer.cacheFile() ?? '—'}`);
+      const choice = await vscode.window.showInformationMessage(lines.join('\n'), { modal: true }, 'OK', s().index.starting);
+      if (choice) await indexer.scan(true);
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.exportJson', async () => {
+      await exportWithFormat(indexer, 'json', logger);
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.exportImage', async () => {
+      await vscode.commands.executeCommand('depscan.showGraph');
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.prepareCompileCommands', async () => {
+      const doc = await vscode.workspace.openTextDocument({
+        content: `## ${s().compile.guideTitle}\n\n\`\`\`\n${s().compile.guideBody}\n\`\`\`\n`,
+        language: 'markdown'
+      });
+      await vscode.window.showTextDocument(doc, { preview: true });
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.openDocs', async () => {
+      const entry = vscode.Uri.joinPath(context.extensionUri, 'docs', '01-快速开始.md');
+      try {
+        await vscode.workspace.fs.stat(entry);
+        await vscode.commands.executeCommand('markdown.showPreview', entry);
+      } catch {
+        void vscode.window.showWarningMessage(s().docs.missing);
+      }
+    })
+  );
+
+  return commands;
+}
+
+async function exportWithFormat(
+  indexer: IndexService,
+  format: 'json' | 'dot' | 'mermaid',
+  logger: Logger
+): Promise<void> {
+  const cfg = readConfig();
+  const active = indexer.activeRelFile();
+  const result = await indexer.exportData(
+    format,
+    active ? `file:${active.rel}` : undefined,
+    cfg.graphDepth,
+    cfg.graphDirection
+  );
+  if (!result) {
+    void vscode.window.showErrorMessage(s().errors.noData);
+    return;
+  }
+  const ext = format === 'mermaid' ? 'mmd' : format;
+  const root = indexer.root ?? process.cwd();
+  const uri = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.file(path.join(root, `depscan-deps.${ext}`))
+  });
+  if (!uri) return;
+  try {
+    await vscode.workspace.fs.writeFile(uri, Buffer.from(result.content, 'utf8'));
+    void vscode.window.showInformationMessage(s().graph.exported(uri.fsPath));
+  } catch (err) {
+    logger.error(`导出失败：${String(err)}`);
+    void vscode.window.showErrorMessage(s().errors.exportFailed(String(err)));
+  }
+}

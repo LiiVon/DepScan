@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+media/webview.js
+media/webview.css
+*.vsix
+engines/
+engine/build/
+engine/out/
+stress/
+stress1m/
+.idea/
+*.user
+**/.vscode/depscan-cache/
