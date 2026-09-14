@@ -43,6 +43,27 @@ bool isQualifierWord(const std::string& s) {
   return false;
 }
 
+// 语句关键字：它们只能出现在表达式/语句里，**不可能**是函数的返回类型。
+// 用途见下方「反例排除」——`return app.start(args);` 里的 `return` 是 identifier，
+// 会被「语句起点到名字之间有 identifier 就算有返回类型」这条启发式误判。
+bool isStatementKeyword(const std::string& s) {
+  static const char* kWords[] = {"return", "if",     "else",     "while",    "for",
+                                 "switch", "case",   "default",  "do",       "goto",
+                                 "break",  "continue", "throw",  "new",      "delete",
+                                 "co_return", "co_await", "co_yield"};
+  for (const char* w : kWords) {
+    if (s == w) return true;
+  }
+  return false;
+}
+
+bool hasStatementKeyword(const Tokens& t, size_t from, size_t to) {
+  for (size_t i = from; i < to && i < t.size(); ++i) {
+    if (isStatementKeyword(t[i].text)) return true;
+  }
+  return false;
+}
+
 bool isBuiltinType(const std::string& s) {
   static const char* kTypes[] = {"void", "bool", "char", "char8_t", "char16_t", "char32_t",
                                  "wchar_t", "short", "int", "long", "float", "double",
@@ -436,6 +457,21 @@ FileAnalysis analyzeFile(const std::string& relPath, const std::string& source,
         if (t[s].identifier) hasTypePart = true;
       }
     }
+
+    // —— 反例排除：挡住「看起来像声明、其实是调用/表达式」的情况 ——
+    // 实测踩出来的两个例子：
+    //   `return app.start(args);`      → 被登记成函数声明 start（return/app 都是 identifier）
+    //   `registry_->add(lastInput_);`  → 被登记成函数声明 add
+    // 危害不只是多几个假节点：假节点是**无限定名**（或只带外层命名空间），
+    // 会污染 funcByQual_ / funcByName_，让真正的 demo::Application::start
+    // 再也匹配不上 —— 成员调用几乎全部失效，调用图和阅读路线都断链。
+    //
+    // 注意：这个循环里 `k` 是 **`(`** 的下标，函数名在 k-1，名字**前面**那个 token 在 k-2。
+    // 1) 名字前是 `.` / `->`：成员访问（app.start / ptr->run），不是定义
+    if (k >= 2 && (t[k - 2].text == "." || t[k - 2].text == "->")) continue;
+    // 2) 语句起点到名字之间出现语句关键字（return / if / while / ...）：
+    //    这些词不可能是返回类型，出现即说明这是语句而不是声明
+    if (hasStatementKeyword(t, start, k + 1)) continue;
     // 构造函数： ClassName(...) 或 ClassName::ClassName(...)
     bool looksLikeCtor = false;
     {

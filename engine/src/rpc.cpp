@@ -12,6 +12,7 @@
 
 #include "depscan/analyzer.hpp"
 #include "depscan/json.hpp"
+#include "depscan/route.hpp"
 #include "depscan/scanner.hpp"
 #include "depscan/session.hpp"
 #include "depscan/util.hpp"
@@ -281,6 +282,34 @@ int runStdioServer() {
         session.eraseFile(util::normalizePath(params.getString("file")));
         session.rebuild();
         writeResult(id, session.statsToJson());
+      } else if (method == "route") {
+        // 阅读路线：从入口（默认 main）出发的有序阅读清单。
+        // 与 subgraph 的区别是「有序」—— 遍历在引擎里做，前端只负责渲染，
+        // 这样大项目下步骤数与负载都由 maxSteps 控住。
+        std::lock_guard<std::mutex> lock(g_sessionMutex);
+        RouteOptions opt;
+        opt.from = params.getString("from");
+        opt.depthFirst = params.getString("strategy", "bfs") == "dfs";
+        const int maxSteps = static_cast<int>(params.getNumber("maxSteps", 200));
+        if (maxSteps > 0) opt.maxSteps = maxSteps;
+        const int maxDepth = static_cast<int>(params.getNumber("maxDepth", 6));
+        if (maxDepth >= 0) opt.maxDepth = maxDepth;
+        opt.projectOnly = params.getBool("projectOnly", true);
+        opt.groupByFile = params.getBool("groupByFile", false);
+        const std::vector<std::string> kinds = params.getStringArray("kinds");
+        if (!kinds.empty()) {
+          std::vector<EdgeKind> parsed;
+          for (const std::string& k : kinds) {
+            EdgeKind ek = EdgeKind::Calls;
+            if (parseEdgeKind(k, ek)) parsed.push_back(ek);
+          }
+          if (!parsed.empty()) opt.kinds = parsed;
+        }
+        const RouteResult route = computeRoute(session.graph(), opt);
+        if (!route.error.empty()) throw std::runtime_error(route.error);
+        json::Value out = routeToJson(session.graph(), route);
+        out.set("from", json::Value::makeString(opt.from.empty() ? findEntryPoint(session.graph()) : opt.from));
+        writeResult(id, std::move(out));
       } else if (method == "exportData") {
         std::lock_guard<std::mutex> lock(g_sessionMutex);
         const std::string format = params.getString("format", "json");

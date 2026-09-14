@@ -14,3 +14,4 @@ stress1m/
 .idea/
 *.user
 **/.vscode/depscan-cache/
+require.md

@@ -184,6 +184,56 @@ try {
   check(Array.isArray(dependents.dependents) && dependents.dependents.length > 0,
     `可计算受影响文件：${dependents.dependents.length} 个`);
 
+  // --- 阅读路线（route）：从入口出发的**有序**阅读清单 ---
+  // 这是本功能唯一的自动化验收方式：不给「好看不好看」下断言，
+  // 只给「顺序对不对」下断言 —— 从 main 出发必须按调用链顺序经过这几个函数。
+  const route = await request('route', { from: '', strategy: 'bfs', maxDepth: 4, maxSteps: 80 });
+  check(route.from === 'func:main', `自动识别程序入口：${route.from}`);
+  check(route.steps.length > 3, `路线生成 ${route.steps.length} 步`);
+  check(route.steps[0].order === 1 && route.steps[0].parent === 0,
+    `第 1 步是起点且没有父节点（${route.steps[0].name}）`);
+  {
+    // 断言用 id 而不是 name：Node.name 是简单名（start / run / add），
+    // 只有 id 带完整限定名，才能确定命中「哪个 start」。
+    const ids = route.steps.map((s) => s.id);
+    const iStart = ids.findIndex((x) => x.endsWith('::Application::start'));
+    const iRun = ids.findIndex((x) => x.endsWith('::Engine::run'));
+    const iAdd = ids.findIndex((x) => x.endsWith('::Registry::add'));
+    check(
+      iStart >= 0 && iRun > iStart && iAdd > iRun,
+      `打靶：main → Application::start(#${iStart + 1}) → Engine::run(#${iRun + 1}) → Registry::add(#${iAdd + 1})`
+    );
+  }
+  check(route.steps.every((s) => !s.external), 'projectOnly 生效：路线里不含项目外符号');
+  check(route.steps.every((s) => s.name && s.file), '每一步都带符号名与文件位置（可点击跳转）');
+
+  const grouped = await request('route', {
+    from: '',
+    strategy: 'bfs',
+    maxDepth: 4,
+    maxSteps: 80,
+    groupByFile: true
+  });
+  check(
+    grouped.steps.length > 0 && grouped.steps.length < route.steps.length,
+    `按文件折叠：${route.steps.length} 步 → ${grouped.steps.length} 步`
+  );
+  check(grouped.steps.every((s) => s.newFile), '折叠后每一步都是「首次进入某文件」');
+  check(grouped.steps[0].parent === 0, '折叠后仍然只有一个根');
+
+  const capped = await request('route', { from: '', strategy: 'bfs', maxDepth: 6, maxSteps: 3 });
+  check(
+    capped.steps.length === 3 && capped.truncated === true,
+    `maxSteps 截断生效：3 步，未展开 ${capped.frontierNodes} 个节点 / ${capped.frontierFiles} 个文件`
+  );
+
+  const dfsA = await request('route', { from: '', strategy: 'dfs', maxDepth: 4, maxSteps: 40 });
+  const dfsB = await request('route', { from: '', strategy: 'dfs', maxDepth: 4, maxSteps: 40 });
+  check(
+    dfsA.steps.map((s) => s.name).join('>') === dfsB.steps.map((s) => s.name).join('>'),
+    '同样参数下路线完全确定（可复现，测试才能打靶）'
+  );
+
   const cancelled = await request('cancel');
   check(cancelled.cancelled === true, '取消指令被接受');
 

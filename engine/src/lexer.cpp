@@ -294,7 +294,12 @@ LexedFile lex(const std::string& src) {
       const int tline = line;
       const int tcol = col;
       std::string p(1, c);
+      // 多字符运算符必须合成单个 token。
+      // `->` 尤其重要：如果拆成 `-` `>`，那么 `registry_->add(...)` 里的
+      // "名字前一个 token" 就变成 `>`，所有「靠前一个 token 判断这是成员访问」
+      // 的地方都会失手（实测把成员调用误登记成了函数声明）。
       if (c == ':' && i + 1 < n && src[i + 1] == ':') { p = "::"; i += 2; col += 2; }
+      else if (c == '-' && i + 1 < n && src[i + 1] == '>') { p = "->"; i += 2; col += 2; }
       else { ++i; ++col; }
       if (p == ")") { if (paren > 0) --paren; }
       if (p == "}") { if (brace > 0) --brace; }
