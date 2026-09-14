@@ -139,13 +139,25 @@ json::Value handleScan(Session& session, const json::Value& params) {
   bool ok = false;
   std::string error;
   std::thread worker([&]() {
-    Scanner scanner(session);
-    std::lock_guard<std::mutex> lock(g_sessionMutex);
-    ok = scanner.run(req, [](int done, int total, const std::string& file) {
-      if (g_cancel.load()) return false;
-      writeProgress(done, total, file);
-      return true;
-    }, error);
+    // ⚠ 这里必须整体包住。这是**子线程**，任何逸出的异常都不会被
+    //   主线程的 try/catch 接住，而是直接 std::terminate → abort()，
+    //   对外表现为进程异常退出（Windows 上退出码 0xC0000409）。
+    //   大项目上只要文件发现 / 图重建任一环节抛一次，整个索引就失败。
+    try {
+      Scanner scanner(session);
+      std::lock_guard<std::mutex> lock(g_sessionMutex);
+      ok = scanner.run(req, [](int done, int total, const std::string& file) {
+        if (g_cancel.load()) return false;
+        writeProgress(done, total, file);
+        return true;
+      }, error);
+    } catch (const std::exception& e) {
+      ok = false;
+      error = std::string("扫描过程中抛出异常：") + e.what();
+    } catch (...) {
+      ok = false;
+      error = "扫描过程中抛出未知异常";
+    }
     g_scanning.store(false);
   });
   worker.join();
@@ -326,22 +338,33 @@ int runStdioServer() {
   return 0;
 }
 
-int runOnce(const std::string& root, bool pretty) {
+int runOnce(const std::string& root, bool pretty, int jobs, bool trace) {
   Session session;
   ScanRequest req;
   req.root = root;
   req.options.fileSizeLimitBytes = 4ull * 1024 * 1024;
   req.useCache = false;
+  if (jobs > 0) req.threads = jobs;
 
   Scanner scanner(session);
   std::string error;
-  const bool ok = scanner.run(req, [](int done, int total, const std::string& file) {
-    if (done % 50 == 0 || done == total) {
-      std::fprintf(stderr, "[DepScan] %d/%d %s\n", done, total, file.c_str());
-      std::fflush(stderr);
-    }
-    return true;
-  }, error);
+  bool ok = false;
+  try {
+    ok = scanner.run(req, [trace](int done, int total, const std::string& file) {
+      // --trace：每个文件都打一行，崩溃时 stderr 的最后一行就是元凶文件
+      if (trace || done % 50 == 0 || done == total) {
+        std::fprintf(stderr, "[DepScan] %d/%d %s\n", done, total, file.c_str());
+        std::fflush(stderr);
+      }
+      return true;
+    }, error);
+  } catch (const std::exception& e) {
+    ok = false;
+    error = std::string("扫描过程中抛出异常：") + e.what();
+  } catch (...) {
+    ok = false;
+    error = "扫描过程中抛出未知异常";
+  }
   if (!ok) {
     std::fprintf(stderr, "[DepScan] 扫描失败: %s\n", error.c_str());
     return 1;

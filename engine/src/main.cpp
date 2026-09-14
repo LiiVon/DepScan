@@ -4,7 +4,9 @@
 //   1) stdio 服务模式（默认）：VS Code 插件以子进程方式启动，逐行 JSON-RPC 通信。
 //   2) 一次性模式（--once --root <dir>）：输出全量图 JSON，便于 CLI 调试与自测。
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <string>
 
 #ifdef _WIN32
@@ -30,7 +32,9 @@ void printUsage() {
       "\n"
       "选项：\n"
       "  --root <dir>    项目根目录（默认当前目录）\n"
-      "  --pretty        JSON 输出带缩进（仅 --once）\n");
+      "  --pretty        JSON 输出带缩进（仅 --once）\n"
+      "  --jobs <n>      解析线程数（仅 --once）—— 排障用，设为 1 可排除并发问题\n"
+      "  --trace         每个文件都打一行到 stderr（仅 --once）—— 崩溃时最后一行就是元凶文件\n");
 }
 
 }  // namespace
@@ -45,6 +49,8 @@ int main(int argc, char** argv) {
 
   bool once = false;
   bool pretty = false;
+  bool trace = false;
+  int jobs = 0;
   std::string root;
 
   for (int i = 1; i < argc; ++i) {
@@ -53,6 +59,10 @@ int main(int argc, char** argv) {
       once = true;
     } else if (arg == "--pretty") {
       pretty = true;
+    } else if (arg == "--trace") {
+      trace = true;
+    } else if (arg == "--jobs" && i + 1 < argc) {
+      jobs = std::atoi(argv[++i]);
     } else if (arg == "--root" && i + 1 < argc) {
       root = argv[++i];
     } else if (arg == "--version" || arg == "-v") {
@@ -71,8 +81,20 @@ int main(int argc, char** argv) {
   }
   root = depscan::util::normalizePath(root);
 
-  if (once) {
-    return depscan::runOnce(root, pretty);
+  // 顶层兜底：主线程里任何逸出的异常都不应该变成「进程异常退出」
+  // （子线程里的兜底在 rpc.cpp / scanner.cpp 各有一处）。
+  try {
+    if (once) {
+      return depscan::runOnce(root, pretty, jobs, trace);
+    }
+    return depscan::runStdioServer();
+  } catch (const std::exception& e) {
+    std::fprintf(stderr, "[DepScan] 致命错误: %s\n", e.what());
+    std::fflush(stderr);
+    return 2;
+  } catch (...) {
+    std::fprintf(stderr, "[DepScan] 致命错误: 未知异常\n");
+    std::fflush(stderr);
+    return 2;
   }
-  return depscan::runStdioServer();
 }

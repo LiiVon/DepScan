@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <mutex>
@@ -239,12 +240,21 @@ std::string configFingerprint(const std::string& root, const CompileDatabase& db
 
 }  // namespace
 
+// 阶段日志：崩溃（0xC0000409 这类 fastfail 是抓不住的，SEH/VEH 都会被绕过）时，
+// stderr 的最后一行就是它死在哪一步 —— 这是事后唯一能拿到的线索，所以无条件输出。
+// 每次扫描只有几行，代价可忽略。
+static void stage(const std::string& what) {
+  std::fprintf(stderr, "[DepScan] 阶段: %s\n", what.c_str());
+  std::fflush(stderr);
+}
+
 bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::string& error) {
   const std::string root = util::normalizePath(req.root);
   if (!util::isDirectory(root)) {
     error = "项目根目录不存在或不是目录: " + root;
     return false;
   }
+  stage("1/5 发现文件: " + root);
 
   AnalyzerOptions opts = req.options;
   const CompileDatabase db = discoverCompileDatabase(root, req.compileCommandsPath);
@@ -282,6 +292,8 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   }
   const std::vector<std::string> filesAbs =
       util::listFilesRecursive(root, includeGlobs, excludeGlobs, req.maxFiles);
+  stage("1/5 完成: " + std::to_string(filesAbs.size()) + " 个文件待索引（上限 " +
+        std::to_string(req.maxFiles) + "）");
 
   const size_t total = filesAbs.size();
   std::vector<std::string> rels;
@@ -289,6 +301,7 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   for (const std::string& abs : filesAbs) rels.push_back(util::relativeTo(root, abs));
 
   // --- 缓存载入（指纹不匹配则整体作废）---
+  stage("2/5 载入缓存");
   const std::string fingerprint = configFingerprint(root, db, baseOpts);
   bool cacheLoaded = false;
   if (req.useCache && !req.forceFull && !req.cachePath.empty()) {
@@ -351,11 +364,11 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   }
   threads = std::max(1, std::min<int>(threads, 64));
 
-  auto worker = [&]() {
-    while (true) {
-      const size_t idx = nextIdx.fetch_add(1);
-      if (idx >= todo.size()) break;
-      if (cancelled.load()) break;
+  // 单个文件的完整处理流程（含进度上报）。
+  // 注意：调用方把它包在 try/catch 里（见下面的 worker）—— 不仅是 analyzeFile，
+  // onProgress（会写 stdout）和 results[idx] 的移动赋值也可能抛异常，
+  // 而这里已经是工作线程，任何逸出都会 std::terminate。
+  auto runOneFile = [&](size_t idx) {
       const size_t fi = todo[idx];
       const std::string& abs = filesAbs[fi];
       const std::string& rel = rels[fi];
@@ -401,8 +414,25 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
       if (onProgress && (d == static_cast<int>(todo.size()) || d % 8 == 0)) {
         if (!onProgress(d, static_cast<int>(todo.size()), rel)) cancelled.store(true);
       }
+  };
+
+  auto worker = [&]() {
+    while (true) {
+      const size_t idx = nextIdx.fetch_add(1);
+      if (idx >= todo.size()) break;
+      if (cancelled.load()) break;
+      try {
+        runOneFile(idx);
+      } catch (const std::exception& e) {
+        recordFailure(idx < todo.size() ? rels[todo[idx]] : std::string("<未知文件>"), e.what());
+      } catch (...) {
+        recordFailure(idx < todo.size() ? rels[todo[idx]] : std::string("<未知文件>"), "未知异常");
+      }
     }
   };
+
+  stage("3/5 并行解析（线程数 " + std::to_string(threads) + "，待解析 " +
+        std::to_string(todo.size()) + "，复用 " + std::to_string(reused) + "）");
 
   std::vector<std::thread> pool;
   pool.reserve(static_cast<size_t>(threads));
@@ -413,8 +443,10 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
     error = "已取消";
     return false;
   }
+  stage("3/5 完成，失败 " + std::to_string(failed.load()) + " 个");
 
   // --- 单线程合并 ---
+  stage("4/5 合并结果");
   for (FileAnalysis& fa : results) {
     if (fa.file.empty()) continue;
     session_.putFile(std::move(fa));
@@ -430,6 +462,7 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   }
 
   // --- 构建模型 + 重建图 ---
+  stage("5/5 解析 CMake + 重建图");
   if (req.options.links) {
     try {
       session_.setBuildModel(parseBuildModel(root));

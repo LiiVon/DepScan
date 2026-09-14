@@ -13,6 +13,6 @@ namespace depscan {
 int runStdioServer();
 
 // 一次性扫描并输出 JSON（CLI / 自测用）。
-int runOnce(const std::string& root, bool pretty);
+int runOnce(const std::string& root, bool pretty, int jobs = 0, bool trace = false);
 
 }  // namespace depscan
