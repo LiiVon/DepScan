@@ -98,21 +98,15 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "git:status",
+			"label": "git:sync",
 			"type": "shell",
-			"command": "git status --short; Write-Output '--- log ---'; git log --oneline -5 2>&1; Write-Output '--- remote ---'; git remote -v; Write-Output '--- branch ---'; git branch --show-current; Write-Output '--- identity ---'; git config user.name; git config user.email",
+			"command": "git add -A; git commit -m \"chore: clean up temporary dev tasks in .vscode/tasks.json\"; Write-Output '--- push ---'; git push origin main; Write-Output '--- state ---'; git status -sb",
 			"problemMatcher": []
 		},
 		{
-			"label": "git:commit",
+			"label": "git:sync2",
 			"type": "shell",
-			"command": "git add -A; Write-Output '--- staged count ---'; (git diff --cached --name-only | Measure-Object -Line).Lines; Write-Output '--- commit ---'; git commit -F engine/build/commit-msg.txt; Write-Output '--- branch ---'; git branch -M main; git branch --show-current; Write-Output '--- remote ---'; git remote add origin https://github.com/LiiVon/DepScan.git; git remote -v",
-			"problemMatcher": []
-		},
-		{
-			"label": "git:amend",
-			"type": "shell",
-			"command": "git rm -r --cached samples/demo/.vscode/depscan-cache 2>&1 | Out-Null; git add -A; git commit --amend -F engine/build/commit-msg.txt --quiet; Write-Output '--- files ---'; (git ls-files | Measure-Object -Line).Lines; Write-Output '--- utf8 names ---'; git -c core.quotepath=false ls-files docs/ samples/; Write-Output '--- head ---'; git log --oneline -1",
+			"command": "git add -A; git commit -F engine/build/commit-msg2.txt --quiet; Write-Output '--- push ---'; git push origin main 2>&1 | Out-String; Write-Output '--- state ---'; git status -sb; git log --oneline -3",
 			"problemMatcher": []
 		}
 	]
