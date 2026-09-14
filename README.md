@@ -1,227 +1,235 @@
-# DepScan
+# DepScan — see the dependency graph of any C/C++ project
 
-> 面向大型 C/C++ 项目的依赖关系分析与可视化 VS Code 插件。
-> 五类依赖一次扫清：**include / 调用 / 继承 / 类型 / 符号引用 / 链接**，并在 Webview 里用「图 · 树 · 表格」三视图联动浏览。
+**One scan, five kinds of dependencies — includes, calls, inheritance, types, symbols, links — explored through a linked graph / tree / table, inside VS Code.**
 
----
-
-## 它解决什么问题
-
-大型 C++ 项目的真正入口不是 `main()`，而是**一张依赖网**。想读懂一个新项目，你需要回答：
-
-- 这个文件被谁 include？它又拉进来哪些头文件？（**模块边界**）
-- 改这个函数会影响哪些调用方？（**变更影响面**）
-- 这个类的继承层次长什么样？（**架构骨架**）
-- 这个宏 / 全局变量在哪里被用到？（**交叉引用**）
-- 哪个 target 链接了哪个库？（**构建与链接关系**）
-
-DepScan 把这些问题变成一次点击。
+<!--
+  TODO(screenshot): hero image — 建议截「左侧边栏 + 依赖图 + 右侧表格」同屏，
+  文件名：media/screenshots/hero.png   （窗口宽度 ≥ 1400px，深色主题）
+  拿到图后把下面这行的注释去掉：
+  ![DepScan overview](media/screenshots/hero.png)
+-->
 
 ---
 
-## 三步开始
+## Why
 
-1. **安装**：安装 vsix。插件内置 C++ 分析引擎，**你不需要装编译器 / Clang / Python**。
-   当前发布版内置的是 **Windows x64** 引擎；其他平台要么用 `depscan.engine.path` 指向自编译引擎，要么看下面的「引擎分发」节。
-2. **打开**：用 VS Code 打开一个 C/C++ 项目 → 插件自动在后台建立索引（状态栏可看进度）
-3. **看图**：在任意 `.cpp/.h` 上右键 → **查看依赖图**（或 `Ctrl+Shift+P` → `DepScan: 查看依赖图`）
+In a large C++ codebase the entry point isn't `main()` — it's a web of dependencies. DepScan answers these questions in one click:
 
-想要**精确**结果？在项目里生成 `compile_commands.json`：
+- Who includes this header, and what does it pull in? *(module boundaries)*
+- If I change this function, which callers break? *(blast radius)*
+- What does this class hierarchy look like? *(architecture skeleton)*
+- Where is this macro or global variable used? *(cross references)*
+- Which build target links which library? *(build & link model)*
+
+---
+
+## Requirements
+
+**None.** The analysis engine is a native executable bundled inside the extension — you do **not** need a compiler, Clang, Python or Node.js to use it.
+
+Prebuilt engines ship for **Windows x64**, **Linux x64** and **macOS** (Intel and Apple Silicon). On any other platform, build the engine yourself and point `depscan.engine.path` at it.
+
+## Install
+
+- **VS Code Marketplace** — search for `DepScan`, or run `code --install-extension liivon.depscan`
+- **From a VSIX file** — Extensions view → `⋯` → **Install from VSIX…**
+
+---
+
+## Quick start
+
+1. **Open** a folder that contains C/C++ sources. DepScan indexes it in the background — progress shows in the status bar and in the **Index Status** sidebar view.
+2. **Pick a starting point** — right-click any `.cpp` / `.h` file → **Show Dependency Graph**, or put the cursor inside a function and run `DepScan: Show Dependency Graph for Symbol`.
+3. **Read the graph** — click a node to jump to its source, double-click it to expand one more level.
+
+<!--
+  TODO(screenshot): 依赖图特写（含工具栏 + 图例 + 选中节点详情）
+  文件名：media/screenshots/graph.png
+  ![Dependency graph](media/screenshots/graph.png)
+-->
+
+---
+
+## Getting exact results (recommended)
+
+Out of the box DepScan uses a built-in structural parser: instant, zero-config, and **approximate** — it resolves references by name. Give it a real compile database and include / link resolution becomes **exact**.
 
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build
 ```
 
-没有它也能用 —— 插件会自动降级为内置结构解析，并在界面上**明确标注精度等级**（近似 / 精确），不会让你误判结果。
+> ### ⚠️ CMake's Visual Studio generator never writes this file
+>
+> `CMAKE_EXPORT_COMPILE_COMMANDS` only works with the **Makefile** and **Ninja** generators. If your `build/` folder contains `CMakeCache.txt` and `*.vcxproj` but no `compile_commands.json`, this is why — re-configuring it will not help, because it is a generator limitation, not a missing flag.
+>
+> Switch to Ninja:
+>
+> ```bat
+> :: Windows + MSVC — enter the VS environment first
+> "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+> cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+> cmake --build build
+> ```
 
-> 详细步骤见 [docs/01-快速开始.md](docs/01-快速开始.md)
+DepScan looks for `compile_commands.json` at the project root, then in `build/`, `out/`, `cmake-build-*`, `build/Release`, `build/Debug`, and finally anywhere within 4 levels of the root. You can also point straight at it with `depscan.compile.commandsPath`.
+
+**Not sure what it found?** Run **`DepScan: Why is it Approx?`** — it reports whether a compile database was found and where it looked, whether the on-disk cache was discarded and why, and the concrete next step for your situation.
+
+### Precision levels
+
+| Level | When | What it means |
+| --- | --- | --- |
+| **Exact** | Engine built against libclang | All five dependency kinds are semantic |
+| **Partly exact** | A `compile_commands.json` was found | Includes and links are exact; calls / inheritance / types stay structural |
+| **Approximate** | Neither | Everything is structural |
+
+Precision is also marked **per edge** — solid lines are exact, dashed lines are approximate. The status bar and the **Index Status** view show the overall level.
 
 ---
 
-## 五类依赖
+## The interface
 
-| 依赖类型 | 边 | 语义 | 精度 |
-| --- | --- | --- | --- |
-| 文件 / 头文件包含 | `includes` | `#include` 关系，区分本地 / 系统引用，支持宏展开后的真实包含 | 精确\* / 近似 |
-| 函数调用图 | `calls` | 谁调用谁，含成员函数、命名空间限定名 | 近似 |
-| 类继承 / 类型依赖 | `inherits` / `uses` | 单/多/虚继承；成员与模板参数的类型依赖 | 近似 |
-| 符号交叉引用 | `refs` | 宏、全局变量的定义与使用位置 | 近似 |
-| 链接 / 构建依赖 | `links` | CMake target ↔ 源文件 ↔ 被链接的库 | 精确 |
+### Sidebar
 
-\* 提供 `compile_commands.json` 时，include 搜索路径来自真实编译参数，解析结果标记为**精确**。
+| View | Contents |
+| --- | --- |
+| **Actions** | Every frequent command as a single click — open graph, reindex, export, switch language. No command palette needed. Shows the current precision level next to *Rebuild Index*. |
+| **Dependencies** | Upstream / downstream tree for the current file, expandable level by level |
+| **Index Status** | Progress, file / symbol / edge counts, precision, and warnings |
 
----
+<!--
+  TODO(screenshot): 侧边栏三个视图（操作 / 依赖 / 索引状态）展开状态
+  文件名：media/screenshots/sidebar.png
+  ![Sidebar views](media/screenshots/sidebar.png)
+-->
 
-## 界面
+### Graph · Tree · Table
 
-- **侧边栏「操作」**：常用功能一次点击 —— 看图 / 重建索引 / 导出 / **切换界面语言** / 打开文档（不用再翻命令面板）
-- **依赖图**：Canvas 力导向图。拖动节点、滚轮缩放、拖拽平移；单击节点跳转源码、双击展开下一层。**工具栏最右侧可直接切换界面语言（中/英）。**
-- **层级树**：以当前焦点为根，按依赖方向逐层展开。
-- **表格**：节点 / 类型 / 出依赖 / 入依赖 / 文件位置 / 精度，可按名称与路径搜索。
-- 三视图**选中联动**：在任一视图点选，其余视图同步高亮与导航。
-- **方向开关**：双向 / 被谁依赖 / 依赖了谁。
-- **LOD 三层下钻**：目录（全局架构）→ 文件 → 函数；超大图自动聚类，避免卡顿。
-- **导出**：PNG / SVG（矢量）/ JSON / DOT / Mermaid。
+Three views of the same subgraph, **selection-synced**: select a node in any one of them and the others highlight it.
 
-> 操作细节见 [docs/02-界面与操作指南.md](docs/02-界面与操作指南.md)
+- **Graph** — drag nodes · wheel to zoom · drag the canvas to pan · single-click to open the source · double-click to expand one more level
+- **Toolbar** — direction (both / upstream / downstream), depth *k*, cluster by directory, show external symbols, export PNG / SVG, and the interface language switch
+- **Tree** — hierarchical view rooted at the current focus
+- **Table** — node, kind, in/out degree, file:line, precision; searchable by name and path
 
----
-
-## 架构
-
-```
-VS Code 插件层（TypeScript / Node）
-  命令 · 侧边栏 · 状态栏 · 配置 · 增量调度 · 磁盘缓存
-  Webview（Canvas 力导向图 / 树 / 表格 / 导出）
-        ↕  stdio JSON-RPC（逐行 JSON，UTF-8）
-C++ 分析引擎（独立进程，零外部依赖）
-  文件发现 → 并行结构解析 → 符号表 → 图构建 → 子图裁剪
-  include 解析（compile_commands）× 调用/继承/类型/符号 × CMake 链接模型
-```
-
-- **为什么是独立进程**：扩展宿主是单线程 Node 进程，把百万行级解析放在里面会卡死编辑器；独立进程天然规避阻塞，崩溃也不影响编辑器。
-- **为什么用 stdio JSON-RPC**：跨平台零差异，不需要本地端口、不需要 ABI 绑定（N-API 会带来 6 平台矩阵的构建噩梦）。
-- **服务端裁剪**：图不是整张推给前端，而是引擎做 k 层 BFS 后只回传子图 —— 这是大项目不卡的关键。
-
-```
-DepScan/
-├── src/            TypeScript 插件（命令 / 服务 / 视图 / i18n）
-├── webview/        前端源码（力导向图 / 树 / 表格 / 导出）
-├── engine/         C++ 分析引擎（CMake，独立可执行文件）
-├── scripts/        构建 / 打包 / 自测脚本
-├── samples/demo/   示例项目（含循环依赖与分层违规，用于验收）
-└── docs/           教学文档（中文）
-```
+Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or **Mermaid**.
 
 ---
 
-## 构建（开发者）
+## Commands
 
-前置：Node.js ≥ 18、CMake ≥ 3.16、C++20 编译器（MSVC 2019+ / GCC 10+ / Clang 12+）。
+| Command | Description |
+| --- | --- |
+| `DepScan: Show Dependency Graph` | Graph focused on the current file |
+| `DepScan: Show Dependency Graph for Symbol` | Graph focused on the symbol under the cursor |
+| `DepScan: Architecture View` | Whole-project view, aggregated by directory |
+| `DepScan: Rebuild Index (Full)` | Ignore the cache and rescan everything |
+| `DepScan: Cancel Indexing` | Abort a running scan |
+| `DepScan: Clear Index Cache` | Delete the on-disk cache |
+| `DepScan: Show Index Status` | Counts, precision, engine path, cache path |
+| `DepScan: Why is it Approx?` | Precision diagnosis with next steps |
+| `DepScan: Export Dependency Data (JSON)` | Export the focused subgraph (JSON / DOT / Mermaid) |
+| `DepScan: How to generate compile_commands.json?` | Setup guide for every build system |
+| `DepScan: Switch UI Language` | `auto` / Chinese / English |
+
+---
+
+## Settings
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `depscan.deps.includes` / `calls` / `types` / `symbols` / `links` | `true` | Enable each dependency kind |
+| `depscan.files.include` / `depscan.files.exclude` | C/C++ globs | Which files participate in indexing |
+| `depscan.compile.commandsPath` | `""` | Explicit compile database (auto-discovered when empty) |
+| `depscan.compile.includePaths` / `defines` / `systemIncludePaths` | `[]` | Extra `-I` / `-D` / `-isystem` when you have no compile database |
+| `depscan.graph.defaultDepth` | `2` | Default expansion depth *k* |
+| `depscan.graph.direction` | `both` | `both` / `upstream` / `downstream` |
+| `depscan.graph.maxNodes` | `800` | Rendering cap per graph; clustering kicks in beyond this |
+| `depscan.graph.clusterByDirectory` | `false` | Cluster by directory when the panel opens |
+| `depscan.index.onStartup` | `true` | Index in the background when a workspace opens |
+| `depscan.index.autoRebuildOnSave` | `true` | Incremental rebuild on save |
+| `depscan.index.parallelism` | `0` | Parser threads; `0` = CPU cores |
+| `depscan.index.maxFiles` | — | Cap the number of files scanned in one run |
+| `depscan.index.fileSizeLimitKB` | — | Files larger than this are listed but not deeply parsed |
+| `depscan.cache.enabled` | `true` | On-disk cache for instant subsequent starts |
+| `depscan.cache.directory` | `""` | Cache location (defaults to `.vscode/depscan-cache`) |
+| `depscan.ui.language` | `auto` | `auto` / `zh` / `en` |
+| `depscan.log.level` | `info` | Set to `debug` to see engine stderr — do this before reporting a crash |
+| `depscan.engine.path` | `""` | Use your own engine build instead of the bundled one |
+
+---
+
+## Troubleshooting
+
+**It still says "Approximate" even though I built the project.**
+Almost always the Visual Studio generator issue described [above](#getting-exact-results-recommended). Run `DepScan: Why is it Approx?` — it will tell you whether the file exists, where DepScan looked, and what to change.
+
+**Indexing fails or the engine exits.**
+Set `depscan.log.level` to `debug`, reproduce, then open the **DepScan** output channel. Since 0.1.1 the last lines of engine stderr are printed right next to the exit notice, so the reason is visible by default. If a single file is the culprit it is now **skipped with a warning** instead of failing the whole scan — check the **Index Status** view for `文件解析失败 / parse failed` entries.
+
+**"Engine missing".**
+The bundled binary does not match your platform, or `depscan.engine.path` is invalid. `DepScan: Show Index Status` prints the resolved engine path and where it came from.
+
+**Indexing a huge repository is slow.**
+Extend `depscan.files.exclude` (build outputs, third-party, generated code), or raise `depscan.index.parallelism`. For reference, 6,000 files / 1.07 M lines takes ~1.4 s wall clock on a modern desktop.
+
+---
+
+## Limitations
+
+- Without a compile database, `calls` / `inherits` / `uses` are resolved **by name**: overloads and templates may be mis-resolved, and more than 3 candidates collapse into a single unresolved node.
+- `links` parses CMake only (`add_executable` / `add_library` / `target_link_libraries`). Other build systems: supply a compile database for includes and calls; link edges need a later version.
+- C/C++ only: `.c .cc .cpp .cxx .h .hh .hpp .hxx .inl .ipp`.
+- The on-disk cache is a text format; on very large repositories (>100 k files) it can reach tens of MB.
+
+---
+
+## Documentation
+
+Detailed, example-driven documentation is currently written in Chinese:
+
+| | |
+| --- | --- |
+| [01 · Quick start](docs/01-快速开始.md) | Install, prepare `compile_commands.json`, first index |
+| [02 · Interface guide](docs/02-界面与操作指南.md) | Three synced views, export, indexing and caching |
+| [03 · Reading a project with DepScan](docs/03-如何用%20DepScan%20学习项目.md) | Four copy-paste reading recipes |
+| [04 · Parsing and precision](docs/04-解析与精度说明.md) | Exact vs approximate, the boundary of each dependency kind, FAQ |
+| [05 · Performance and settings](docs/05-性能与配置参考.md) | Every setting, tuning for million-line repos |
+
+---
+
+## Building from source
+
+Requires Node.js ≥ 18, CMake ≥ 3.16 and a C++20 compiler (MSVC 2019+ / GCC 10+ / Clang 12+).
 
 ```bash
 npm install
-npm run build:core     # 编译 C++ 引擎 -> engine/build/bin/<Config>/depscan-core
-npm run build          # 类型检查 + 打包扩展 + 打包 Webview + Webview 自检
-npm test               # 引擎单测 + JSON-RPC 协议冒烟 + Webview 自检
+npm run build:core     # C++ engine -> engine/build/bin/<Config>/depscan-core
+npm run build          # typecheck + bundle extension + bundle webview + self-checks
+npm test               # engine self-tests + JSON-RPC smoke + webview checks
+npm run package        # produce a .vsix
 ```
 
-调试：在 VS Code 中按 `F5`（会以 `samples/demo` 作为工作区启动扩展开发宿主）。
+Press `F5` to start an Extension Development Host with `samples/demo` as the workspace. Releases are built for all platforms by GitHub Actions — see [docs/06-发布与版本管理.md](docs/06-发布与版本管理.md).
 
-不开编辑器也能验证前端渲染（用真实引擎数据生成一个可直接在浏览器打开的页面）：
-
-```bash
-npm run preview:layout                              # 默认扫描 samples/demo，焦点 src/core/engine.cpp
-npm run preview:layout -- samples/demo src/util/logger.h 3
-# 产物：engine/build/layout-preview.html
-```
-
-打包与发布：
-
-```bash
-npm run package              # 收集本机引擎到 engines/<platform>-<arch>/，再调用 vsce 打包
-npm run package:win32-x64    # 平台专用包（文件名形如 depscan-win32-x64-0.1.0.vsix）
-
-npm run publish              # 发布已打好的包（会先做一轮检查：包存在 / 引擎齐全 / publisher 一致）
-npm run publish:win32-x64    # 打包 + 发布平台专用包
-npm run publish -- --dry-run # 只检查不上传
-npm run publish:openvsx      # 发到 Open VSX（需先设置 OVSX_PAT）
-```
-
-**发新版只需四行**（CI 会构建四平台并自动发布，见 [docs/06-发布与版本管理](docs/06-发布与版本管理.md)）：
-
-```bash
-npm test                      # 自测
-# 更新 docs/CHANGELOG.md 后：
-npm version patch             # 改 package.json + commit + 打 tag
-# 推上去后 CI 自动构建发布：
-git push && git push --tags
-```
-
-> 为什么不直接跑 `vsce publish`：它只会执行 `vscode:prepublish`，**不会**跑 `scripts/package.mjs`，
-> 于是 `engines/` 里的二进制不会被刷新，很可能发出一个没有引擎（或带旧引擎）的包。
-> `npm run publish` 把「先打包再上传」固化了，并在上传前做可读的预检。
->
-> 完整流程（Publisher 创建、PAT 权限、常见报错）见 [docs/06-发布与版本管理](docs/06-发布与版本管理.md)。
-
-### 引擎分发
-
-vsix 内按 `engines/<platform>-<arch>/depscan-core[.exe]` 分发，插件运行时按当前平台自动选择：
+### How it is put together
 
 ```
-engines/
-├── win32-x64/depscan-core.exe
-├── linux-x64/depscan-core
-├── darwin-x64/depscan-core
-└── darwin-arm64/depscan-core
+VS Code extension (TypeScript / Node)
+  commands · sidebar · status bar · settings · incremental scheduling · disk cache
+  Webview (Canvas force-directed graph / tree / table / export)
+        ↕  stdio JSON-RPC (line-delimited JSON, UTF-8)
+C++ engine (separate process, zero external dependencies)
+  discovery → parallel structural parsing → symbol table → graph → subgraph pruning
 ```
 
-**引擎是原生二进制，不能交叉编译** —— 所以这四个目录得在各自的平台上编译出来。
-本项目用 **GitHub Actions 自动完成**（公开仓库的构建分钟数免费且不限量）：
-
-```
-.github/workflows/build-vsix.yml
-  ① 四个原生 runner 各编译一次引擎（windows / ubuntu / macos-13 / macos-14）
-     + 跑引擎自测 29 项
-  ② 汇到一个 ubuntu runner，构建扩展 + 逐平台打 vsix
-     + 跑 Webview 自检 32 项
-  ③ 打 tag（v*）时自动创建 Release 并附上四个 vsix
-     手动触发时可选直接发布到 Marketplace（需 VSCE_PAT）
-```
-
-触发方式：仓库页面 → **Actions** → `Build VSIX` → **Run workflow**。
-
-本地单平台则很简单（在对应平台上执行）：
-
-```bash
-npm run build:core        # 编译引擎
-npm run collect:engine    # 归位到 engines/<当前平台>/
-npm run package           # 打包 vsix
-```
-
-用户也可以用 `depscan.engine.path` 指定自编译引擎覆盖内置版本。
+- **Why a separate process** — the extension host is a single-threaded Node process; parsing millions of lines inside it would freeze the editor. A child process also means an engine crash cannot take the editor down.
+- **Why stdio JSON-RPC** — identical on every platform, no local ports, no ABI binding (N-API would mean a six-platform build matrix for nothing).
+- **Pruning on the engine side** — the whole graph is never sent to the webview; the engine runs a k-hop BFS and returns only the subgraph. This is what keeps large projects responsive.
 
 ---
 
-## 配置速查
-
-| 配置项 | 默认 | 说明 |
-| --- | --- | --- |
-| `depscan.deps.*` | true | 五类依赖各自开关 |
-| `depscan.index.onStartup` | true | 打开工作区后自动后台索引 |
-| `depscan.index.autoRebuildOnSave` | true | 保存后增量重建受影响子图 |
-| `depscan.index.parallelism` | 0 | 解析线程数，0 = CPU 核心数 |
-| `depscan.files.include` / `exclude` | C/C++ glob | 参与索引的文件范围 |
-| `depscan.compile.commandsPath` | "" | 指定 compile_commands.json（留空自动发现） |
-| `depscan.graph.defaultDepth` | 2 | 依赖图默认层级 k |
-| `depscan.graph.direction` | both | 双向 / 被谁依赖 / 依赖了谁 |
-| `depscan.graph.maxNodes` | 800 | 单图渲染上限 |
-| `depscan.cache.enabled` | true | 磁盘缓存（二次启动秒开） |
-| `depscan.ui.language` | auto | 插件界面语言 `auto` / `zh` / `en`（侧边栏「操作 → 界面语言」也能切） |
-
-完整字典见 [docs/05-性能与配置参考.md](docs/05-性能与配置参考.md)
-
----
-
-## 文档
-
-1. [快速开始](docs/01-快速开始.md) —— 安装、准备 compile_commands、首次索引
-2. [界面与操作指南](docs/02-界面与操作指南.md) —— 三视图联动、导出、索引与缓存
-3. [如何用 DepScan 学习项目](docs/03-如何用%20DepScan%20学习项目.md) —— 四个可复制的阅读套路
-4. [解析与精度说明](docs/04-解析与精度说明.md) —— 精确 vs 近似、五类依赖的边界与 FAQ
-5. [性能与配置参考](docs/05-性能与配置参考.md) —— 全部配置项、百万行级调优
-6. [更新日志](docs/CHANGELOG.md)
-
----
-
-## 已知限制
-
-- 无 `compile_commands.json` 时，调用图 / 继承 / 类型依赖为**结构级近似**：重载决议、模板实例化、宏展开的函数式调用无法完全还原，可能漏报或误报。
-- 内置解析器按**名字**消解引用：同名符号（尤其是重载）会优先同文件、其次全部候选（>3 个候选则聚合为「未解析」节点），不保证 100% 正确。
-- 链接依赖目前解析 **CMake**（`add_executable` / `add_library` / `target_link_libraries`）；Makefile / Bazel / qmake 请通过 `compile_commands.json` 提供编译信息，链接关系需等待后续版本。
-- 磁盘缓存为 v0.1 的文本格式，超大项目（>10 万文件）缓存文件可能达到数十 MB。
-- 只支持 C/C++（`.c/.cc/.cpp/.cxx/.h/.hpp/.hh/.hxx/.inl/.ipp`）。
-
-## 许可证
+## License
 
 MIT

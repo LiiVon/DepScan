@@ -17,6 +17,7 @@ esbuild.mjs
 package-lock.json
 require.md
 media/webview.js.map
+media/screenshots/**
 **/*.map
 **/*.ts
 !dist/extension.js
