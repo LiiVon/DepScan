@@ -249,8 +249,17 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   // --- 文件发现 ---
   std::vector<std::string> includeGlobs = req.includeGlobs;
   if (includeGlobs.empty()) includeGlobs = {"**/*.{c,cc,cpp,cxx,h,hh,hpp,hxx,inl,ipp}"};
+  // 未显式给出排除规则时使用安全默认值，避免把构建产物/依赖目录当成项目源码。
+  // 插件侧总会带上 depscan.files.exclude，这里主要保护 CLI 与 --once 路径
+  // （否则 CMake 生成的 CompilerIdCXX.cpp 之类会被当成项目文件索引进来）。
+  std::vector<std::string> excludeGlobs = req.excludeGlobs;
+  if (excludeGlobs.empty()) {
+    excludeGlobs = {"**/node_modules/**", "**/.git/**",       "**/build/**",
+                    "**/out/**",          "**/CMakeFiles/**", "**/cmake-build-*/**",
+                    "**/.cache/**"};
+  }
   const std::vector<std::string> filesAbs =
-      util::listFilesRecursive(root, includeGlobs, req.excludeGlobs, req.maxFiles);
+      util::listFilesRecursive(root, includeGlobs, excludeGlobs, req.maxFiles);
 
   const size_t total = filesAbs.size();
   std::vector<std::string> rels;
