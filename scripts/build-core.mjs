@@ -37,6 +37,17 @@ if (!cmake) {
 const configureArgs = ['-S', resolve(root, 'engine'), '-B', buildDir, '-DDEPS_BUILD_TESTS=ON'];
 if (process.platform !== 'win32') configureArgs.push('-DCMAKE_BUILD_TYPE=Release');
 
+// 允许外部追加 CMake 参数（CI 用）。走环境变量而不是命令行参数，
+// 是因为像 -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64 里的分号会被 shell 当成命令分隔符。
+// 多个参数用空格分隔，例如：
+//   EXTRA_CMAKE_ARGS='-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
+const extra = (process.env.EXTRA_CMAKE_ARGS ?? '').trim();
+if (extra) {
+  const parts = extra.split(/\s+/);
+  configureArgs.push(...parts);
+  console.log(`[build-core] 追加 CMake 参数: ${parts.join(' ')}`);
+}
+
 console.log(`[build-core] ${cmake} ${configureArgs.join(' ')}`);
 const configure = spawnSync(cmake, configureArgs, { stdio: 'inherit' });
 if (configure.status !== 0) process.exit(configure.status ?? 1);

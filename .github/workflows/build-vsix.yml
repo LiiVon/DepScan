@@ -9,6 +9,13 @@ name: Build VSIX
 # 仓库是 public 的，GitHub Actions 对公开仓库的构建分钟数**免费且不限量**，
 # 所以这条路是零成本的。
 #
+# 为什么没有 macos-13（Intel）这个 job
+# ------------------------------------------------------------------
+# Intel macOS runner 正在被 GitHub 退役。实测 `macos-13` 会一直卡在
+# "Waiting for a runner to pick up this job..."，要等到 6 小时 job 超时才失败。
+# 改成在 Apple Silicon 上编一个 **universal 二进制**（同时含 x86_64 + arm64 两个切片），
+# macOS 会自动选对应切片，所以 darwin-x64 / darwin-arm64 共用一份产物。
+#
 # 产物：每个平台一个专用 vsix（win32-x64 / linux-x64 / darwin-x64 / darwin-arm64）。
 # 不产出「通用包」—— 通用包会被 ARM Linux、Windows ARM 之类的平台也装到，
 # 然后报「引擎缺失」，比直接装不上更糟。
@@ -32,19 +39,26 @@ env:
 jobs:
   # ---------------------------------------------------------------- 1) 各平台编译引擎
   engine:
-    name: 引擎 ${{ matrix.key }}
+    name: 引擎 ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, key: win32-x64 }
-          - { os: ubuntu-latest, key: linux-x64 }
-          - { os: macos-13, key: darwin-x64 } # macos-13 是 Intel
-          - { os: macos-14, key: darwin-arm64 } # macos-14 是 Apple Silicon
+          - name: win32-x64
+            os: windows-latest
+            keys: win32-x64
+          - name: linux-x64
+            os: ubuntu-latest
+            keys: linux-x64
+          # 一份 universal 二进制同时供给两个 darwin 目标
+          - name: darwin-x64 + darwin-arm64（universal）
+            os: macos-14
+            keys: darwin-x64 darwin-arm64
+            extra: '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
           # 想覆盖 ARM 平台可以再加（runner 处于 public preview，稳定性一般）：
-          # - { os: ubuntu-24.04-arm, key: linux-arm64 }
-          # - { os: windows-11-arm,   key: win32-arm64 }
+          # - { name: linux-arm64, os: ubuntu-24.04-arm, keys: linux-arm64 }
+          # - { name: win32-arm64, os: windows-11-arm,   keys: win32-arm64 }
     steps:
       - uses: actions/checkout@v4
 
@@ -52,26 +66,39 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # runner 上已经有 CMake + MSVC / GCC / Xcode CLT，build-core.mjs 会自己找 cmake
+      # runner 上已经有 CMake + MSVC / GCC / Xcode CLT，build-core.mjs 会自己找 cmake。
+      # extra 走环境变量传，避免 universal 参数里的分号被 shell 当成分隔符。
       - name: 配置 + 编译引擎
-        run: npm run build:core
+        env:
+          EXTRA_CMAKE_ARGS: ${{ matrix.extra }}
+        run: node scripts/build-core.mjs
 
       - name: 引擎自测（29 项）
         run: node scripts/test-core.mjs
 
-      - name: 归位到 engines/${{ matrix.key }}/
-        run: node scripts/collect-engine.mjs --key ${{ matrix.key }}
+      - name: 归位到 engines/<key>/
+        shell: bash
+        run: |
+          set -euo pipefail
+          for k in ${{ matrix.keys }}; do
+            node scripts/collect-engine.mjs --key "$k"
+          done
+          ls -lR engines
 
       # upload-artifact 不保留文件权限位，所以先打成 tar 再上传，
       # 否则 Linux/macOS 的 depscan-core 下载回来就没有 +x 了。
       - name: 打包成 artifact
         shell: bash
-        run: tar -czf engine-${{ matrix.key }}.tar.gz -C engines/${{ matrix.key }} .
+        run: |
+          set -euo pipefail
+          for k in ${{ matrix.keys }}; do
+            tar -czf "engine-$k.tar.gz" -C "engines/$k" .
+          done
 
       - uses: actions/upload-artifact@v4
         with:
-          name: engine-${{ matrix.key }}
-          path: engine-${{ matrix.key }}.tar.gz
+          name: engines-${{ matrix.os }}
+          path: engine-*.tar.gz
           if-no-files-found: error
           retention-days: 7
 
@@ -89,17 +116,20 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: engine-*
+          pattern: engines-*
           path: artifacts
 
-      - name: 把四个平台的引擎归位到 engines/
+      - name: 把各平台引擎归位到 engines/
         shell: bash
         run: |
           set -euo pipefail
-          for d in artifacts/engine-*; do
-            key="${d#artifacts/engine-}"
-            mkdir -p "engines/$key"
-            tar -xzf "$d"/*.tar.gz -C "engines/$key"
+          for d in artifacts/engines-*; do
+            for t in "$d"/*.tar.gz; do
+              key="$(basename "$t" .tar.gz)"
+              key="${key#engine-}"
+              mkdir -p "engines/$key"
+              tar -xzf "$t" -C "engines/$key"
+            done
           done
           chmod +x engines/*/depscan-core 2>/dev/null || true
           ls -lR engines
