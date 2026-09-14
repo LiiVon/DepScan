@@ -2,6 +2,7 @@ node_modules/
 dist/
 out/
 media/webview.js
+media/webview.js.map
 media/webview.css
 *.vsix
 engines/
