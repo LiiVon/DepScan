@@ -96,18 +96,6 @@
 				"scripts/clean-sample.mjs"
 			],
 			"problemMatcher": []
-		},
-		{
-			"label": "git:sync",
-			"type": "shell",
-			"command": "git add -A; git commit -m \"chore: clean up temporary dev tasks in .vscode/tasks.json\"; Write-Output '--- push ---'; git push origin main; Write-Output '--- state ---'; git status -sb",
-			"problemMatcher": []
-		},
-		{
-			"label": "git:sync2",
-			"type": "shell",
-			"command": "git add -A; git commit -F engine/build/commit-msg2.txt --quiet; Write-Output '--- push ---'; git push origin main 2>&1 | Out-String; Write-Output '--- state ---'; git status -sb; git log --oneline -3",
-			"problemMatcher": []
 		}
 	]
 }
