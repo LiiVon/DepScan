@@ -21,7 +21,8 @@ DepScan 把这些问题变成一次点击。
 
 ## 三步开始
 
-1. **安装**：安装 vsix（插件已内置各平台分析引擎，开发机无需安装编译器 / Clang）
+1. **安装**：安装 vsix。插件内置 C++ 分析引擎，**你不需要装编译器 / Clang / Python**。
+   当前发布版内置的是 **Windows x64** 引擎；其他平台要么用 `depscan.engine.path` 指向自编译引擎，要么看下面的「引擎分发」节。
 2. **打开**：用 VS Code 打开一个 C/C++ 项目 → 插件自动在后台建立索引（状态栏可看进度）
 3. **看图**：在任意 `.cpp/.h` 上右键 → **查看依赖图**（或 `Ctrl+Shift+P` → `DepScan: 查看依赖图`）
 
@@ -115,28 +116,41 @@ npm run preview:layout -- samples/demo src/util/logger.h 3
 # 产物：engine/build/layout-preview.html
 ```
 
-打包发布：
+打包与发布：
 
 ```bash
-npm run package        # 收集本机引擎到 engines/<platform>-<arch>/，再调用 vsce 打包
+npm run package              # 收集本机引擎到 engines/<platform>-<arch>/，再调用 vsce 打包
+npm run package:win32-x64    # 平台专用包（文件名形如 depscan-win32-x64-0.1.0.vsix）
+
+npm run publish              # 发布已打好的包（会先做一轮检查：包存在 / 引擎齐全 / publisher 一致）
+npm run publish:win32-x64    # 打包 + 发布平台专用包
+npm run publish -- --dry-run # 只检查不上传
+npm run publish:openvsx      # 发到 Open VSX（需先设置 OVSX_PAT）
 ```
 
-### 三平台引擎分发
+> 为什么不直接跑 `vsce publish`：它只会执行 `vscode:prepublish`，**不会**跑 `scripts/package.mjs`，
+> 于是 `engines/` 里的二进制不会被刷新，很可能发出一个没有引擎（或带旧引擎）的包。
+> `npm run publish` 把「先打包再上传」固化了，并在上传前做可读的预检。
+>
+> 完整流程（Publisher 创建、PAT 权限、常见报错）见 [docs/06-发布与版本管理](docs/06-发布与版本管理.md)。
+
+### 引擎分发
 
 vsix 内按 `engines/<platform>-<arch>/depscan-core[.exe]` 分发，插件运行时按当前平台自动选择：
 
 ```
 engines/
-├── win32-x64/depscan-core.exe
-├── linux-x64/depscan-core
-├── darwin-x64/depscan-core
-└── darwin-arm64/depscan-core
+├── win32-x64/depscan-core.exe      ← 当前仓库发布包里内置的
+├── linux-x64/depscan-core          ← 需要你在 Linux 上构建
+└── darwin-arm64/depscan-core       ← 需要你在 macOS 上构建
 ```
 
-每个平台在对应机器（或交叉编译环境）执行 `npm run build:core` 后复制到上述目录，再统一 `vsce package`。
-代价说明：三平台二进制会让 vsix 体积增加约 6–12 MB；换来的是**用户侧零工具链依赖**。
+**现状要说清楚**：引擎是原生二进制，不能交叉编译，所以只能在对应平台上各跑一次
+`npm run build:core`，把产物放进 `engines/<platform>-<arch>/`。
+在这件事做完之前，请用平台专用包发布（`npm run publish:win32-x64`），
+这样 Marketplace 只会把包发给 Windows 用户，不会让 Linux/macOS 用户装到一个跑不起来的扩展。
 
-用户也可用 `depscan.engine.path` 指定自编译引擎覆盖内置版本。
+用户也可以用 `depscan.engine.path` 指定自编译引擎覆盖内置版本。
 
 ---
 
