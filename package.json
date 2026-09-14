@@ -332,7 +332,7 @@
         },
         "depscan.graph.clusterByDirectory": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "%cfg.graph.clusterByDirectory%"
         },
         "depscan.cache.enabled": {
@@ -382,6 +382,7 @@
     "build": "npm run typecheck && npm run compile && npm run build:webview && npm run check:webview",
     "build:prod": "npm run typecheck && node esbuild.mjs --production && node scripts/build-webview.mjs --production && node scripts/check-webview.mjs",
     "watch": "node esbuild.mjs --watch",
+    "preview:layout": "node scripts/layout-preview.mjs",
     "package": "npm run build:prod && node scripts/package.mjs",
     "test:core": "node scripts/test-core.mjs",
     "test:rpc": "node scripts/test-rpc.mjs",

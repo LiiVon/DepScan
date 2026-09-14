@@ -35,7 +35,8 @@ export interface Strings {
     showExternal: string;
     cluster: string;
     refresh: string;
-    truncated: (shown: number) => string;
+    truncated: string; // 含 {n} 占位符
+    statsLine: string; // 含 {n} {e} 占位符
     empty: string;
     loading: string;
     search: string;

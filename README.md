@@ -106,6 +106,14 @@ npm test               # 引擎单测 + JSON-RPC 协议冒烟 + Webview 自检
 
 调试：在 VS Code 中按 `F5`（会以 `samples/demo` 作为工作区启动扩展开发宿主）。
 
+不开编辑器也能验证前端渲染（用真实引擎数据生成一个可直接在浏览器打开的页面）：
+
+```bash
+npm run preview:layout                              # 默认扫描 samples/demo，焦点 src/core/engine.cpp
+npm run preview:layout -- samples/demo src/util/logger.h 3
+# 产物：engine/build/layout-preview.html
+```
+
 打包发布：
 
 ```bash

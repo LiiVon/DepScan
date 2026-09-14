@@ -37,7 +37,7 @@
   "cfg.graph.defaultDepth": "依赖图默认展开层级 k。",
   "cfg.graph.direction": "依赖方向：双向 / 只看被谁依赖 / 只看依赖了谁。",
   "cfg.graph.maxNodes": "单张图中最多渲染的节点数，超出会启用聚类与折叠。",
-  "cfg.graph.clusterByDirectory": "按目录聚类聚合节点（超大图性能优化）。",
+  "cfg.graph.clusterByDirectory": "打开面板时启用按目录聚类。超大图（节点数超过 400）会自动启用，无需手动打开。",
   "cfg.cache.enabled": "启用磁盘缓存以加速二次启动。",
   "cfg.cache.directory": "缓存目录（留空使用工作区 .vscode/depscan-cache）。",
   "cfg.log.level": "日志级别。"

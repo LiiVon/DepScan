@@ -24,14 +24,22 @@ body {
   background: var(--bg);
 }
 
+/*
+ * 四行布局：工具栏 / 页签 / 内容区 / 状态栏。
+ * 注意：必须用 4 条显式轨道并显式指定 grid-row ——
+ * 早期只写了 3 行（auto 1fr auto）却放入 4 行内容，
+ * 自动排布会把 1fr 分给「页签行」，导致 main 落进 auto 行、
+ * 高度塌成几十像素（画面表现为：图被压在底部一条窄带里）。
+ */
 #app {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   height: 100vh;
 }
 
 #toolbar {
+  grid-row: 1;
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
@@ -101,6 +109,7 @@ input[type='text'] {
 }
 
 #tabs {
+  grid-row: 2;
   grid-column: 1 / -1;
   display: flex;
   gap: 2px;
@@ -121,7 +130,9 @@ input[type='text'] {
 main {
   position: relative;
   overflow: hidden;
+  grid-row: 3;
   grid-column: 1;
+  min-height: 0;
 }
 
 #view-graph {
@@ -161,6 +172,7 @@ main {
 }
 
 aside {
+  grid-row: 3;
   grid-column: 2;
   border-left: 1px solid var(--border);
   padding: 10px;
@@ -168,9 +180,11 @@ aside {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 #status {
+  grid-row: 4;
   grid-column: 1 / -1;
   border-top: 1px solid var(--border);
   padding: 4px 10px;
@@ -178,6 +192,9 @@ aside {
   color: var(--muted);
   display: flex;
   gap: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #toast {

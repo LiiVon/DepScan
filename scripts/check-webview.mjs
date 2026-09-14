@@ -138,6 +138,28 @@ check(html.includes('<script nonce="testnonce123" src='), '脚本以外部文件
 check(!/<script(?![^>]*src)[^>]*>[\s\S]*?\S[\s\S]*?<\/script>/.test(html), '不存在含内容的内联 <script>');
 check(html.includes('default-src \'none\''), 'CSP 默认拒绝一切外部资源');
 
+// --- 6. 布局回归守卫 ---
+// 曾经踩过：DOM 是 4 行（工具栏/页签/内容/状态），CSS 只声明 3 条轨道且不指定 grid-row，
+// 自动排布把 1fr 分给了页签行，画布高度塌成 91px（表现为"图缩成底部一个小点"）。
+const css = readFileSync(resolve(root, 'media/webview.css'), 'utf8');
+const cssBlock = (selector) => {
+  const i = css.indexOf(`\n${selector} {`);
+  if (i < 0) return '';
+  return css.slice(i, css.indexOf('}', i));
+};
+const appBlock = cssBlock('#app');
+const trackSpec = (appBlock.match(/grid-template-rows:\s*([^;]+);/)?.[1] ?? '').trim();
+const trackCount = (trackSpec.match(/minmax\([^)]*\)|auto|[\d.]+fr/g) ?? []).length;
+check(trackCount === 4, `#app 声明了 4 条网格轨道（工具栏/页签/内容/状态），实际 ${trackCount} 条`);
+for (const [selector, row] of [['#toolbar', 1], ['#tabs', 2], ['main', 3], ['aside', 3], ['#status', 4]]) {
+  const block = cssBlock(selector);
+  check(
+    new RegExp(`grid-row:\\s*${row}`).test(block),
+    `${selector} 显式指定 grid-row: ${row}（避免自动排布错位）`
+  );
+}
+check(/min-height:\s*0/.test(cssBlock('main')), 'main 设置 min-height: 0（防止内容把网格行撑破）');
+
 rmSync(workDir, { recursive: true, force: true });
 
 if (failures.length > 0) {

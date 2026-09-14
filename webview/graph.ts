@@ -44,6 +44,9 @@ export class GraphView {
   private rafHandle = 0;
   private needsDraw = false;
 
+  /** 用户是否手动缩放/平移过（用于决定窗口 resize 后要不要重新自适应） */
+  userAdjustedView = false;
+
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly callbacks: GraphViewCallbacks
@@ -117,28 +120,20 @@ export class GraphView {
     return { width: rect.width, height: rect.height };
   }
 
-  fitToContent(padding = 60): void {
+  fitToContent(margin = 70): void {
     if (this.graph.nodes.length === 0) return;
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const n of this.graph.nodes) {
-      const p = this.positions.get(n.id);
-      if (!p) continue;
-      minX = Math.min(minX, p.x - p.radius);
-      minY = Math.min(minY, p.y - p.radius);
-      maxX = Math.max(maxX, p.x + p.radius);
-      maxY = Math.max(maxY, p.y + p.radius);
-    }
-    if (!isFinite(minX)) return;
     const { width, height } = this.viewSize;
-    const contentW = Math.max(1, maxX - minX);
-    const contentH = Math.max(1, maxY - minY);
-    this.scale = Math.min((width - padding * 2) / contentW, (height - padding * 2) / contentH, 2.5);
-    this.scale = Math.max(this.scale, 0.05);
-    this.tx = width / 2 - ((minX + maxX) / 2) * this.scale;
-    this.ty = height / 2 - ((minY + maxY) / 2) * this.scale;
+    if (!(width > 1) || !(height > 1)) return;
+
+    const b = this.contentBounds(0);
+    // 把节点半径与一点留白计入内容尺寸
+    const contentW = Math.max(1, b.maxX - b.minX) + 70;
+    const contentH = Math.max(1, b.maxY - b.minY) + 70;
+    this.scale = Math.min((width - margin) / contentW, (height - margin) / contentH, 2.5);
+    this.scale = Math.max(this.scale, 0.1);
+    this.tx = width / 2 - ((b.minX + b.maxX) / 2) * this.scale;
+    this.ty = height / 2 - ((b.minY + b.maxY) / 2) * this.scale;
+    this.userAdjustedView = false;
     this.requestDraw();
   }
 
@@ -188,6 +183,7 @@ export class GraphView {
       'wheel',
       (ev) => {
         ev.preventDefault();
+        this.userAdjustedView = true;
         const rect = canvas.getBoundingClientRect();
         this.zoomBy(ev.deltaY < 0 ? 1.12 : 1 / 1.12, { x: ev.clientX - rect.left, y: ev.clientY - rect.top });
       },
@@ -196,6 +192,7 @@ export class GraphView {
 
     canvas.addEventListener('pointerdown', (ev) => {
       canvas.setPointerCapture(ev.pointerId);
+      this.userAdjustedView = true;
       const rect = canvas.getBoundingClientRect();
       const x = ev.clientX - rect.left;
       const y = ev.clientY - rect.top;
@@ -427,20 +424,31 @@ export class GraphView {
   // ------------------------------ 导出 ------------------------------
 
   private contentBounds(padding = 40): { minX: number; minY: number; maxX: number; maxY: number } {
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const radii: number[] = [];
     for (const n of this.graph.nodes) {
       const p = this.positions.get(n.id);
       if (!p) continue;
-      minX = Math.min(minX, p.x - p.radius - padding);
-      minY = Math.min(minY, p.y - p.radius - padding);
-      maxX = Math.max(maxX, p.x + p.radius + padding);
-      maxY = Math.max(maxY, p.y + p.radius + padding);
+      xs.push(p.x);
+      ys.push(p.y);
+      radii.push(p.radius);
     }
-    if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
-    return { minX, minY, maxX, maxY };
+    if (xs.length === 0) return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
+
+    // 对坐标做 2% 截尾：即使个别离群点跑得很远，也不会把整张图缩成一个点
+    xs.sort((a, b) => a - b);
+    ys.sort((a, b) => a - b);
+    const maxRadius = radii.length > 0 ? Math.max(...radii) : 8;
+    const trim = xs.length >= 10 ? Math.floor(xs.length * 0.02) : 0;
+    const lo = trim;
+    const hi = xs.length - 1 - trim;
+    return {
+      minX: xs[lo] - maxRadius - padding,
+      minY: ys[lo] - maxRadius - padding,
+      maxX: xs[hi] + maxRadius + padding,
+      maxY: ys[hi] + maxRadius + padding
+    };
   }
 
   /** 渲染到离屏画布（用于导出 PNG，与当前视图无关，导出全图） */

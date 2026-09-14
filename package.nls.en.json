@@ -37,7 +37,7 @@
   "cfg.graph.defaultDepth": "Default expansion depth k for the dependency graph.",
   "cfg.graph.direction": "Dependency direction: both / who depends on me / what I depend on.",
   "cfg.graph.maxNodes": "Maximum number of nodes rendered in one graph; clustering kicks in beyond this.",
-  "cfg.graph.clusterByDirectory": "Cluster nodes by directory (large-graph performance).",
+  "cfg.graph.clusterByDirectory": "Enable directory clustering when the panel opens. Very large graphs (>400 nodes) cluster automatically.",
   "cfg.cache.enabled": "Enable on-disk cache to speed up subsequent startups.",
   "cfg.cache.directory": "Cache directory (defaults to .vscode/depscan-cache in the workspace).",
   "cfg.log.level": "Log level."

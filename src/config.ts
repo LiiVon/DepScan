@@ -60,7 +60,7 @@ export function readConfig(): DepScanConfig {
     graphDepth: c.get<number>('graph.defaultDepth', 2),
     graphDirection: c.get<'both' | 'upstream' | 'downstream'>('graph.direction', 'both'),
     graphMaxNodes: c.get<number>('graph.maxNodes', 800),
-    clusterByDirectory: c.get<boolean>('graph.clusterByDirectory', true),
+    clusterByDirectory: c.get<boolean>('graph.clusterByDirectory', false),
     cacheEnabled: c.get<boolean>('cache.enabled', true),
     cacheDirectory: c.get<string>('cache.directory', ''),
     logLevel: c.get<'off' | 'error' | 'warn' | 'info' | 'debug'>('log.level', 'info')

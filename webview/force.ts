@@ -19,6 +19,23 @@ export interface SimLink {
   strength: number;
 }
 
+const DEFAULT_SIZE = 900;
+
+/** 画布尺寸退化（0 或 NaN）时退回安全值，避免布局在无效坐标系里计算 */
+function sane(v: number): number {
+  return Number.isFinite(v) && v > 1 ? v : DEFAULT_SIZE;
+}
+
+/** FNV-1a：用于从节点 id 推导确定性的初始角度 */
+function hashCode(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 export class ForceLayout {
   nodes: SimNode[] = [];
   links: SimLink[] = [];
@@ -28,13 +45,15 @@ export class ForceLayout {
   private indexById = new Map<string, number>();
 
   constructor(width: number, height: number) {
-    this.width = width;
-    this.height = height;
+    this.width = sane(width);
+    this.height = sane(height);
   }
 
   setSize(width: number, height: number): void {
-    this.width = width;
-    this.height = height;
+    if (width > 1 && height > 1) {
+      this.width = width;
+      this.height = height;
+    }
   }
 
   setData(
@@ -42,15 +61,23 @@ export class ForceLayout {
     links: Array<{ source: string; target: string; kind: string }>
   ): void {
     this.indexById.clear();
+    // 黄金角螺旋初值：位置确定、互不重合，且均匀铺满整个盒子。
+    // 这一点很关键 —— 早期用「同半径圆环」时，一旦画布尺寸为 0，
+    // 所有节点会落在同一点，斥力（与距离平方成反比）会直接炸掉。
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    const rx = this.width * 0.42;
+    const ry = this.height * 0.42;
     this.nodes = nodes.map((n, i) => {
       this.indexById.set(n.id, i);
-      // 以环形初始位置打散，避免全部重合导致斥力方向随机
-      const angle = (i / Math.max(1, nodes.length)) * Math.PI * 2;
-      const radius = Math.min(this.width, this.height) * 0.35;
+      // 半径按序号均匀铺开（保证互不重合），角度由 id 哈希决定 ——
+      // 这样同类型节点不会被排到同一片区域，避免"看起来分区"的误导。
+      const r = Math.sqrt((i + 0.5) / Math.max(1, nodes.length));
+      const angle = ((hashCode(n.id) % 4096) / 4096) * Math.PI * 2 + i * 0.0007;
       return {
         id: n.id,
-        x: this.width / 2 + Math.cos(angle) * radius,
-        y: this.height / 2 + Math.sin(angle) * radius,
+        x: cx + Math.cos(angle) * rx * r,
+        y: cy + Math.sin(angle) * ry * r,
         vx: 0,
         vy: 0,
         radius: n.radius,
@@ -114,7 +141,8 @@ export class ForceLayout {
           d2 = dx * dx + dy * dy + 1e-6;
         }
         const dist = Math.sqrt(d2);
-        const repulse = (2400 * this.alpha) / d2;
+        // 距离下限：避免两节点几乎重合时斥力趋于无穷（这是布局"爆炸"的另一个来源）
+        const repulse = (2400 * this.alpha) / Math.max(d2, 140);
         const fx = (dx / dist) * repulse;
         const fy = (dy / dist) * repulse;
         a.vx -= fx;
@@ -166,13 +194,19 @@ export class ForceLayout {
       node.vy *= 0.82;
       // 限制单步速度，避免"炸开"
       const speed = Math.hypot(node.vx, node.vy);
-      const maxSpeed = 24;
+      const maxSpeed = 16;
       if (speed > maxSpeed) {
         node.vx = (node.vx / speed) * maxSpeed;
         node.vy = (node.vy / speed) * maxSpeed;
       }
       node.x += node.vx;
       node.y += node.vy;
+
+      // 硬边界：保证任何节点都不会跑出布局盒子，
+      // 这样 fitToContent 的包围盒永远有界，不会出现"整图缩成一个小点"。
+      const pad = 30;
+      node.x = Math.min(this.width - pad, Math.max(pad, node.x));
+      node.y = Math.min(this.height - pad, Math.max(pad, node.y));
     }
 
     this.alpha = Math.max(0.02, this.alpha * 0.985);

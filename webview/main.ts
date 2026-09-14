@@ -63,7 +63,6 @@ const state: State = {
 };
 
 let canvasView: GraphView;
-let layout: ForceLayout | undefined;
 
 // ------------------------------ 初始化 ------------------------------
 
@@ -103,12 +102,13 @@ function init(): void {
 
   bindToolbar();
   bindTabs();
-  window.addEventListener('resize', () => {
+  const refit = (): void => {
     canvasView.resize();
-    if (layout) layout.setSize(canvasView.viewSize.width, canvasView.viewSize.height);
-  });
+    if (!canvasView.userAdjustedView && state.view.nodes.length > 0) canvasView.fitToContent();
+  };
+  window.addEventListener('resize', refit);
 
-  const observer = new ResizeObserver(() => canvasView.resize());
+  const observer = new ResizeObserver(refit);
   observer.observe(el('view-graph'));
 
   setLoading(I18N.loading ?? 'Loading…');
@@ -250,6 +250,7 @@ function renderGraph(): void {
   if (!state.settings.showExternal) {
     graph = filterExternal(graph);
   }
+  // 超过上限才强制聚类；勾选框只影响是否启用（避免小图被折成无意义的目录块）
   if (state.settings.cluster || graph.nodes.length > 400) {
     graph = clusterByModule(graph);
   } else {
@@ -257,19 +258,22 @@ function renderGraph(): void {
   }
   state.view = graph;
 
-  const { width, height } = canvasView.viewSize;
+  // 先确定画布尺寸再做布局：早期版本反过来，画布尺寸为 0 时
+  // 会把所有节点初始化到同一点，斥力直接把布局炸飞。
+  canvasView.resize();
+  const size = canvasView.viewSize;
+  const width = size.width > 1 ? size.width : 900;
+  const height = size.height > 1 ? size.height : 600;
   const simNodes = graph.nodes.map((n) => ({ id: n.id, radius: NODE_RADIUS[n.kind as NodeKind] ?? 8 }));
 
   if (graph.nodes.length <= FORCE_NODE_LIMIT) {
-    layout = new ForceLayout(width, height);
-    layout.setData(simNodes, graph.edges.map((e) => ({ source: e.from, target: e.to, kind: e.kind })));
-    layout.run(300);
-    canvasView.setData(graph, layout.nodes);
+    const force = new ForceLayout(width, height);
+    force.setData(simNodes, graph.edges.map((e) => ({ source: e.from, target: e.to, kind: e.kind })));
+    force.run(320);
+    canvasView.setData(graph, force.nodes);
   } else {
-    layout = undefined;
     canvasView.setData(graph, ForceLayout.gridLayout(width, height, simNodes));
   }
-  canvasView.resize();
   canvasView.fitToContent();
 
   updateLegend();
@@ -344,17 +348,19 @@ function updateLegend(): void {
 function updateStatus(): void {
   const stats = state.settings.stats;
   const bits: string[] = [];
-  bits.push(`${state.view.nodes.length} / ${state.view.edges.length}`);
+  const line = I18N['graph.statsLine'] ?? '{n} nodes · {e} edges';
+  bits.push(line.replace('{n}', String(state.view.nodes.length)).replace('{e}', String(state.view.edges.length)));
   if (stats) {
     bits.push(
       stats.precision === 'exact'
         ? I18N['precision.exact'] ?? 'exact'
         : I18N['precision.approx'] ?? 'approx'
     );
-    bits.push(`${stats.fileCount} files`);
   }
-  if (state.truncated) bits.push(I18N['graph.truncated'] ?? 'truncated');
-  el('status').textContent = bits.join(' · ');
+  if (state.truncated) {
+    bits.push((I18N['graph.truncated'] ?? '').replace('{n}', String(state.view.nodes.length)));
+  }
+  el('status').textContent = bits.filter((b) => b.length > 0).join('   ·   ');
 }
 
 // ------------------------------ 树视图 ------------------------------

@@ -96,6 +96,16 @@
 				"scripts/clean-sample.mjs"
 			],
 			"problemMatcher": []
+		},
+		{
+			"label": "preview:layout",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"preview:layout"
+			],
+			"problemMatcher": []
 		}
 	]
 }
