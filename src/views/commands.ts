@@ -7,6 +7,7 @@ import type { IndexService } from '../index/indexer';
 import { findCompileCommands } from '../index/compileDb';
 import type { Logger } from '../util/log';
 import { GraphPanel } from './graphPanel';
+import type { RouteTreeProvider } from './routeProvider';
 import type { DependencyTreeProvider, IndexTreeProvider } from './treeProvider';
 
 export interface CommandDeps {
@@ -14,13 +15,14 @@ export interface CommandDeps {
   indexer: IndexService;
   indexTree: IndexTreeProvider;
   dependencyTree: DependencyTreeProvider;
+  routeTree: RouteTreeProvider;
   logger: Logger;
 }
 
 const SUPPORTED = /\.(c|cc|cpp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|inl|ipp|tcc|inc)$/i;
 
 export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
-  const { context, indexer, indexTree, dependencyTree, logger } = deps;
+  const { context, indexer, indexTree, dependencyTree, routeTree, logger } = deps;
   const commands: vscode.Disposable[] = [];
 
   /** 确保已有索引；返回是否可用 */
@@ -121,6 +123,27 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       await vscode.workspace
         .getConfiguration('depscan')
         .update('ui.language', language, vscode.ConfigurationTarget.Global);
+    })
+  );
+
+  // 阅读路线：把侧边栏该视图展开并重新生成
+  commands.push(
+    vscode.commands.registerCommand('depscan.showRoute', async () => {
+      if (!(await ensureIndex())) return;
+      await vscode.commands.executeCommand('depscan.routeView.focus');
+      routeTree.refresh();
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.toggleRouteGroupByFile', async () => {
+      await routeTree.toggleGroupByFile();
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.toggleRouteStrategy', async () => {
+      await routeTree.toggleStrategy();
     })
   );
 

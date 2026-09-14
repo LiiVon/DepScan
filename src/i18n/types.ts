@@ -142,7 +142,47 @@ export interface Strings {
     languageHint: string;
     compileGuide: string;
     diagnosePrecision: string;
+    route: string;
     docs: string;
     current: string;
+  };
+
+  /** 侧边栏「阅读路线」视图 */
+  route: {
+    /** 空视图提示：还没有索引 */
+    needIndex: string;
+    /** 自动找入口失败（库项目没有 main） */
+    noEntry: string;
+    /** 查询失败 */
+    failed: string;
+    /** 起点说明，例：起点：main（自动识别） */
+    from: (name: string, file: string) => string;
+    /** 起点无法使用限定名时的兑底：起点：main */
+    fromShort: (name: string) => string;
+    /** 已经是最高优先级 / 根节点 */
+    root: string;
+    /** 步号前缀，例：#3 */
+    step: (order: number) => string;
+    /** 该步有多个同名候选，可能是错边 */
+    ambiguous: string;
+    /** 项目外符号（关掉 projectOnly 才出现） */
+    external: string;
+    /** 首次进入某文件 */
+    newFile: string;
+    /** 被截断时的尾部提示，例：还有 137 个函数/9 个文件未展开 */
+    truncated: (nodes: number, files: number) => string;
+    /** 生成完整了 */
+    complete: string;
+    /** 切换「只显示每个文件首次进入」的按钮文案 */
+    toggleGroupByFile: string;
+    /** 切换遍历策略的按钮文案 */
+    toggleStrategy: string;
+    /** 策略当前值 */
+    bfs: string;
+    dfs: string;
+    /** 重新生成 */
+    regenerate: string;
+    /** 提示：路线是阅读建议，不是精确调用栈 */
+    precisionHint: string;
   };
 }

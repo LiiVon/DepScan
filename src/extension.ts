@@ -7,6 +7,7 @@ import { Logger } from './util/log';
 import { ActionsTreeProvider } from './views/actionsProvider';
 import { registerCommands } from './views/commands';
 import { GraphPanel } from './views/graphPanel';
+import { RouteTreeProvider } from './views/routeProvider';
 import { StatusBar } from './views/statusBar';
 import { DependencyTreeProvider, IndexTreeProvider } from './views/treeProvider';
 
@@ -24,7 +25,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const actionsTree = new ActionsTreeProvider(indexer);
   const indexTree = new IndexTreeProvider(indexer);
   const dependencyTree = new DependencyTreeProvider(indexer);
+  const routeTree = new RouteTreeProvider(indexer);
   const statusBar = new StatusBar(indexer);
+
+  const routeView = vscode.window.createTreeView('depscan.routeView', {
+    treeDataProvider: routeTree,
+    showCollapseAll: true
+  });
+  routeTree.attachView(routeView);
 
   context.subscriptions.push(
     channel,
@@ -32,14 +40,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     actionsTree,
     indexTree,
     dependencyTree,
+    routeTree,
     statusBar,
+    routeView,
     vscode.window.registerTreeDataProvider('depscan.actionsView', actionsTree),
     vscode.window.registerTreeDataProvider('depscan.indexView', indexTree),
     vscode.window.registerTreeDataProvider('depscan.dependencyView', dependencyTree)
   );
 
   context.subscriptions.push(
-    ...registerCommands({ context, indexer, indexTree, dependencyTree, logger })
+    ...registerCommands({ context, indexer, indexTree, dependencyTree, routeTree, logger })
   );
 
   /**
@@ -52,6 +62,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     actionsTree.refresh();
     indexTree.refresh();
     dependencyTree.refresh();
+    routeTree.repaint();
     statusBar.refresh();
     GraphPanel.currentPanel?.refreshLocalization();
   };

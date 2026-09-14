@@ -6,7 +6,7 @@ import { readConfig, toEngineConfig, type DepScanConfig } from '../config';
 import { findCompileCommands, fileMtimeMs } from './compileDb';
 import { EngineClient } from '../engine/client';
 import { resolveEnginePath, type EngineLocation } from '../engine/locator';
-import type { Direction, ExportResult, PingResult, SubgraphResult } from '../engine/protocol';
+import type { Direction, ExportResult, PingResult, RouteOptions, RouteResult, SubgraphResult } from '../engine/protocol';
 import type { GraphData, ScanStats } from '../graph/model';
 import { s } from '../i18n';
 import { precisionLabel } from '../i18n';
@@ -397,6 +397,28 @@ export class IndexService implements vscode.Disposable {
       return await this.client!.request<SubgraphResult>('architecture', { maxNodes: 200 });
     } catch (err) {
       this.logger.warn(`架构视图查询失败：${String(err)}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * 阅读路线：从入口（main / WinMain / DllMain …）出发的有序阅读清单。
+   * 遍历在引擎侧完成 —— 大项目下这里可能是几万个节点，不能拉到前端再算。
+   */
+  async route(options: RouteOptions = {}): Promise<RouteResult | undefined> {
+    if (!(await this.requireStats())) return undefined;
+    try {
+      return await this.client!.request<RouteResult>('route', {
+        from: options.from ?? '',
+        strategy: options.strategy ?? 'bfs',
+        maxSteps: options.maxSteps ?? 200,
+        maxDepth: options.maxDepth ?? 6,
+        projectOnly: options.projectOnly ?? true,
+        groupByFile: options.groupByFile ?? false
+      });
+    } catch (err) {
+      // 找不到入口是「可预期」的失败（库项目没有 main），不当成错误刷日志
+      this.logger.warn(`阅读路线查询失败：${String(err)}`);
       return undefined;
     }
   }

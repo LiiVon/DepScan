@@ -78,6 +78,7 @@ function topNodes(indexer: IndexService): ActionNode[] {
   const t = s().actions;
   const stats = indexer.currentStatus.stats;
   return [
+    { kind: 'command', id: 'depscan.showRoute', label: t.route, icon: 'list-ordered' },
     { kind: 'command', id: 'depscan.showGraph', label: t.graph, icon: 'type-hierarchy' },
     { kind: 'command', id: 'depscan.showGraphForSymbol', label: t.symbolGraph, icon: 'symbol-method' },
     { kind: 'command', id: 'depscan.showArchitecture', label: t.architecture, icon: 'list-tree' },

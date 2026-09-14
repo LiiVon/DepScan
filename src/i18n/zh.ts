@@ -190,8 +190,30 @@ export const zh: Strings = {
     languageHint: '仅影响插件界面与提示；命令标题跟随 VS Code 显示语言',
     compileGuide: '如何生成 compile_commands.json',
     diagnosePrecision: '为什么是近似？',
+    route: '阅读路线（从 main 开始）',
     docs: '使用文档',
     current: '当前'
+  },
+  route: {
+    needIndex: '尚未建立索引。先执行「重建索引」再回来看路线。',
+    noEntry: '找不到程序入口（main / WinMain / DllMain）。库项目请用命令面板指定起点。',
+    failed: '阅读路线生成失败，详情见「输出 → DepScan」。',
+    from: (name, file) => `起点：${name}（自动识别，${file}）`,
+    fromShort: (name) => `起点：${name}`,
+    root: '起点',
+    step: (order) => `#${order}`,
+    ambiguous: '有多个同名候选，这一步可能是错的（近似精度下按名字消解）',
+    external: '项目外符号',
+    newFile: '首次进入该文件',
+    truncated: (nodes, files) =>
+      `到达步数上限，还有 ${nodes} 个函数（来自 ${files} 个文件）未展开。调大步数或先用文件级看个轮廓。`,
+    complete: '路线已完整生成',
+    toggleGroupByFile: '只显示每个文件首次进入',
+    toggleStrategy: '切换遍历策略',
+    bfs: '广度优先（先看骨架）',
+    dfs: '深度优先（先追一条链）',
+    regenerate: '重新生成路线',
+    precisionHint: '路线是「阅读建议」，不是精确调用栈：调用边按名字消解，标注 ⚠ 的步骤请自行判断。'
   },
   edgeKinds: {
     includes: '包含',

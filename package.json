@@ -68,6 +68,24 @@
         "icon": "$(question)"
       },
       {
+        "command": "depscan.showRoute",
+        "title": "%cmd.showRoute%",
+        "category": "DepScan",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "depscan.toggleRouteGroupByFile",
+        "title": "%cmd.toggleRouteGroupByFile%",
+        "category": "DepScan",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "depscan.toggleRouteStrategy",
+        "title": "%cmd.toggleRouteStrategy%",
+        "category": "DepScan",
+        "icon": "$(arrow-both)"
+      },
+      {
         "command": "depscan.showGraph",
         "title": "%cmd.showGraph%",
         "category": "DepScan",
@@ -134,6 +152,11 @@
           "icon": "media/activitybar.svg"
         },
         {
+          "id": "depscan.routeView",
+          "name": "%view.route%",
+          "icon": "media/activitybar.svg"
+        },
+        {
           "id": "depscan.dependencyView",
           "name": "%view.dependencies%",
           "icon": "media/activitybar.svg"
@@ -155,7 +178,7 @@
       "view/title": [
         {
           "command": "depscan.indexWorkspace",
-          "when": "view == depscan.actionsView || view == depscan.indexView || view == depscan.dependencyView",
+          "when": "view == depscan.actionsView || view == depscan.indexView || view == depscan.dependencyView || view == depscan.routeView",
           "group": "navigation@1"
         },
         {
@@ -177,6 +200,21 @@
           "command": "depscan.refreshDependencyView",
           "when": "view == depscan.dependencyView",
           "group": "navigation@2"
+        },
+        {
+          "command": "depscan.showRoute",
+          "when": "view == depscan.routeView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "depscan.toggleRouteStrategy",
+          "when": "view == depscan.routeView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "depscan.toggleRouteGroupByFile",
+          "when": "view == depscan.routeView",
+          "group": "navigation@3"
         }
       ],
       "explorer/context": [

@@ -191,8 +191,31 @@ export const en: Strings = {
     languageHint: 'Affects DepScan UI and messages only; command titles follow the VS Code display language',
     compileGuide: 'How to generate compile_commands.json',
     diagnosePrecision: 'Why is it Approx?',
+    route: 'Reading Route (from main)',
     docs: 'Documentation',
     current: 'current'
+  },
+  route: {
+    needIndex: 'Not indexed yet. Run "Rebuild Index" first, then come back.',
+    noEntry: 'No entry point found (main / WinMain / DllMain). For a library project, pick a start node from the command palette.',
+    failed: 'Could not build the reading route — see Output → DepScan for details.',
+    from: (name, file) => `Start: ${name} (auto-detected, ${file})`,
+    fromShort: (name) => `Start: ${name}`,
+    root: 'start',
+    step: (order) => `#${order}`,
+    ambiguous: 'Several same-named candidates — this step may be wrong (references are resolved by name)',
+    external: 'outside the project',
+    newFile: 'first time in this file',
+    truncated: (nodes, files) =>
+      `Step limit reached: ${nodes} more functions (from ${files} files) are not expanded. Raise the limit, or switch to file level for the outline.`,
+    complete: 'Route is complete',
+    toggleGroupByFile: 'Only first entry per file',
+    toggleStrategy: 'Switch traversal strategy',
+    bfs: 'Breadth first (outline first)',
+    dfs: 'Depth first (follow one chain)',
+    regenerate: 'Rebuild route',
+    precisionHint:
+      'The route is a reading suggestion, not an exact call stack: call edges are resolved by name, so treat ⚠ steps with care.'
   },
   edgeKinds: {
     includes: 'Includes',
