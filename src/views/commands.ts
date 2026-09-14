@@ -103,6 +103,26 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     })
   );
 
+  // 全局架构视图（按目录聚合，无需焦点文件）
+  commands.push(
+    vscode.commands.registerCommand('depscan.showArchitecture', async () => {
+      if (!(await ensureIndex())) return;
+      GraphPanel.createOrShow(context, indexer, logger, {
+        label: s().actions.architecture,
+        architecture: true
+      });
+    })
+  );
+
+  // 切换界面语言。只负责改配置，真正的刷新由 extension.ts 的配置变更监听统一处理。
+  commands.push(
+    vscode.commands.registerCommand('depscan.setLanguage', async (language: 'auto' | 'zh' | 'en') => {
+      await vscode.workspace
+        .getConfiguration('depscan')
+        .update('ui.language', language, vscode.ConfigurationTarget.Global);
+    })
+  );
+
   commands.push(
     vscode.commands.registerCommand('depscan.indexWorkspace', async () => {
       await indexer.scan(true);

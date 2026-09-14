@@ -7,13 +7,20 @@ import type { IndexService, IndexStatus } from '../index/indexer';
 export class StatusBar implements vscode.Disposable {
   private readonly item: vscode.StatusBarItem;
   private readonly disposable: vscode.Disposable;
+  private readonly indexer: IndexService;
 
   constructor(indexer: IndexService) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
     this.item.command = 'depscan.showIndexStatus';
     this.item.show();
+    this.indexer = indexer;
     this.disposable = indexer.onDidChangeStatus.event((status) => this.update(status));
     this.update(indexer.currentStatus);
+  }
+
+  /** 语言切换后重绘文案 */
+  refresh(): void {
+    this.update(this.indexer.currentStatus);
   }
 
   update(status: IndexStatus): void {

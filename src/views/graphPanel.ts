@@ -4,17 +4,20 @@ import * as vscode from 'vscode';
 
 import type { Direction } from '../engine/protocol';
 import type { GraphData, ScanStats } from '../graph/model';
-import { s } from '../i18n';
+import { s, currentLanguageTag } from '../i18n';
 import type { IndexService } from '../index/indexer';
 import type { Logger } from '../util/log';
 import type { HostToWebview, WebviewToHost } from '../../webview/types';
 import { renderGraphHtml } from './webviewHtml';
+import { buildWebviewStrings } from './webviewStrings';
 
 export interface GraphPanelTarget {
   focusId?: string;
   label: string;
   depth?: number;
   direction?: Direction;
+  /** 直接以「全局架构视图」打开（无需焦点文件） */
+  architecture?: boolean;
 }
 
 const STATE_KEY = 'depscan.graphPanelState';
@@ -86,13 +89,37 @@ export class GraphPanel {
     return GraphPanel.current;
   }
 
+  /** 当前已打开的图面板（语言切换时需要重建它的页面） */
+  static get currentPanel(): GraphPanel | undefined {
+    return GraphPanel.current;
+  }
+
   private applyTarget(target: GraphPanelTarget): void {
     if (target.focusId) this.focusId = target.focusId;
     this.label = target.label;
     if (target.depth) this.depth = target.depth;
     if (target.direction) this.direction = target.direction;
     this.panel.title = s().graph.title(target.label);
-    void this.refresh();
+    if (target.architecture) void this.loadArchitecture();
+    else void this.refresh();
+  }
+
+  private async loadArchitecture(): Promise<void> {
+    this.post({ type: 'loading', message: s().graph.loading });
+    const result = await this.indexer.architecture();
+    if (!result) {
+      this.post({ type: 'error', message: s().errors.noData });
+      return;
+    }
+    this.label = s().actions.architecture;
+    this.lastGraph = result.graph;
+    this.panel.title = s().graph.title(this.label);
+    this.post({
+      type: 'render',
+      graph: result.graph,
+      settings: { ...this.settings(), label: this.label },
+      truncated: false
+    });
   }
 
   private buildHtml(): string {
@@ -100,57 +127,22 @@ export class GraphPanel {
     const mediaRoot = vscode.Uri.joinPath(this.context.extensionUri, 'media');
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'webview.js'));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'webview.css'));
-    const nonce = createNonce();
-    const strings = s();
-    const i18n: Record<string, string> = {
-      loading: strings.graph.loading,
-      empty: strings.graph.empty,
-      hint: strings.graph.hint,
-      'graph.depth': strings.graph.depth,
-      'graph.direction': strings.graph.direction,
-      'graph.both': strings.graph.both,
-      'graph.upstream': strings.graph.upstream,
-      'graph.downstream': strings.graph.downstream,
-      'graph.showExternal': strings.graph.showExternal,
-      'graph.cluster': strings.graph.cluster,
-      'graph.clickToOpen': strings.graph.clickToOpen,
-      'graph.fit': strings.graph.fit,
-      'graph.architecture': strings.graph.architecture,
-      'graph.refresh': strings.graph.refresh,
-      'graph.search': strings.graph.search,
-      'graph.focusLabel': strings.graph.focusLabel,
-      'graph.truncated': strings.graph.truncated,
-      'graph.statsLine': strings.graph.statsLine,
-      'graph.viewGraph': strings.graph.viewGraph,
-      'graph.viewTree': strings.graph.viewTree,
-      'graph.viewTable': strings.graph.viewTable,
-      'graph.legend': strings.graph.legend,
-      'graph.exportPng': strings.graph.exportPng,
-      'graph.exportSvg': strings.graph.exportSvg,
-      'graph.exportJson': strings.graph.exportJson,
-      'graph.exportDot': strings.graph.exportDot,
-      'graph.exportMermaid': strings.graph.exportMermaid,
-      'table.node': strings.table.node,
-      'table.kind': strings.table.kind,
-      'table.outDeps': strings.table.outDeps,
-      'table.inDeps': strings.table.inDeps,
-      'table.file': strings.table.file,
-      'table.precision': strings.table.precision,
-      'precision.exact': strings.precision.exact,
-      'precision.approx': strings.precision.approx
-    };
-    for (const [kind, label] of Object.entries(strings.kinds)) i18n[`kind.${kind}`] = label;
-    for (const [kind, label] of Object.entries(strings.edgeKinds)) i18n[`edge.${kind}`] = label;
-
     return renderGraphHtml({
       cspSource: webview.cspSource,
       scriptUri: scriptUri.toString(),
       styleUri: styleUri.toString(),
-      nonce,
-      lang: process.env.VSCODE_NLS_CONFIG?.includes('"locale":"en') ? 'en' : 'zh-CN',
+      nonce: createNonce(),
+      lang: currentLanguageTag(),
       title: s().graph.title(this.label),
-      i18n
+      // 与离线自检脚本共用同一个打平函数，避免"预览页和真实界面文案不一致"
+      i18n: buildWebviewStrings(s())
     });
+  }
+
+  /** 语言变更后重建页面：Webview 的 HTML 是生成式的，只能整体替换 */
+  refreshLocalization(): void {
+    this.panel.title = s().graph.title(this.label);
+    this.panel.webview.html = this.buildHtml();
   }
 
   private post(message: HostToWebview): void {
@@ -211,19 +203,9 @@ export class GraphPanel {
         this.post({ type: 'merge', graph: merged, settings: this.settings() });
         break;
       }
-      case 'architecture': {
-        const result = await this.indexer.architecture();
-        if (!result) return;
-        this.label = 'Architecture';
-        this.lastGraph = result.graph;
-        this.post({
-          type: 'render',
-          graph: result.graph,
-          settings: { ...this.settings(), label: 'Architecture' },
-          truncated: false
-        });
+      case 'architecture':
+        await this.loadArchitecture();
         break;
-      }
       case 'open':
         await this.openLocation(msg.file, msg.line, msg.column);
         break;

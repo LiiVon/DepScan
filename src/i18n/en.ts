@@ -123,6 +123,25 @@ export const en: Strings = {
     target: 'Target',
     unknown: 'Unknown'
   },
+  actions: {
+    graph: 'Show dependency graph (current file)',
+    symbolGraph: 'Show dependency graph (current symbol)',
+    architecture: 'Architecture view',
+    reindex: 'Rebuild index (full)',
+    cancelIndex: 'Cancel indexing',
+    clearCache: 'Clear index cache',
+    exportJson: 'Export dependency data (JSON)',
+    exportImage: 'Export dependency graph',
+    exportImageHint: 'Use the toolbar inside the graph to export PNG / SVG',
+    language: 'UI language',
+    languageAuto: 'Follow VS Code',
+    languageZh: '中文',
+    languageEn: 'English',
+    languageHint: 'Affects DepScan UI and messages only; command titles follow the VS Code display language',
+    compileGuide: 'How to generate compile_commands.json',
+    docs: 'Documentation',
+    current: 'current'
+  },
   edgeKinds: {
     includes: 'Includes',
     calls: 'Calls',

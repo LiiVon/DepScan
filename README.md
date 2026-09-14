@@ -53,6 +53,7 @@ cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 ## 界面
 
+- **侧边栏「操作」**：常用功能一次点击 —— 看图 / 重建索引 / 导出 / **切换界面语言** / 打开文档（不用再翻命令面板）
 - **依赖图**：Canvas 力导向图。拖动节点、滚轮缩放、拖拽平移；单击节点跳转源码、双击展开下一层。
 - **层级树**：以当前焦点为根，按依赖方向逐层展开。
 - **表格**：节点 / 类型 / 出依赖 / 入依赖 / 文件位置 / 精度，可按名称与路径搜索。
@@ -153,7 +154,7 @@ engines/
 | `depscan.graph.direction` | both | 双向 / 被谁依赖 / 依赖了谁 |
 | `depscan.graph.maxNodes` | 800 | 单图渲染上限 |
 | `depscan.cache.enabled` | true | 磁盘缓存（二次启动秒开） |
-| `depscan.ui.language` | auto | 界面语言（auto / zh / en） |
+| `depscan.ui.language` | auto | 插件界面语言 `auto` / `zh` / `en`（侧边栏「操作 → 界面语言」也能切） |
 
 完整字典见 [docs/05-性能与配置参考.md](docs/05-性能与配置参考.md)
 

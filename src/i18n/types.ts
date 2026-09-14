@@ -93,4 +93,24 @@ export interface Strings {
   kinds: Record<NodeKind, string>;
   edgeKinds: Record<EdgeKind, string>;
   precisionLabel: (p: Precision) => string;
+  /** 侧边栏「操作」视图 */
+  actions: {
+    graph: string;
+    symbolGraph: string;
+    architecture: string;
+    reindex: string;
+    cancelIndex: string;
+    clearCache: string;
+    exportJson: string;
+    exportImage: string;
+    exportImageHint: string;
+    language: string;
+    languageAuto: string;
+    languageZh: string;
+    languageEn: string;
+    languageHint: string;
+    compileGuide: string;
+    docs: string;
+    current: string;
+  };
 }

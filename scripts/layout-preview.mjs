@@ -1,19 +1,44 @@
-// 离线渲染预览：用真实引擎数据生成一个可直接在浏览器打开的 Webview 页面，
-// 用于在不开 VS Code 的情况下验证布局、配色、图例是否正常。
+// 离线渲染预览：用真实引擎数据 + 真实 i18n 生成一个可直接在浏览器打开的 Webview 页面，
+// 用于在不开 VS Code 的情况下验证布局、配色、图例与中英文文案。
 //
-// 用法: node scripts/layout-preview.mjs [样本项目] [焦点文件] [深度]
-// 产物: engine/build/layout-preview.html
+// 用法: node scripts/layout-preview.mjs [样本项目] [焦点文件] [深度] [--lang zh|en]
+//   例: node scripts/layout-preview.mjs samples/demo src/core/engine.cpp 2 --lang en
+// 产物: engine/build/layout-preview.html（英文为 layout-preview.en.html）
 import { spawnSync } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { build } from 'esbuild';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const project = process.argv[2] ?? 'samples/demo';
-const focus = process.argv[3] ?? 'src/core/engine.cpp';
-const depth = Number(process.argv[4] ?? 2);
 
+// ---- 参数 ----
+const argv = process.argv.slice(2);
+const langIndex = argv.indexOf('--lang');
+const lang = langIndex >= 0 && argv[langIndex + 1] === 'en' ? 'en' : 'zh';
+const positional = argv.filter((a, i) => !a.startsWith('--') && i !== langIndex + 1);
+const project = positional[0] ?? 'samples/demo';
+const focus = positional[1] ?? 'src/core/engine.cpp';
+const depth = Number(positional[2] ?? 2);
+
+const workDir = resolve(root, 'engine/build');
+mkdirSync(workDir, { recursive: true });
+
+const bundleModule = async (entry, name) => {
+  const outfile = resolve(workDir, `layout-preview-${name}.mjs`);
+  await build({
+    entryPoints: [resolve(root, entry)],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+    outfile,
+    logLevel: 'error'
+  });
+  return import(pathToFileURL(outfile).href);
+};
+
+// ---- 扫描真实项目 ----
 const exe = process.platform === 'win32' ? '.exe' : '';
 const engine = [`engine/build/bin/Release/depscan-core${exe}`, `engine/build/bin/depscan-core${exe}`]
   .map((p) => resolve(root, p))
@@ -88,71 +113,21 @@ if (sub.nodes.length === 0) {
   process.exit(1);
 }
 
-// 复用真实的 HTML 生成器与 i18n
-const workDir = resolve(root, 'engine/build');
-mkdirSync(workDir, { recursive: true });
-const bundled = resolve(workDir, 'layout-preview-html.mjs');
-await build({
-  entryPoints: [resolve(root, 'src/views/webviewHtml.ts')],
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'node18',
-  outfile: bundled,
-  logLevel: 'error'
-});
-const { renderGraphHtml } = await import(pathToFileURL(bundled).href);
-
-const strings = JSON.parse(readFileSync(resolve(root, 'package.nls.json'), 'utf8'));
-const i18n = {
-  loading: '加载中…',
-  empty: '无数据',
-  hint: '拖动节点 · 滚轮缩放 · 空白处平移 · 双击节点下钻 · 单击节点跳转源码',
-  'graph.depth': '层级 k',
-  'graph.direction': '方向',
-  'graph.both': '双向',
-  'graph.upstream': '被谁依赖',
-  'graph.downstream': '依赖了谁',
-  'graph.showExternal': '显示项目外符号',
-  'graph.cluster': '按目录聚类',
-  'graph.clickToOpen': '点击跳转源码',
-  'graph.fit': '适应窗口',
-  'graph.architecture': '全局架构视图',
-  'graph.refresh': '刷新',
-  'graph.search': '搜索节点…',
-  'graph.focusLabel': '焦点',
-  'graph.truncated': '节点过多，仅显示 {n} 个（可减小 k，或用搜索定位）',
-  'graph.statsLine': '{n} 个节点 · {e} 条边',
-  'graph.viewGraph': '图',
-  'graph.viewTree': '树',
-  'graph.viewTable': '表格',
-  'graph.legend': '图例',
-  'graph.exportPng': '导出 PNG',
-  'graph.exportSvg': '导出 SVG',
-  'graph.exportJson': '导出 JSON',
-  'graph.exportDot': '导出 DOT',
-  'graph.exportMermaid': '导出 Mermaid',
-  'table.node': '节点',
-  'table.kind': '类型',
-  'table.outDeps': '出依赖',
-  'table.inDeps': '入依赖',
-  'table.file': '文件',
-  'table.precision': '精度',
-  'precision.exact': '精确',
-  'precision.approx': '近似'
-};
-const kinds = { file: '文件', function: '函数', class: '类', enum: '枚举', variable: '变量', macro: '宏', target: '构建目标', unknown: '未知' };
-const edgeKinds = { includes: '包含', calls: '调用', inherits: '继承', uses: '类型', refs: '引用', links: '链接' };
-for (const [k, v] of Object.entries(kinds)) i18n[`kind.${k}`] = v;
-for (const [k, v] of Object.entries(edgeKinds)) i18n[`edge.${k}`] = v;
+// ---- 复用真实的 HTML 生成器与文案 ----
+const { renderGraphHtml } = await bundleModule('src/views/webviewHtml.ts', 'html');
+const { buildWebviewStrings } = await bundleModule('src/views/webviewStrings.ts', 'strings');
+const zhMod = await bundleModule('src/i18n/zh.ts', 'zh');
+const enMod = await bundleModule('src/i18n/en.ts', 'en');
+const strings = lang === 'en' ? enMod.en : zhMod.zh;
+const i18n = buildWebviewStrings(strings);
 
 let html = renderGraphHtml({
   cspSource: "'self'",
   scriptUri: '../../media/webview.js',
   styleUri: '../../media/webview.css',
   nonce: 'preview',
-  lang: 'zh-CN',
-  title: `DepScan 布局预览 · ${rel}`,
+  lang: lang === 'en' ? 'en' : 'zh-CN',
+  title: strings.graph.title(`${rel} [${lang}]`),
   i18n
 });
 
@@ -181,12 +156,12 @@ window.postMessage({type:'render',graph:${JSON.stringify(sub)},settings:${JSON.s
 </body>`
 );
 
-const outFile = resolve(workDir, 'layout-preview.html');
+const outFile = resolve(workDir, lang === 'en' ? 'layout-preview.en.html' : 'layout-preview.html');
 writeFileSync(outFile, html, 'utf8');
+console.log(`[preview] 语言: ${lang}`);
 console.log(`[preview] 焦点: file:${rel}（${depth} 层）`);
 console.log(`[preview] 子图: ${sub.nodes.length} 节点 / ${sub.edges.length} 边`);
 const kindsUsed = {};
 for (const n of sub.nodes) kindsUsed[n.kind] = (kindsUsed[n.kind] ?? 0) + 1;
 console.log(`[preview] 节点构成: ${JSON.stringify(kindsUsed)}`);
-console.log(`[preview] 页面: ${outFile}`);
 console.log(`[preview] 浏览器打开: ${pathToFileURL(outFile).href}`);

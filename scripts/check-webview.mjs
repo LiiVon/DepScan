@@ -37,62 +37,33 @@ if (existsSync(scriptPath)) {
   }
 }
 
-// --- 2. 渲染 HTML（用真实 i18n 数据）---
+// --- 2. 用**真实**的 i18n 与 HTML 生成器渲染（不是手写副本）---
 const workDir = mkdtempSync(join(tmpdir(), 'depscan-check-'));
-const bundled = join(workDir, 'webviewHtml.mjs');
-await build({
-  entryPoints: [resolve(root, 'src/views/webviewHtml.ts')],
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  target: 'node18',
-  outfile: bundled,
-  logLevel: 'error'
-});
-const mod = await import(pathToFileURL(bundled).href);
+const bundle = async (entry, name) => {
+  const outfile = join(workDir, name);
+  await build({
+    entryPoints: [resolve(root, entry)],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+    outfile,
+    logLevel: 'error'
+  });
+  return import(pathToFileURL(outfile).href);
+};
 
-const i18n = JSON.parse(readFileSync(resolve(root, 'package.nls.json'), 'utf8'));
-i18n['graph.loading'] = '正在加载依赖数据…';
-i18n['graph.empty'] = '无数据';
-i18n['graph.hint'] = '提示';
-for (const key of [
-  'graph.depth',
-  'graph.direction',
-  'graph.both',
-  'graph.upstream',
-  'graph.downstream',
-  'graph.showExternal',
-  'graph.cluster',
-  'graph.clickToOpen',
-  'graph.fit',
-  'graph.architecture',
-  'graph.refresh',
-  'graph.search',
-  'graph.focusLabel',
-  'graph.viewGraph',
-  'graph.viewTree',
-  'graph.viewTable',
-  'graph.legend',
-  'graph.exportPng',
-  'graph.exportSvg',
-  'graph.exportJson',
-  'graph.exportDot',
-  'graph.exportMermaid',
-  'table.node',
-  'table.kind',
-  'table.outDeps',
-  'table.inDeps',
-  'table.file',
-  'table.precision',
-  'precision.exact',
-  'precision.approx',
-  'kind.file',
-  'edge.includes'
-]) {
-  if (!(key in i18n)) i18n[key] = key;
-}
+const htmlMod = await bundle('src/views/webviewHtml.ts', 'webviewHtml.mjs');
+const stringsMod = await bundle('src/views/webviewStrings.ts', 'webviewStrings.mjs');
+const zhMod = await bundle('src/i18n/zh.ts', 'zh.mjs');
+const enMod = await bundle('src/i18n/en.ts', 'en.mjs');
 
-const html = mod.renderGraphHtml({
+const zhStrings = zhMod.zh;
+const enStrings = enMod.en;
+const i18n = stringsMod.buildWebviewStrings(zhStrings);
+const i18nEn = stringsMod.buildWebviewStrings(enStrings);
+
+const html = htmlMod.renderGraphHtml({
   cspSource: 'vscode-webview://test',
   scriptUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.js',
   styleUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.css',
@@ -100,6 +71,16 @@ const html = mod.renderGraphHtml({
   lang: 'zh-CN',
   title: 'DepScan 依赖图',
   i18n
+});
+
+const htmlEn = htmlMod.renderGraphHtml({
+  cspSource: 'vscode-webview://test',
+  scriptUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.js',
+  styleUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.css',
+  nonce: 'testnonce123',
+  lang: 'en',
+  title: 'DepScan Dependency Graph',
+  i18n: i18nEn
 });
 
 // --- 3. 前端脚本引用的元素 id 必须都在 HTML 里 ---
@@ -159,6 +140,43 @@ for (const [selector, row] of [['#toolbar', 1], ['#tabs', 2], ['main', 3], ['asi
   );
 }
 check(/min-height:\s*0/.test(cssBlock('main')), 'main 设置 min-height: 0（防止内容把网格行撑破）');
+
+// --- 7. 中英双语：键集合必须完全一致，且英文字面量真的出现 ---
+const flattenKeys = (obj, prefix = '') =>
+  Object.entries(obj).flatMap(([k, v]) =>
+    v && typeof v === 'object' ? flattenKeys(v, `${prefix}${k}.`) : [`${prefix}${k}`]
+  );
+const zhKeys = new Set(flattenKeys(zhStrings));
+const enKeys = new Set(flattenKeys(enStrings));
+const missingInEn = [...zhKeys].filter((k) => !enKeys.has(k));
+const missingInZh = [...enKeys].filter((k) => !zhKeys.has(k));
+check(zhKeys.size > 60, `中文文案共 ${zhKeys.size} 条`);
+check(missingInEn.length === 0, `英文文案无缺键${missingInEn.length ? `（缺 ${missingInEn.join(', ')}）` : ''}`);
+check(missingInZh.length === 0, `中文文案无缺键${missingInZh.length ? `（缺 ${missingInZh.join(', ')}）` : ''}`);
+
+const isPlaceholderDump = (arr) => arr.some(([k, v]) => k === v);
+check(!isPlaceholderDump(Object.entries(i18n)), '中文 Webview 文案没有"键名当值"的占位残留');
+check(!isPlaceholderDump(Object.entries(i18nEn)), '英文 Webview 文案没有"键名当值"的占位残留');
+check(i18nEn['graph.viewGraph'] === 'Graph' && i18n['graph.viewGraph'] === '图', '中英文界面文案确实不同');
+check(htmlEn.includes('>Graph<') && html.includes('>图<'), '英文/中文 HTML 分别渲染出了对应语言');
+check(/<html lang="en"/.test(htmlEn) && /<html lang="zh-CN"/.test(html), '<html lang> 跟随语言切换');
+
+// --- 8. package.nls：默认(英文)与中文翻译的键必须一致，且 package.json 引用的键都存在 ---
+const nlsDefault = JSON.parse(readFileSync(resolve(root, 'package.nls.json'), 'utf8'));
+const nlsZh = JSON.parse(readFileSync(resolve(root, 'package.nls.zh-cn.json'), 'utf8'));
+const nlsKeys = new Set(Object.keys(nlsDefault));
+const nlsZhKeys = new Set(Object.keys(nlsZh));
+const nlsMissingZh = [...nlsKeys].filter((k) => !nlsZhKeys.has(k));
+const nlsExtraZh = [...nlsZhKeys].filter((k) => !nlsKeys.has(k));
+check(nlsMissingZh.length === 0, `package.nls.zh-cn.json 无缺键${nlsMissingZh.length ? `（缺 ${nlsMissingZh.join(', ')}）` : ''}`);
+check(nlsExtraZh.length === 0, `package.nls.zh-cn.json 无多余键${nlsExtraZh.length ? `（多 ${nlsExtraZh.join(', ')}）` : ''}`);
+check(nlsDefault['view.actions'] === 'Actions', 'package.nls.json 是英文默认值（非中文）');
+
+const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
+const usedNlsKeys = new Set([...JSON.stringify(pkg).matchAll(/%([A-Za-z0-9_.]+)%/g)].map((m) => m[1]));
+const danglingKeys = [...usedNlsKeys].filter((k) => !nlsKeys.has(k));
+check(usedNlsKeys.size > 20, `package.json 引用了 ${usedNlsKeys.size} 个 nls 键`);
+check(danglingKeys.length === 0, `package.json 引用的 nls 键都已定义${danglingKeys.length ? `（缺 ${danglingKeys.join(', ')}）` : ''}`);
 
 rmSync(workDir, { recursive: true, force: true });
 

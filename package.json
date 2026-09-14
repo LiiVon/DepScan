@@ -88,6 +88,18 @@
         "category": "DepScan"
       },
       {
+        "command": "depscan.showArchitecture",
+        "title": "%cmd.showArchitecture%",
+        "category": "DepScan",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "depscan.setLanguage",
+        "title": "%cmd.setLanguage%",
+        "category": "DepScan",
+        "icon": "$(globe)"
+      },
+      {
         "command": "depscan.openDocs",
         "title": "%cmd.openDocs%",
         "category": "DepScan"
@@ -111,13 +123,18 @@
     "views": {
       "depscan": [
         {
-          "id": "depscan.indexView",
-          "name": "%view.index%",
+          "id": "depscan.actionsView",
+          "name": "%view.actions%",
           "icon": "media/activitybar.svg"
         },
         {
           "id": "depscan.dependencyView",
           "name": "%view.dependencies%",
+          "icon": "media/activitybar.svg"
+        },
+        {
+          "id": "depscan.indexView",
+          "name": "%view.index%",
           "icon": "media/activitybar.svg"
         }
       ]
@@ -132,8 +149,13 @@
       "view/title": [
         {
           "command": "depscan.indexWorkspace",
-          "when": "view == depscan.indexView || view == depscan.dependencyView",
+          "when": "view == depscan.actionsView || view == depscan.indexView || view == depscan.dependencyView",
           "group": "navigation@1"
+        },
+        {
+          "command": "depscan.showGraph",
+          "when": "view == depscan.actionsView",
+          "group": "navigation@2"
         },
         {
           "command": "depscan.cancelIndex",
@@ -174,6 +196,10 @@
         {
           "command": "depscan.showGraphForSymbol",
           "when": "editorLangId == cpp || editorLangId == c"
+        },
+        {
+          "command": "depscan.setLanguage",
+          "when": "false"
         }
       ]
     },
@@ -383,6 +409,7 @@
     "build:prod": "npm run typecheck && node esbuild.mjs --production && node scripts/build-webview.mjs --production && node scripts/check-webview.mjs",
     "watch": "node esbuild.mjs --watch",
     "preview:layout": "node scripts/layout-preview.mjs",
+    "preview:layout:en": "node scripts/layout-preview.mjs samples/demo src/core/engine.cpp 2 --lang en",
     "package": "npm run build:prod && node scripts/package.mjs",
     "test:core": "node scripts/test-core.mjs",
     "test:rpc": "node scripts/test-rpc.mjs",

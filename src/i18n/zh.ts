@@ -122,6 +122,25 @@ export const zh: Strings = {
     target: '构建目标',
     unknown: '未知'
   },
+  actions: {
+    graph: '查看依赖图（当前文件）',
+    symbolGraph: '查看依赖图（当前符号）',
+    architecture: '全局架构视图',
+    reindex: '重建索引（全量）',
+    cancelIndex: '取消索引',
+    clearCache: '清理索引缓存',
+    exportJson: '导出依赖数据（JSON）',
+    exportImage: '导出依赖图',
+    exportImageHint: '在打开的图里用工具栏导出 PNG / SVG',
+    language: '界面语言',
+    languageAuto: '跟随 VS Code',
+    languageZh: '中文',
+    languageEn: 'English',
+    languageHint: '仅影响插件界面与提示；命令标题跟随 VS Code 显示语言',
+    compileGuide: '如何生成 compile_commands.json',
+    docs: '使用文档',
+    current: '当前'
+  },
   edgeKinds: {
     includes: '包含',
     calls: '调用',

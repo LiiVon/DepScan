@@ -4,18 +4,27 @@
 #define DEMO_VERSION "0.1.0"
 #define DEMO_MAX_ITEMS 256
 
-namespace demo {
+namespace demo
+{
 
-enum class Level { Trace, Info, Warning, Error };
+  enum class Level
+  {
+    Trace,
+    Info,
+    Warning,
+    Error
+  };
 
-struct Config {
-  int maxItems = DEMO_MAX_ITEMS;
-  bool verbose = false;
-};
+  struct Config
+  {
+    int maxItems = DEMO_MAX_ITEMS;
+    bool verbose = false;
+  };
 
-inline Config& config() {
-  static Config instance;
-  return instance;
-}
+  inline Config &config()
+  {
+    static Config instance;
+    return instance;
+  }
 
-}  // namespace demo
+} // namespace demo
