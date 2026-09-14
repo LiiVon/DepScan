@@ -13,6 +13,9 @@ export interface Strings {
     alreadyRunning: string;
     watchReindex: (file: string) => string;
     incremental: (file: string, changed: number) => string;
+    compileDbChanged: string;
+    cacheReused: string;
+    precisionNow: (label: string) => string;
   };
   engine: {
     missing: string;
@@ -66,9 +69,36 @@ export interface Strings {
   };
   precision: {
     exact: string;
+    partial: string;
     approx: string;
     exactHint: string;
+    partialHint: string;
     approxHint: string;
+  };
+
+  /** 「为什么是近似？」精度诊断命令的文案 */
+  diagnostic: {
+    title: string;
+    project: (root: string) => string;
+    engine: (path: string, source: string) => string;
+    libclang: (available: boolean) => string;
+    compileDb: (path: string) => string;
+    compileDbEntries: (n: number) => string;
+    compileDbMissing: string;
+    searched: (dirs: string) => string;
+    precision: (label: string, hint: string) => string;
+    includes: (exact: number, approx: number) => string;
+    symbols: (exact: number, approx: number) => string;
+    cache: (reused: boolean, path: string) => string;
+    notIndexed: string;
+    nextHeader: string;
+    nextScan: string;
+    nextBuild: string;
+    nextRescan: string;
+    nextClang: string;
+    nextOk: string;
+    rescan: string;
+    openGuide: string;
   };
   cache: {
     cleared: string;
@@ -110,6 +140,7 @@ export interface Strings {
     languageEn: string;
     languageHint: string;
     compileGuide: string;
+    diagnosePrecision: string;
     docs: string;
     current: string;
   };

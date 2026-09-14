@@ -358,11 +358,7 @@ function updateStatus(): void {
   const line = I18N['graph.statsLine'] ?? '{n} nodes · {e} edges';
   bits.push(line.replace('{n}', String(state.view.nodes.length)).replace('{e}', String(state.view.edges.length)));
   if (stats) {
-    bits.push(
-      stats.precision === 'exact'
-        ? I18N['precision.exact'] ?? 'exact'
-        : I18N['precision.approx'] ?? 'approx'
-    );
+    bits.push(I18N[`precision.${stats.precision}`] ?? stats.precision);
   }
   if (state.truncated) {
     bits.push((I18N['graph.truncated'] ?? '').replace('{n}', String(state.view.nodes.length)));

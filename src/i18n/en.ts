@@ -14,7 +14,10 @@ export const en: Strings = {
     noWorkspace: 'Open a folder before using DepScan.',
     alreadyRunning: 'An indexing task is already running. Cancel it or wait for completion.',
     watchReindex: (file) => `File changed, updating incrementally: ${file}`,
-    incremental: (file, changed) => `Updated ${file} incrementally (${changed} affected nodes)`
+    incremental: (file, changed) => `Updated ${file} incrementally (${changed} affected nodes)`,
+    compileDbChanged: 'compile_commands.json changed — re-indexing for exact results…',
+    cacheReused: 'Reused on-disk cache (compile database and options unchanged)',
+    precisionNow: (label) => `Re-indexed. Current precision: ${label}`
   },
   engine: {
     missing: 'DepScan analysis engine was not found.',
@@ -70,9 +73,35 @@ export const en: Strings = {
   },
   precision: {
     exact: 'Exact',
+    partial: 'Partly exact',
     approx: 'Approx',
-    exactHint: 'Parsed with real compile arguments from compile_commands.json',
-    approxHint: 'No compile_commands.json; built-in structural parser may miss or over-report'
+    exactHint: 'Engine is linked with Clang: all five dependency kinds are semantic and exact',
+    partialHint: 'compile_commands.json found: includes and links are exact; calls / inheritance / types stay structural',
+    approxHint: 'No compile_commands.json: everything is structural and may over- or under-report'
+  },
+
+  diagnostic: {
+    title: 'DepScan precision diagnosis',
+    project: (root) => `Project root: ${root}`,
+    engine: (path, source) => `Engine: ${path} (source: ${source})`,
+    libclang: (ok) => `Clang semantic analysis: ${ok ? 'enabled' : 'disabled (engine built without libclang)'}`,
+    compileDb: (p) => `Compile database: found -> ${p}`,
+    compileDbEntries: (n) => `  entries: ${n} (include paths and defines come from the real build)`,
+    compileDbMissing: 'Compile database: compile_commands.json not found',
+    searched: (dirs) => `Looked in:\n${dirs}`,
+    precision: (label, hint) => `Current precision: ${label}\n  ${hint}`,
+    includes: (exact, approx) => `Include edges: exact ${exact} / approx ${approx}`,
+    symbols: (exact, approx) => `Symbols: exact ${exact} / approx ${approx}`,
+    cache: (reused, p) => `Cache: ${reused ? 'reused (nothing reparsed)' : 'reparsed'} - ${p}`,
+    notIndexed: 'Not indexed yet - run Reindex first.',
+    nextHeader: 'What to do next:',
+    nextScan: '- Run Reindex once (sidebar: Actions -> Reindex).',
+    nextBuild: '- Let your build system export the database: for CMake add set(CMAKE_EXPORT_COMPILE_COMMANDS ON) at the top of CMakeLists.txt (or configure with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON), then re-configure.',
+    nextRescan: '- A newer compile_commands.json was detected. Click Reindex below to upgrade precision (existing results predate it).',
+    nextClang: '- Includes are already exact; to make calls / inheritance / types exact as well, use an engine build linked against libclang (see docs 04).',
+    nextOk: '- Already at the highest precision; nothing to do.',
+    rescan: 'Reindex',
+    openGuide: 'Setup guide'
   },
   cache: {
     cleared: 'Index cache cleared',
@@ -139,6 +168,7 @@ export const en: Strings = {
     languageEn: 'English',
     languageHint: 'Affects DepScan UI and messages only; command titles follow the VS Code display language',
     compileGuide: 'How to generate compile_commands.json',
+    diagnosePrecision: 'Why is it Approx?',
     docs: 'Documentation',
     current: 'current'
   },

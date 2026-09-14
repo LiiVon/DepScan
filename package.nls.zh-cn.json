@@ -3,6 +3,7 @@
   "cmd.cancelIndex": "取消索引",
   "cmd.clearCache": "清理索引缓存",
   "cmd.showIndexStatus": "查看索引状态",
+  "cmd.diagnosePrecision": "为什么是近似？（精度诊断）",
   "cmd.showGraph": "查看依赖图",
   "cmd.showGraphForSymbol": "查看当前符号的依赖图",
   "cmd.exportJson": "导出依赖数据（JSON）",

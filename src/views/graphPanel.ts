@@ -168,6 +168,11 @@ export class GraphPanel {
   }
 
   private async refresh(): Promise<void> {
+    // 面板的「⟳ 重新加载」不能只是重新取一次子图：如果用户期间生成了
+    // compile_commands.json，引擎内存里的图仍是旧精度，必须整体重扫。
+    if (await this.indexer.refreshCompileDbIfNeeded()) {
+      this.lastStats = this.indexer.currentStatus.stats;
+    }
     // 架构模式没有焦点文件，重新加载时必须走架构分支（否则会报「无数据」）
     if (this.mode === 'architecture') {
       await this.loadArchitecture();

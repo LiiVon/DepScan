@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <thread>
 
 #include "depscan/buildmodel.hpp"
@@ -217,6 +218,27 @@ CompileDatabase discoverCompileDatabase(const std::string& root, const std::stri
 
 // ---------------------------- 扫描 ----------------------------
 
+namespace {
+
+// 缓存指纹：编译数据库（路径 + 条目数 + mtime）+ 编译参数 + 文件大小上限。
+// 任何一项变化都说明旧的「文件级分析结果」不再可信（尤其是 fromCompileCommand
+// 与 include 列表），必须整体重解析。
+std::string configFingerprint(const std::string& root, const CompileDatabase& db,
+                              const AnalyzerOptions& opts) {
+  std::ostringstream oss;
+  oss << root << '\x1f' << db.path << '\x1f' << db.entries << '\x1f'
+      << (db.path.empty() ? 0 : fileStampMs(db.path, nullptr)) << '\x1f' << opts.fileSizeLimitBytes
+      << '\x1f';
+  for (const std::string& p : opts.includePaths) oss << p << ',';
+  oss << '\x1f';
+  for (const std::string& p : opts.systemIncludePaths) oss << p << ',';
+  oss << '\x1f';
+  for (const std::string& d : opts.defines) oss << d << ',';
+  return std::to_string(util::hashString(oss.str()));
+}
+
+}  // namespace
+
 bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::string& error) {
   const std::string root = util::normalizePath(req.root);
   if (!util::isDirectory(root)) {
@@ -266,11 +288,11 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   rels.reserve(total);
   for (const std::string& abs : filesAbs) rels.push_back(util::relativeTo(root, abs));
 
-  // --- 缓存载入 ---
+  // --- 缓存载入（指纹不匹配则整体作废）---
+  const std::string fingerprint = configFingerprint(root, db, baseOpts);
   bool cacheLoaded = false;
   if (req.useCache && !req.forceFull && !req.cachePath.empty()) {
-    session_.loadCache(req.cachePath);
-    cacheLoaded = true;
+    cacheLoaded = session_.loadCache(req.cachePath, fingerprint);
   }
 
   std::map<std::string, FileAnalysis>& store = session_.filesMutable();
@@ -371,6 +393,7 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
     session_.putFile(std::move(fa));
   }
   session_.statsMutable().skippedFiles = skipped.load();
+  session_.statsMutable().cacheReused = cacheLoaded && reused > 0;
 
   // --- 构建模型 + 重建图 ---
   if (req.options.links) {
@@ -380,7 +403,7 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
 
   // --- 写缓存 ---
   if (req.useCache && !req.cachePath.empty()) {
-    session_.saveCache(req.cachePath);
+    session_.saveCache(req.cachePath, fingerprint);
   }
 
   (void)reused;
@@ -424,7 +447,7 @@ bool Scanner::runSingle(const ScanRequest& req, const std::string& relPath, std:
   session_.rebuild();
 
   if (req.useCache && !req.cachePath.empty()) {
-    session_.saveCache(req.cachePath);
+    session_.saveCache(req.cachePath, configFingerprint(root, db, opts));
   }
   error.clear();
   return true;

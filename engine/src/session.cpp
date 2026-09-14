@@ -78,6 +78,7 @@ Session::Session() { stats_.engineVersion = kEngineVersion; }
 void Session::reset(const std::string& root, const AnalyzerOptions& opts) {
   root_ = util::normalizePath(root);
   options_ = opts;
+  stats_ = ScanStats();
   stats_.root = root_;
   stats_.engineVersion = kEngineVersion;
 #ifdef DEPS_HAVE_LIBCLANG
@@ -647,8 +648,14 @@ json::Value Session::statsToJson() const {
   o.set("compileCommandsPath", json::Value::makeString(stats_.compileCommandsPath));
   o.set("compileCommandEntries", json::Value::makeInt(stats_.compileCommandEntries));
   o.set("libclangAvailable", json::Value::makeBool(stats_.libclangAvailable));
+  o.set("cacheReused", json::Value::makeBool(stats_.cacheReused));
   o.set("elapsedMs", json::Value::makeNumber(stats_.elapsedMs));
-  o.set("precision", json::Value::makeString(stats_.libclangAvailable ? "exact" : "approx"));
+  // 整体精度：以前只看 libclang，导致「有编译数据库」也一律显示近似，属于误导。
+  // 现在分三级，如实反映能力边界。
+  const char* overall = stats_.libclangAvailable ? "exact"
+                        : stats_.compileCommandsFound ? "partial"
+                                                      : "approx";
+  o.set("precision", json::Value::makeString(overall));
   json::Value nk = json::Value::makeObject();
   for (const auto& kv : stats_.nodeKindCounts) nk.set(kv.first, json::Value::makeInt(kv.second));
   json::Value ek = json::Value::makeObject();
@@ -710,19 +717,25 @@ std::string Session::graphToMermaid(const Graph& g) const {
 }
 
 // ---------------------------- 磁盘缓存 ----------------------------
-// V1 文本格式（每行一条记录，字段以制表符分隔，字段内转义 \\ \t \n）：
-//   V<TAB>1<TAB><root>
+// V2 文本格式（每行一条记录，字段以制表符分隔，字段内转义 \\ \t \n）：
+//   V<TAB>2<TAB><root><TAB><fingerprint>
 //   F<TAB>rel<TAB>mtimeMs<TAB>size<TAB>lineCount<TAB>fromCompileCommand
 //   S<TAB>kind<TAB>line<TAB>col<TAB>name<TAB>qualified<TAB>decl<TAB>signature
-//   R<TAB>kind<TAB>line<TAB>name
+//   R<TAB>kind<TAB>line<TAB>fromId<TAB>name
 //   I<TAB>line<TAB>target
-// 目的：二次启动只重算 mtime/size 变化的文件。
+//
+// 头部指纹覆盖「编译数据库 + 编译参数 + 过滤配置」。
+// 这是必须的：文件级结果里存着 fromCompileCommand 与 include 列表，
+// 如果只按源文件 mtime 判定，用户新生成 compile_commands.json 后
+// 旧结果会被原样复用 —— 表现就是"编译过了，精度还是近似"。
 
-bool Session::saveCache(const std::string& path) const {
+bool Session::saveCache(const std::string& path, const std::string& fingerprint) const {
   std::string out;
   out.reserve(1 << 20);
-  out += "V\t1\t";
+  out += "V\t2\t";
   out += esc(root_);
+  out += "\t";
+  out += esc(fingerprint);
   out += "\n";
   for (const auto& kv : files_) {
     const FileAnalysis& fa = kv.second;
@@ -745,7 +758,7 @@ bool Session::saveCache(const std::string& path) const {
   return util::writeFile(path, out);
 }
 
-bool Session::loadCache(const std::string& path) {
+bool Session::loadCache(const std::string& path, const std::string& fingerprint) {
   const std::string text = util::readFile(path);
   if (text.empty()) return false;
   files_.clear();
@@ -760,7 +773,14 @@ bool Session::loadCache(const std::string& path) {
     const std::vector<std::string> f = splitTab(line);
     if (f.empty()) continue;
     if (f[0] == "V") {
-      if (f.size() < 3 || unesc(f[2]) != root_) return false;  // 缓存属于别的项目
+      if (f.size() < 4) return false;              // V1 旧格式：直接作废
+      if (unesc(f[2]) != root_) return false;      // 缓存属于别的项目
+      if (unesc(f[3]) != fingerprint) {
+        stats_.warnings.push_back(
+            "编译数据库或编译参数已变化（如新生成的 compile_commands.json），"
+            "已丢弃旧缓存并重新解析。");
+        return false;
+      }
       headerOk = true;
       continue;
     }

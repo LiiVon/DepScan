@@ -2,8 +2,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { readConfig } from '../config';
-import { s } from '../i18n';
+import { precisionHint, precisionLabel, s } from '../i18n';
 import type { IndexService } from '../index/indexer';
+import { findCompileCommands } from '../index/compileDb';
 import type { Logger } from '../util/log';
 import { GraphPanel } from './graphPanel';
 import type { DependencyTreeProvider, IndexTreeProvider } from './treeProvider';
@@ -159,17 +160,68 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       lines.push(`${s().graph.focusLabel}: ${status.message || status.state}`);
       if (stats) {
         lines.push(s().index.summary(stats));
-        lines.push(
-          `${s().table.precision}: ${stats.compileCommandsFound ? s().precision.exact : s().precision.approx}`
-        );
+        lines.push(`${s().table.precision}: ${precisionLabel(stats.precision)}`);
         lines.push(`compile_commands: ${stats.compileCommandsFound ? stats.compileCommandsPath : '—'}`);
         for (const w of stats.warnings ?? []) lines.push(`⚠ ${w}`);
       }
       const engine = indexer.engineLocation;
       if (engine) lines.push(`engine: ${engine.path}`);
       lines.push(`cache: ${indexer.cacheFile() ?? '—'}`);
-      const choice = await vscode.window.showInformationMessage(lines.join('\n'), { modal: true }, 'OK', s().index.starting);
+      const choice = await vscode.window.showInformationMessage(lines.join('\n'), { modal: true }, 'OK', s().diagnostic.rescan);
       if (choice) await indexer.scan(true);
+    })
+  );
+
+  // 精度诊断：回答「为什么我编译了、刷新了，还是显示近似？」
+  commands.push(
+    vscode.commands.registerCommand('depscan.diagnosePrecision', async () => {
+      const d = s().diagnostic;
+      const root = indexer.root;
+      if (!root) {
+        void vscode.window.showWarningMessage(s().index.noWorkspace);
+        return;
+      }
+      const stats = indexer.currentStatus.stats;
+      const lines: string[] = [d.title, ''];
+      lines.push(d.project(root));
+
+      const engine = indexer.engineLocation;
+      if (engine) lines.push(d.engine(engine.path, engine.source));
+      lines.push(d.libclang(stats?.libclangAvailable ?? false));
+
+      const db = findCompileCommands(root);
+      if (db.path) {
+        lines.push(d.compileDb(db.path));
+        if (stats?.compileCommandsFound) lines.push(d.compileDbEntries(stats.compileCommandEntries));
+      } else {
+        lines.push(d.compileDbMissing);
+        const dirs = db.searched.slice(0, 8).map((p) => `  · ${path.relative(root, p) || '.'}/`).join('\n');
+        if (dirs) lines.push(d.searched(dirs));
+      }
+
+      if (stats) {
+        lines.push(d.precision(precisionLabel(stats.precision), precisionHint(stats.precision)));
+        lines.push(d.includes(stats.exactIncludeEdges, stats.approxIncludeEdges));
+        lines.push(d.symbols(stats.exactNodes, stats.approxNodes));
+        lines.push(d.cache(stats.cacheReused, indexer.cacheFile() ?? '—'));
+        for (const w of stats.warnings ?? []) lines.push(`⚠ ${w}`);
+      } else {
+        lines.push(d.notIndexed);
+      }
+
+      lines.push('', d.nextHeader);
+      if (!stats) lines.push(d.nextScan);
+      const stale = indexer.compileDbIsStale();
+      if (!db.path) lines.push(d.nextBuild);
+      else if (stale) lines.push(d.nextRescan);
+      else if (stats && stats.precision !== 'exact') lines.push(d.nextClang);
+      else lines.push(d.nextOk);
+
+      const action = await vscode.window.showInformationMessage(lines.join('\n'), {
+        modal: true
+      }, d.rescan, d.openGuide, 'OK');
+      if (action === d.rescan) await indexer.scan(true);
+      if (action === d.openGuide) await vscode.commands.executeCommand('depscan.prepareCompileCommands');
     })
   );
 

@@ -15,6 +15,14 @@ export type EdgeKind = 'includes' | 'calls' | 'inherits' | 'uses' | 'refs' | 'li
 
 export type Precision = 'exact' | 'approx';
 
+/**
+ * 整体精度（引擎上报）：
+ * - exact   链了 libclang，五类依赖均为语义级精确
+ * - partial 有 compile_commands.json：include 与链接精确，调用/继承/类型为结构级
+ * - approx  两者都没有，全部为结构级近似
+ */
+export type OverallPrecision = 'exact' | 'partial' | 'approx';
+
 export interface GraphNode {
   id: string;
   kind: NodeKind;
@@ -61,8 +69,9 @@ export interface ScanStats {
   compileCommandsPath: string;
   compileCommandEntries: number;
   libclangAvailable: boolean;
+  cacheReused: boolean;
   elapsedMs: number;
-  precision: Precision;
+  precision: OverallPrecision;
   nodeKindCounts: Record<string, number>;
   edgeKindCounts: Record<string, number>;
   warnings: string[];

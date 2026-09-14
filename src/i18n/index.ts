@@ -53,3 +53,13 @@ export function languageLabel(lang: UiLanguage): string {
   if (lang === 'en') return t.actions.languageEn;
   return t.actions.languageZh;
 }
+
+/** 精度等级的文字标签（exact / partial / approx） */
+export function precisionLabel(level: string): string {
+  return (current.precision as unknown as Record<string, string>)[level] ?? level;
+}
+
+/** 精度等级对应的解释文字 */
+export function precisionHint(level: string): string {
+  return (current.precision as unknown as Record<string, string>)[`${level}Hint`] ?? '';
+}

@@ -28,6 +28,7 @@ struct ScanStats {
   std::string compileCommandsPath;
   int compileCommandEntries = 0;
   bool libclangAvailable = false;
+  bool cacheReused = false;
   double elapsedMs = 0;
   std::vector<std::string> warnings;
   std::map<std::string, int> nodeKindCounts;
@@ -72,9 +73,10 @@ class Session {
   std::string graphToDot(const Graph& g) const;
   std::string graphToMermaid(const Graph& g) const;
 
-  // 磁盘缓存（V1 自定义文本格式，见 cache 段注释）
-  bool saveCache(const std::string& path) const;
-  bool loadCache(const std::string& path);
+  // 磁盘缓存（V2 自定义文本格式，见 cache 段注释）
+  // fingerprint：配置与编译数据库的摘要；不匹配则整体作废
+  bool saveCache(const std::string& path, const std::string& fingerprint) const;
+  bool loadCache(const std::string& path, const std::string& fingerprint);
 
  private:
   std::string resolveInclude(const std::string& fromRel, const std::string& target,

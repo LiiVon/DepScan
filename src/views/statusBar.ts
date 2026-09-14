@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { s } from '../i18n';
+import { precisionHint, precisionLabel, s } from '../i18n';
 import type { IndexService, IndexStatus } from '../index/indexer';
 
 /** 状态栏：索引进度 / 就绪统计 / 引擎错误。点击打开索引详情。 */
@@ -33,8 +33,12 @@ export class StatusBar implements vscode.Disposable {
       }
       case 'ready': {
         const stats = status.stats;
-        this.item.text = stats ? `$(type-hierarchy) DepScan ${stats.fileCount} 文件 / ${stats.edgeCount} 依赖` : '$(type-hierarchy) DepScan';
-        this.item.tooltip = `${status.message}\n${stats?.compileCommandsFound ? s().precision.exactHint : s().precision.approxHint}`;
+        const label = stats ? precisionLabel(stats.precision) : '';
+        this.item.text = stats
+          ? `$(type-hierarchy) DepScan ${stats.fileCount} 文件 / ${stats.edgeCount} 依赖 · ${label}`
+          : '$(type-hierarchy) DepScan';
+        const hint = stats ? precisionHint(stats.precision) : s().precision.approxHint;
+        this.item.tooltip = `${status.message}\n${hint}`;
         break;
       }
       case 'error':

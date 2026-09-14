@@ -189,6 +189,21 @@ try {
       `include 精确解析生效（exact ${exactStats.exactIncludeEdges} 条 / approx ${exactStats.approxIncludeEdges} 条）`);
     check(exactStats.exactNodes > exactStats.approxNodes || exactStats.exactIncludeEdges > 5,
       '精度等级随编译数据库提升');
+
+    // 缓存指纹必须包含编译数据库：否则「先扫描、后生成 compile_commands.json」
+    // 会一直命中旧缓存，用户编译完刷新仍看到「近似」。这正是线上反馈的 bug。
+    const inflated = await request('scan', { root: demoRoot, config: { ...config } });
+    check(inflated.cacheReused === false, '编译数据库新增后旧缓存被丢弃（不再复用）');
+    check(inflated.exactIncludeEdges > 0,
+      `丢弃缓存后重新解析，include 仍为精确（${inflated.exactIncludeEdges} 条）`);
+    check((inflated.warnings ?? []).some((w) => w.includes('缓存')),
+      '给出「旧缓存已丢弃并重新解析」的提示');
+
+    // 参数完全没变时，缓存应该照常复用（避免每次全量重解析）
+    const warm = await request('scan', { root: demoRoot, config: { ...config } });
+    check(warm.cacheReused === true, '编译参数未变化时复用磁盘缓存');
+    check(warm.precision === inflated.precision,
+      `复用缓存后精度保持一致（${warm.precision}）`);
   } finally {
     rmSync(compdbPath, { force: true });
   }

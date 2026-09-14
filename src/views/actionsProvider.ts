@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { readConfig } from '../config';
-import { languageLabel, s, type UiLanguage } from '../i18n';
+import { languageLabel, precisionLabel, s, type UiLanguage } from '../i18n';
 import type { IndexService } from '../index/indexer';
 
 export type ActionNode =
@@ -60,7 +60,7 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionNode>,
   }
 
   getChildren(element?: ActionNode): ActionNode[] {
-    if (!element) return topNodes();
+    if (!element) return topNodes(this.indexer);
     if (element.kind === 'language') {
       const values: UiLanguage[] = ['auto', 'zh', 'en'];
       return values.map((value) => ({ kind: 'language-choice', value }));
@@ -74,13 +74,21 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionNode>,
 }
 
 /** 顺序按使用频率排：先导航，再索引维护，再导出，最后设置与帮助 */
-function topNodes(): ActionNode[] {
+function topNodes(indexer: IndexService): ActionNode[] {
   const t = s().actions;
+  const stats = indexer.currentStatus.stats;
   return [
     { kind: 'command', id: 'depscan.showGraph', label: t.graph, icon: 'type-hierarchy' },
     { kind: 'command', id: 'depscan.showGraphForSymbol', label: t.symbolGraph, icon: 'symbol-method' },
     { kind: 'command', id: 'depscan.showArchitecture', label: t.architecture, icon: 'list-tree' },
-    { kind: 'command', id: 'depscan.indexWorkspace', label: t.reindex, icon: 'refresh' },
+    {
+      kind: 'command',
+      id: 'depscan.indexWorkspace',
+      label: t.reindex,
+      icon: 'refresh',
+      // 把当前精度直接摆在侧边栏，不必打开面板才知道是精确还是近似
+      description: stats ? precisionLabel(stats.precision) : undefined
+    },
     { kind: 'command', id: 'depscan.cancelIndex', label: t.cancelIndex, icon: 'stop' },
     { kind: 'command', id: 'depscan.clearCache', label: t.clearCache, icon: 'trash' },
     { kind: 'command', id: 'depscan.exportJson', label: t.exportJson, icon: 'export' },
@@ -93,6 +101,7 @@ function topNodes(): ActionNode[] {
     },
     { kind: 'language' },
     { kind: 'command', id: 'depscan.prepareCompileCommands', label: t.compileGuide, icon: 'book' },
-    { kind: 'command', id: 'depscan.openDocs', label: t.docs, icon: 'question' }
+    { kind: 'command', id: 'depscan.diagnosePrecision', label: t.diagnosePrecision, icon: 'question' },
+    { kind: 'command', id: 'depscan.openDocs', label: t.docs, icon: 'book' }
   ];
 }

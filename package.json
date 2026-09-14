@@ -62,6 +62,12 @@
         "category": "DepScan"
       },
       {
+        "command": "depscan.diagnosePrecision",
+        "title": "%cmd.diagnosePrecision%",
+        "category": "DepScan",
+        "icon": "$(question)"
+      },
+      {
         "command": "depscan.showGraph",
         "title": "%cmd.showGraph%",
         "category": "DepScan",

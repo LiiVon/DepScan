@@ -45,6 +45,7 @@ export function buildWebviewStrings(t: Strings): Record<string, string> {
     'table.file': t.table.file,
     'table.precision': t.table.precision,
     'precision.exact': t.precision.exact,
+    'precision.partial': t.precision.partial,
     'precision.approx': t.precision.approx
   };
   for (const [kind, label] of Object.entries(t.kinds)) i18n[`kind.${kind}`] = label;

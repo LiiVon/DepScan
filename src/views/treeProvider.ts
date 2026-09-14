@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 import type { Direction } from '../engine/protocol';
 import type { GraphData, GraphNode, NodeKind } from '../graph/model';
-import { s } from '../i18n';
+import { precisionHint, precisionLabel, s } from '../i18n';
 import type { IndexService, IndexStatus } from '../index/indexer';
 
 type IndexTreeElement = { kind: 'status' } | { kind: 'stat'; label: string; value: string } | { kind: 'warning'; text: string };
@@ -52,7 +52,13 @@ export class IndexTreeProvider implements vscode.TreeDataProvider<IndexTreeEleme
       out.push({
         kind: 'stat',
         label: s().table.precision,
-        value: stats.compileCommandsFound ? s().precision.exact : s().precision.approx
+        value: precisionLabel(stats.precision)
+      });
+      out.push({ kind: 'warning', text: precisionHint(stats.precision) });
+      out.push({
+        kind: 'stat',
+        label: 'include 精确 / 近似',
+        value: `${stats.exactIncludeEdges} / ${stats.approxIncludeEdges}`
       });
       out.push({ kind: 'stat', label: '耗时', value: `${Math.round(stats.elapsedMs)} ms` });
       out.push({

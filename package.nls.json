@@ -3,6 +3,7 @@
   "cmd.cancelIndex": "Cancel Indexing",
   "cmd.clearCache": "Clear Index Cache",
   "cmd.showIndexStatus": "Show Index Status",
+  "cmd.diagnosePrecision": "Why is it Approx? (Precision Diagnosis)",
   "cmd.showGraph": "Show Dependency Graph",
   "cmd.showGraphForSymbol": "Show Dependency Graph for Symbol",
   "cmd.exportJson": "Export Dependency Data (JSON)",

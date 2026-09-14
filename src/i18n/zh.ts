@@ -14,7 +14,10 @@ export const zh: Strings = {
     noWorkspace: '请先打开一个文件夹（工作区）再使用 DepScan。',
     alreadyRunning: '已有索引任务在执行，请先取消或等待完成。',
     watchReindex: (file) => `文件变更，正在增量更新：${file}`,
-    incremental: (file, changed) => `已增量更新 ${file}（受影响子图 ${changed} 处）`
+    incremental: (file, changed) => `已增量更新 ${file}（受影响子图 ${changed} 处）`,
+    compileDbChanged: '检测到 compile_commands.json 变化，正在重新索引以获得精确结果…',
+    cacheReused: '已复用磁盘缓存（编译数据库与编译参数均未变化）',
+    precisionNow: (label) => `重新索引完成，当前精度：${label}`
   },
   engine: {
     missing: '未找到 DepScan 分析引擎可执行文件。',
@@ -69,9 +72,35 @@ export const zh: Strings = {
   },
   precision: {
     exact: '精确',
+    partial: '部分精确',
     approx: '近似',
-    exactHint: '基于 compile_commands.json 的编译参数解析（路径与宏均来自真实构建）',
-    approxHint: '未提供 compile_commands.json，使用内置结构解析，结果可能有误报/漏报'
+    exactHint: '引擎已链接 Clang：五类依赖均为语义级精确结果',
+    partialHint: '已使用 compile_commands.json：包含关系与链接关系精确；调用 / 继承 / 类型为结构级近似',
+    approxHint: '未找到 compile_commands.json：全部为结构级近似，可能误报或漏报'
+  },
+
+  diagnostic: {
+    title: 'DepScan 精度诊断',
+    project: (root) => `项目根目录：${root}`,
+    engine: (path, source) => `引擎：${path}（来源 ${source}）`,
+    libclang: (ok) => `Clang 语义分析：${ok ? '已启用' : '未启用（引擎编译时未链接 libclang）'}`,
+    compileDb: (p) => `编译数据库：已找到 → ${p}`,
+    compileDbEntries: (n) => `  条目数：${n}（包含路径与宏来自真实构建）`,
+    compileDbMissing: '编译数据库：未找到 compile_commands.json',
+    searched: (dirs) => `已查找以下位置：\n${dirs}`,
+    precision: (label, hint) => `当前精度：${label}\n  ${hint}`,
+    includes: (exact, approx) => `include 边：精确 ${exact} / 近似 ${approx}`,
+    symbols: (exact, approx) => `符号：精确 ${exact} / 近似 ${approx}`,
+    cache: (reused, p) => `缓存：${reused ? '已复用（未重新解析）' : '已重新解析'} · ${p}`,
+    notIndexed: '尚未建立索引 —— 先执行「重新索引」再看精度。',
+    nextHeader: '下一步怎么做：',
+    nextScan: '· 执行一次「重新索引」（侧边栏 操作 → 重新索引）。',
+    nextBuild: '· 让你的构建系统导出编译数据库：CMake 项目在 CMakeLists.txt 顶层加 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)，或配置时加 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON，然后重新配置一次。',
+    nextRescan: '· 已检测到新的 compile_commands.json，点下方「重新索引」即可升级精度（旧结果来自它生成之前）。',
+    nextClang: '· 包含关系已经是精确的；若还要让调用 / 继承 / 类型也精确，需要用链接了 libclang 的引擎构建（见文档 04-解析与精度说明）。',
+    nextOk: '· 当前已是最高精度，无需额外操作。',
+    rescan: '重新索引',
+    openGuide: '查看配置指南'
   },
   cache: {
     cleared: '索引缓存已清理',
@@ -138,6 +167,7 @@ export const zh: Strings = {
     languageEn: 'English',
     languageHint: '仅影响插件界面与提示；命令标题跟随 VS Code 显示语言',
     compileGuide: '如何生成 compile_commands.json',
+    diagnosePrecision: '为什么是近似？',
     docs: '使用文档',
     current: '当前'
   },

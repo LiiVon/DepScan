@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# 让引擎自身的构建也产出 compile_commands.json：
+# 一来便于用 DepScan 分析 DepScan 自己（dogfooding），
+# 二来让 include/链接依赖走精确解析路径（精度：部分精确）。
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # 引擎默认不依赖任何第三方库：内置轻量结构解析器（近似精度）。
 # 若本机存在 LLVM/Clang，可通过 -DDEPS_USE_LIBCLANG=ON 启用 libclang 精确语义解析。
 option(DEPS_USE_LIBCLANG "Use libclang for exact semantic analysis" OFF)

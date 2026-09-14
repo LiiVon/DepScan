@@ -3,11 +3,13 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { readConfig, toEngineConfig, type DepScanConfig } from '../config';
+import { findCompileCommands, fileMtimeMs } from './compileDb';
 import { EngineClient } from '../engine/client';
 import { resolveEnginePath, type EngineLocation } from '../engine/locator';
 import type { Direction, ExportResult, PingResult, SubgraphResult } from '../engine/protocol';
 import type { GraphData, ScanStats } from '../graph/model';
 import { s } from '../i18n';
+import { precisionLabel } from '../i18n';
 import type { Logger } from '../util/log';
 
 export type IndexState = 'idle' | 'indexing' | 'ready' | 'error';
@@ -33,6 +35,10 @@ export class IndexService implements vscode.Disposable {
   private client: EngineClient | undefined;
   private location: EngineLocation | undefined;
   private watcher: vscode.FileSystemWatcher | undefined;
+  private compileDbWatcher: vscode.FileSystemWatcher | undefined;
+  private compileDbTimer: NodeJS.Timeout | undefined;
+  /** 上次扫描时实际生效的编译数据库（路径 + mtime），用于判断是否需要重扫 */
+  private compileDbUsed: { path: string; mtimeMs: number } | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private readonly debounceTimers = new Map<string, NodeJS.Timeout>();
   private scanning = false;
@@ -85,6 +91,17 @@ export class IndexService implements vscode.Disposable {
       this.watcher,
       this.watcher.onDidCreate((uri) => this.scheduleUpdate(uri.fsPath)),
       this.watcher.onDidDelete((uri) => this.scheduleUpdate(uri.fsPath))
+    );
+
+    // 编译数据库出现/更新/删除 → 包含路径、宏、以及链接器输入全都变了，
+    // 精度也会变。此时缓存指纹会失配，必须整体重解析，不能走增量。
+    this.compileDbWatcher = vscode.workspace.createFileSystemWatcher('**/compile_commands.json');
+    const onCompileDb = (uri: vscode.Uri) => this.scheduleCompileDbRescan(uri.fsPath);
+    this.disposables.push(
+      this.compileDbWatcher,
+      this.compileDbWatcher.onDidCreate(onCompileDb),
+      this.compileDbWatcher.onDidChange(onCompileDb),
+      this.compileDbWatcher.onDidDelete(onCompileDb)
     );
   }
 
@@ -188,7 +205,9 @@ export class IndexService implements vscode.Disposable {
         }
       );
       this.setStatus({ state: 'ready', message: s().index.summary(stats), stats });
+      this.recordCompileDbUsage(stats.compileCommandsFound ? stats.compileCommandsPath : undefined);
       this.logger.info(s().index.done(stats));
+      if (stats.cacheReused) this.logger.info(s().index.cacheReused);
       for (const w of stats.warnings ?? []) this.logger.warn(w);
       this.onDidUpdateGraph.fire({ files: [], stats });
       return stats;
@@ -223,6 +242,58 @@ export class IndexService implements vscode.Disposable {
       void this.updateFiles([fsPath]);
     }, 400);
     this.debounceTimers.set(fsPath, timer);
+  }
+
+  /** 编译数据库变化：防抖后强制整体重扫（不能只更新变化文件） */
+  private scheduleCompileDbRescan(fsPath: string): void {
+    if (this.compileDbTimer) clearTimeout(this.compileDbTimer);
+    this.compileDbTimer = setTimeout(() => {
+      this.compileDbTimer = undefined;
+      if (!this.client?.running) return;
+      this.logger.info(s().index.compileDbChanged);
+      this.logger.info(`编译数据库：${fsPath}`);
+      void vscode.window.showInformationMessage(s().index.compileDbChanged);
+      void this.scan(true);
+    }, 800);
+  }
+
+  private recordCompileDbUsage(compdbPath: string | undefined): void {
+    if (!compdbPath) {
+      this.compileDbUsed = undefined;
+      return;
+    }
+    const abs = path.resolve(compdbPath);
+    this.compileDbUsed = { path: abs, mtimeMs: fileMtimeMs(abs) };
+  }
+
+  /**
+   * 编译数据库是否已经比「上次扫描时生效的那份」更新。
+   *
+   * 只有整体重扫才能把它带来的精度提升体现出来 —— 面板的「⟳ 重新加载」
+   * 原本只重新取一次子图，用户编译完再刷新当然还是看到旧的「近似」。
+   */
+  compileDbIsStale(): boolean {
+    const root = this.root;
+    if (!root) return false;
+    const now = findCompileCommands(root);
+    if (!now.path) return false; // 依旧没有编译数据库，重扫也不会变
+    if (!this.compileDbUsed) return true; // 从无到有
+    if (path.resolve(now.path) !== this.compileDbUsed.path) return true; // 换了一份
+    return now.mtimeMs > this.compileDbUsed.mtimeMs + 1; // 同一份被重新生成
+  }
+
+  /** 需要时整体重扫；返回是否真的重扫了 */
+  async refreshCompileDbIfNeeded(): Promise<boolean> {
+    if (!this.compileDbIsStale()) return false;
+    this.logger.info(s().index.compileDbChanged);
+    const stats = await this.scan(true);
+    if (stats) this.logger.info(s().index.precisionNow(precisionLabel(stats.precision)));
+    return true;
+  }
+
+  /** 上次扫描生效的编译数据库路径（诊断用） */
+  get compileDbInUse(): { path: string; mtimeMs: number } | undefined {
+    return this.compileDbUsed;
   }
 
   /** 增量更新：只重算变化的文件，并重建受影响子图 */
