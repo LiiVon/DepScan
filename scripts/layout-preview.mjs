@@ -135,7 +135,7 @@ let html = renderGraphHtml({
 html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\s*/, '');
 html = html.replace(
   '<script nonce="preview"',
-  `<script>window.acquireVsCodeApi=function(){return{postMessage:function(){},getState:function(){},setState:function(){}};};</script>
+  `<script>window.acquireVsCodeApi=function(){return{postMessage:function(m){(window.__posted=window.__posted||[]).push(m);},getState:function(){},setState:function(){}};};</script>
 <script nonce="preview"`
 );
 const settings = {

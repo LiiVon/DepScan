@@ -55,7 +55,8 @@ const state: State = {
     cluster: false,
     clickToOpen: true,
     focusId: '',
-    label: ''
+    label: '',
+    language: 'auto'
   },
   truncated: false,
   selectedId: undefined,
@@ -149,6 +150,12 @@ function bindToolbar(): void {
   const clickOpen = el<HTMLInputElement>('chk-clickopen');
   clickOpen.addEventListener('change', () => {
     state.settings.clickToOpen = clickOpen.checked;
+  });
+
+  // 语言切换：工具栏里直接可切，不必再去侧边栏或设置页
+  const language = el<HTMLSelectElement>('sel-language');
+  language.addEventListener('change', () => {
+    vscode.postMessage({ type: 'setLanguage', language: language.value as UiSettings['language'] });
   });
 
   el('btn-fit').addEventListener('click', () => canvasView.resetView());
@@ -534,6 +541,7 @@ window.addEventListener('message', (event: MessageEvent<HostToWebview>) => {
       el<HTMLInputElement>('input-depth').value = String(msg.settings.depth);
       el('depth-value').textContent = String(msg.settings.depth);
       el<HTMLSelectElement>('sel-direction').value = msg.settings.direction;
+      el<HTMLSelectElement>('sel-language').value = msg.settings.language ?? 'auto';
       el<HTMLInputElement>('chk-external').checked = msg.settings.showExternal;
       el<HTMLInputElement>('chk-cluster').checked = msg.settings.cluster;
       el('focus-label').textContent = msg.settings.label;

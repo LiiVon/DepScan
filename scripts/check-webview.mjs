@@ -160,6 +160,14 @@ check(!isPlaceholderDump(Object.entries(i18nEn)), '英文 Webview 文案没有"�
 check(i18nEn['graph.viewGraph'] === 'Graph' && i18n['graph.viewGraph'] === '图', '中英文界面文案确实不同');
 check(htmlEn.includes('>Graph<') && html.includes('>图<'), '英文/中文 HTML 分别渲染出了对应语言');
 check(/<html lang="en"/.test(htmlEn) && /<html lang="zh-CN"/.test(html), '<html lang> 跟随语言切换');
+check(
+  /id="sel-language"/.test(html) && /value="auto"[\s\S]*value="zh"[\s\S]*value="en"/.test(html),
+  '依赖图工具栏内自带语言切换（auto / zh / en）'
+);
+check(
+  /id="sel-language"[\s\S]*?Follow VS Code/.test(htmlEn) && /id="sel-language"[\s\S]*?跟随 VS Code/.test(html),
+  '语言下拉的两个选项文案本身也跟随语言'
+);
 
 // --- 8. package.nls：默认(英文)与中文翻译的键必须一致，且 package.json 引用的键都存在 ---
 const nlsDefault = JSON.parse(readFileSync(resolve(root, 'package.nls.json'), 'utf8'));

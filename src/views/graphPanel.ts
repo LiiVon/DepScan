@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import { readConfig } from '../config';
 import type { Direction } from '../engine/protocol';
 import type { GraphData, ScanStats } from '../graph/model';
 import { s, currentLanguageTag } from '../i18n';
@@ -39,6 +40,7 @@ export class GraphPanel {
   private cluster = false;
   private focusId = '';
   private label = '';
+  private mode: 'focus' | 'architecture' = 'focus';
   private lastStats: ScanStats | undefined;
 
   private constructor(
@@ -99,12 +101,14 @@ export class GraphPanel {
     this.label = target.label;
     if (target.depth) this.depth = target.depth;
     if (target.direction) this.direction = target.direction;
+    this.mode = target.architecture ? 'architecture' : 'focus';
     this.panel.title = s().graph.title(target.label);
     if (target.architecture) void this.loadArchitecture();
     else void this.refresh();
   }
 
   private async loadArchitecture(): Promise<void> {
+    this.mode = 'architecture';
     this.post({ type: 'loading', message: s().graph.loading });
     const result = await this.indexer.architecture();
     if (!result) {
@@ -158,11 +162,17 @@ export class GraphPanel {
       clickToOpen: true,
       focusId: this.focusId,
       label: this.label,
+      language: readConfig().language,
       stats: this.lastStats
     };
   }
 
   private async refresh(): Promise<void> {
+    // 架构模式没有焦点文件，重新加载时必须走架构分支（否则会报「无数据」）
+    if (this.mode === 'architecture') {
+      await this.loadArchitecture();
+      return;
+    }
     if (!this.focusId) {
       this.post({ type: 'error', message: s().errors.noData });
       return;
@@ -194,6 +204,13 @@ export class GraphPanel {
         this.showExternal = msg.showExternal;
         this.persist();
         await this.refresh();
+        break;
+      case 'setLanguage':
+        // 与侧边栏「操作 → 界面语言」走同一条路：只改配置，
+        // 真正的刷新由 extension.ts 的配置监听统一处理（含重建本页面）
+        await vscode.workspace
+          .getConfiguration('depscan')
+          .update('ui.language', msg.language, vscode.ConfigurationTarget.Global);
         break;
       case 'expand': {
         const result = await this.indexer.subgraph(msg.id, this.depth, this.direction);

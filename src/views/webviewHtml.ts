@@ -83,6 +83,14 @@ export function renderGraphHtml(options: WebviewHtmlOptions): string {
     <div class="group">
       <input id="search" type="text" placeholder="${t('graph.search', 'Search nodes…')}" />
     </div>
+    <div class="group">
+      <label for="sel-language">${t('graph.language', 'Language')}</label>
+      <select id="sel-language">
+        <option value="auto">${t('graph.languageAuto', 'Follow VS Code')}</option>
+        <option value="zh">${t('graph.languageZh', '中文')}</option>
+        <option value="en">${t('graph.languageEn', 'English')}</option>
+      </select>
+    </div>
   </header>
 
   <div id="tabs">

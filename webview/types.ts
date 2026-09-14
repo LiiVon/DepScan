@@ -10,6 +10,7 @@ export interface UiSettings {
   clickToOpen: boolean;
   focusId: string;
   label: string;
+  language: 'auto' | 'zh' | 'en';
   stats?: ScanStats;
 }
 
@@ -26,6 +27,7 @@ export type WebviewToHost =
   | { type: 'open'; id: string; file: string; line: number; column: number }
   | { type: 'expand'; id: string; depth: number; direction: Direction }
   | { type: 'reload'; depth: number; direction: Direction; showExternal: boolean }
+  | { type: 'setLanguage'; language: 'auto' | 'zh' | 'en' }
   | { type: 'architecture' }
   | { type: 'exportImage'; format: 'png' | 'svg'; data: string; suggestedName: string }
   | { type: 'exportData'; format: 'json' | 'dot' | 'mermaid' }
