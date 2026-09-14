@@ -85,6 +85,7 @@ export interface Strings {
     compileDb: (path: string) => string;
     compileDbEntries: (n: number) => string;
     compileDbMissing: string;
+    buildDirWithoutDb: (dirs: string) => string;
     searched: (dirs: string) => string;
     precision: (label: string, hint: string) => string;
     includes: (exact: number, approx: number) => string;

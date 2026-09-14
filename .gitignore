@@ -7,6 +7,7 @@ media/webview.css
 *.vsix
 engines/
 engine/build/
+engine/build-ninja/
 engine/out/
 stress/
 stress1m/

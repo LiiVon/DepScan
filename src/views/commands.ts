@@ -195,8 +195,13 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
         if (stats?.compileCommandsFound) lines.push(d.compileDbEntries(stats.compileCommandEntries));
       } else {
         lines.push(d.compileDbMissing);
-        const dirs = db.searched.slice(0, 8).map((p) => `  · ${path.relative(root, p) || '.'}/`).join('\n');
-        if (dirs) lines.push(d.searched(dirs));
+        if (db.staleBuilds.length > 0) {
+          const dirs = db.staleBuilds.slice(0, 6).map((p) => `  · ${path.relative(root, p) || '.'}/`).join('\n');
+          lines.push(d.buildDirWithoutDb(dirs));
+        } else {
+          const dirs = db.searched.slice(0, 8).map((p) => `  · ${path.relative(root, p) || '.'}/`).join('\n');
+          if (dirs) lines.push(d.searched(dirs));
+        }
       }
 
       if (stats) {

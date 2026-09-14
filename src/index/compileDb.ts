@@ -15,6 +15,14 @@ export interface CompileDbInfo {
   mtimeMs: number;
   /** 实际检查过的目录（按顺序），用于诊断输出 */
   searched: string[];
+  /**
+   * “看起来是构建目录（有 CMakeCache.txt）但没有 compile_commands.json”的目录。
+   *
+   * 这是「我明明编译了，为什么还是近似」的头号原因：CMake 的
+   * `CMAKE_EXPORT_COMPILE_COMMANDS` **只对 Makefile / Ninja 生成器有效**，
+   * Visual Studio 生成器（CMake Tools 的默认 Kit）即使打开这个开关也不产出。
+   */
+  staleBuilds: string[];
 }
 
 /**
@@ -52,16 +60,18 @@ export function findCompileCommands(root: string): CompileDbInfo {
     searched.push(dir);
     const candidate = path.join(dir, 'compile_commands.json');
     const mtime = fileMtimeMs(candidate);
-    if (mtime > 0) return { path: candidate, mtimeMs: mtime, searched };
+    if (mtime > 0) return { path: candidate, mtimeMs: mtime, searched, staleBuilds: [] };
   }
 
   // 兜底：有限深度递归（很多 CMake 预设把生成物放在 out/build/<预设名>/ 下）
   const walked: string[] = [];
   const found = walk(root, 0, walked);
+  const all = searched.concat(walked);
   return {
     path: found,
     mtimeMs: found ? fileMtimeMs(found) : 0,
-    searched: searched.concat(walked)
+    searched: all,
+    staleBuilds: found ? [] : all.filter((d) => fileMtimeMs(path.join(d, 'CMakeCache.txt')) > 0)
   };
 }
 
