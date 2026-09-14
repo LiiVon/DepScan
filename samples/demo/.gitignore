@@ -1,5 +1,7 @@
 # CMake / CMake Tools 就地配置产物（示例项目保持干净）
 build/
+build-ninja/
+out/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake

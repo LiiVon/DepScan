@@ -279,8 +279,11 @@
             "**/node_modules/**",
             "**/.git/**",
             "**/build/**",
+            "**/build-*/**",
             "**/out/**",
             "**/cmake-build-*/**",
+            "**/CMakeFiles/**",
+            "**/_deps/**",
             "**/.cache/**"
           ],
           "description": "%cfg.files.exclude%"

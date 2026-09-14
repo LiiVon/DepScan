@@ -91,6 +91,19 @@ function request(method, params = {}) {
 }
 
 const demoRoot = resolve(root, 'samples/demo');
+
+// 开发机可能已经为 demo 生成过编译数据库（比如换成 Ninja 生成器后）。
+// 这条断言只关心「引擎有没有如实报告」，不把 fixture 状态写死，
+// 否则本地一生成 compile_commands.json，测试就会假失败。
+const demoCompileDb = [
+  'compile_commands.json',
+  'build/compile_commands.json',
+  'build-ninja/compile_commands.json',
+  'out/compile_commands.json'
+]
+  .map((p) => join(demoRoot, p))
+  .find((p) => existsSync(p));
+
 const config = {
   includes: true,
   calls: true,
@@ -116,7 +129,10 @@ try {
   check((kinds.inherits ?? 0) > 0, `inherits 边 ${kinds.inherits ?? 0} 条`);
   check((kinds.uses ?? 0) > 0, `uses 边 ${kinds.uses ?? 0} 条`);
   check((kinds.links ?? 0) > 0, `links 边 ${kinds.links ?? 0} 条`);
-  check(stats.compileCommandsFound === false, '无 compile_commands.json 时如实标记（精度降级）');
+  check(stats.compileCommandsFound === !!demoCompileDb,
+    demoCompileDb
+      ? '发现了 demo 内的编译数据库，精度随之提升（partial/exact）'
+      : '无 compile_commands.json 时如实标记（精度降级）');
 
   const sub = await request('subgraph', {
     focus: 'file:src/core/engine.cpp',

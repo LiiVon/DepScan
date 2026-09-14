@@ -8,7 +8,7 @@
 // 分层违规示例：底层 core 反向依赖上层 ui
 #include "ui/panel.h"
 
-// 循环包含的另一半
+// 循环包含的另一半（见 core/engine.h 里的说明）
 #include "core/engine.h"
 
 namespace demo {

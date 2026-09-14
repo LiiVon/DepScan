@@ -2,11 +2,13 @@
   "cmake.configureOnOpen": false,
   "depscan.files.exclude": [
     "**/build/**",
+    "**/build-*/**",
     "**/out/**",
     "**/CMakeFiles/**",
     "**/cmake-build-*/**",
     "**/node_modules/**",
     "**/.git/**",
+    "**/_deps/**",
     "**/.cache/**"
   ]
 }

@@ -1,0 +1,49 @@
+-- The CXX compiler identification is MSVC 19.51.36246.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (1.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: C:/Users/Lc_x7/Desktop/zw_lz/DepScan/samples/demo/build-ninja
+[1/10] Building CXX object CMakeFiles\demo_core.dir\src\core\registry.cpp.obj
+FAILED: CMakeFiles/demo_core.dir/src/core/registry.cpp.obj 
+C:\PROGRA~1\MICROS~3\18\COMMUN~1\VC\Tools\MSVC\1451~1.362\bin\Hostx64\x64\cl.exe  /nologo /TP  -IC:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\include -IC:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src /DWIN32 /D_WINDOWS /GR /EHsc /O2 /Ob2 /DNDEBUG -std:c++17 -MD /showIncludes /FoCMakeFiles\demo_core.dir\src\core\registry.cpp.obj /FdCMakeFiles\demo_core.dir\demo_core.pdb /FS -c C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core\registry.cpp
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/registry.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\ui/panel.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(24): error C3646: “registry_”: 未知重写说明符
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(24): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\util/logger.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[2/10] Building CXX object CMakeFiles\demo_ui.dir\src\ui\panel.cpp.obj
+FAILED: CMakeFiles/demo_ui.dir/src/ui/panel.cpp.obj 
+C:\PROGRA~1\MICROS~3\18\COMMUN~1\VC\Tools\MSVC\1451~1.362\bin\Hostx64\x64\cl.exe  /nologo /TP  -IC:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\include -IC:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src /DWIN32 /D_WINDOWS /GR /EHsc /O2 /Ob2 /DNDEBUG -std:c++17 -MD /showIncludes /FoCMakeFiles\demo_ui.dir\src\ui\panel.cpp.obj /FdCMakeFiles\demo_ui.dir\demo_ui.pdb /FS -c C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\ui\panel.cpp
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\ui/panel.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/registry.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(24): error C3646: “registry_”: 未知重写说明符
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(24): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\util/logger.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[3/10] Building CXX object CMakeFiles\demo_app.dir\src\main.cpp.obj
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\app/application.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/registry.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\ui/panel.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\util/logger.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[4/10] Building CXX object CMakeFiles\demo_app.dir\src\app\application.cpp.obj
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\app/application.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/registry.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\ui/panel.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\util/logger.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[5/10] Building CXX object CMakeFiles\demo_core.dir\src\util\logger.cpp.obj
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\util/logger.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[6/10] Building CXX object CMakeFiles\demo_core.dir\src\core\engine.cpp.obj
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core\engine.cpp(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/engine.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\core/registry.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\ui/panel.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\Lc_x7\Desktop\zw_lz\DepScan\samples\demo\src\util/logger.h(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+[7/10] Building CXX object CMakeFiles\demo_core.dir\src\util\string_utils.cpp.obj
+ninja: build stopped: subcommand failed.

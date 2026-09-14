@@ -278,7 +278,7 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   if (excludeGlobs.empty()) {
     excludeGlobs = {"**/node_modules/**", "**/.git/**",       "**/build/**",
                     "**/out/**",          "**/CMakeFiles/**", "**/cmake-build-*/**",
-                    "**/.cache/**"};
+                    "**/build-*/**",      "**/.cache/**",     "**/_deps/**"};
   }
   const std::vector<std::string> filesAbs =
       util::listFilesRecursive(root, includeGlobs, excludeGlobs, req.maxFiles);
