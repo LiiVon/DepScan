@@ -128,6 +128,16 @@ npm run publish -- --dry-run # 只检查不上传
 npm run publish:openvsx      # 发到 Open VSX（需先设置 OVSX_PAT）
 ```
 
+**发新版只需四行**（CI 会构建四平台并自动发布，见 [docs/06-发布与版本管理](docs/06-发布与版本管理.md)）：
+
+```bash
+npm test                      # 自测
+# 更新 docs/CHANGELOG.md 后：
+npm version patch             # 改 package.json + commit + 打 tag
+# 推上去后 CI 自动构建发布：
+git push && git push --tags
+```
+
 > 为什么不直接跑 `vsce publish`：它只会执行 `vscode:prepublish`，**不会**跑 `scripts/package.mjs`，
 > 于是 `engines/` 里的二进制不会被刷新，很可能发出一个没有引擎（或带旧引擎）的包。
 > `npm run publish` 把「先打包再上传」固化了，并在上传前做可读的预检。

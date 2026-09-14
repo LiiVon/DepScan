@@ -157,22 +157,39 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: 打 tag 时创建 Release
+      - name: 打 tag 时创建 / 更新 Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes ./*.vsix
+        shell: bash
+        # 幂等：同一个 tag 重跑时（Re-run all jobs）不报「Release 已存在」
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" ./*.vsix --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes ./*.vsix
+          fi
 
+      # 两条触发路径：
+      #   · 手动 Run workflow 并勾了 publish → 必须是「真发布」，缺 secret 直接失败
+      #   · 推 tag（v*）→ 配了 secret 就顺手发布，没配就只发 GitHub Release 并警告
+      #     （这样没配 secret 的项目推 tag 也不会构建失败）
       - name: 发布到 VS Code Marketplace
-        if: ${{ inputs.publish }}
+        if: ${{ inputs.publish || startsWith(github.ref, 'refs/tags/v') }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          WANT_PUBLISH: ${{ inputs.publish }}
         shell: bash
         run: |
           set -euo pipefail
           if [ -z "${VSCE_PAT:-}" ]; then
-            echo "::error::打了 publish 但没配 VSCE_PAT secret。见 docs/06-发布与版本管理.md"
-            exit 1
+            if [ "${WANT_PUBLISH:-false}" = "true" ]; then
+              echo "::error::勾了 publish 但没配 VSCE_PAT secret。见 docs/06-发布与版本管理.md"
+              exit 1
+            fi
+            echo "::warning::未配置 VSCE_PAT，本次只创建 GitHub Release，未发布到 Marketplace"
+            exit 0
           fi
           for f in ./*.vsix; do
             echo "== 发布 $f"
