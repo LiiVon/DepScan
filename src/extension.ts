@@ -7,6 +7,7 @@ import { Logger } from './util/log';
 import { ActionsTreeProvider } from './views/actionsProvider';
 import { registerCommands } from './views/commands';
 import { GraphPanel } from './views/graphPanel';
+import { RoutePanel } from './views/routePanel';
 import { RouteTreeProvider } from './views/routeProvider';
 import { StatusBar } from './views/statusBar';
 import { DependencyTreeProvider, IndexTreeProvider } from './views/treeProvider';
@@ -65,6 +66,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     routeTree.repaint();
     statusBar.refresh();
     GraphPanel.currentPanel?.refreshLocalization();
+    RoutePanel.currentPanel?.refreshLocalization();
   };
 
   context.subscriptions.push(

@@ -32,3 +32,15 @@ export type WebviewToHost =
   | { type: 'exportImage'; format: 'png' | 'svg'; data: string; suggestedName: string }
   | { type: 'exportData'; format: 'json' | 'dot' | 'mermaid' }
   | { type: 'log'; message: string };
+
+/** 泳道图页面 → 宿主（页面里的脚本只做缩放 / 导出 / 点击，不负责绘制） */
+export type SwimlaneToHost =
+  | { type: 'ready' }
+  | { type: 'open'; file: string; line: number; column: number }
+  | { type: 'export' }
+  | { type: 'refresh' };
+
+/** 宿主 → 泳道图页面：只送「画什么」，页面自己决定缩放 */
+export type SwimlaneToWebview =
+  | { type: 'svg'; svg: string; title: string; status: string; notice?: string }
+  | { type: 'empty'; message: string; title: string };

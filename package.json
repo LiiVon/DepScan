@@ -98,6 +98,12 @@
         "icon": "$(home)"
       },
       {
+        "command": "depscan.showRouteDiagram",
+        "title": "%cmd.showRouteDiagram%",
+        "category": "DepScan",
+        "icon": "$(graph)"
+      },
+      {
         "command": "depscan.showGraph",
         "title": "%cmd.showGraph%",
         "category": "DepScan",
@@ -219,24 +225,29 @@
           "group": "navigation@1"
         },
         {
-          "command": "depscan.toggleRouteStrategy",
+          "command": "depscan.showRouteDiagram",
           "when": "view == depscan.routeView",
           "group": "navigation@2"
         },
         {
-          "command": "depscan.toggleRouteGroupByFile",
+          "command": "depscan.toggleRouteStrategy",
           "when": "view == depscan.routeView",
           "group": "navigation@3"
         },
         {
+          "command": "depscan.toggleRouteGroupByFile",
+          "when": "view == depscan.routeView",
+          "group": "navigation@4"
+        },
+        {
           "command": "depscan.routeFromCursor",
           "when": "view == depscan.routeView && editorLangId == cpp",
-          "group": "navigation@4"
+          "group": "navigation@5"
         },
         {
           "command": "depscan.resetRouteStart",
           "when": "view == depscan.routeView && depscan.routeCustomStart",
-          "group": "navigation@5"
+          "group": "navigation@6"
         }
       ],
       "explorer/context": [
@@ -280,6 +291,10 @@
         {
           "command": "depscan.resetRouteStart",
           "when": "depscan.routeCustomStart"
+        },
+        {
+          "command": "depscan.showRouteDiagram",
+          "when": "true"
         },
         {
           "command": "depscan.setLanguage",
@@ -509,8 +524,9 @@
     "test:rpc": "node scripts/test-rpc.mjs",
     "test:webview": "node scripts/check-webview.mjs",
     "test:route": "node scripts/test-route-tree.mjs",
+    "test:swimlane": "node scripts/test-swimlane.mjs",
     "route:dump": "node scripts/dump-route.mjs",
-    "test": "npm run test:core && npm run test:rpc && npm run test:route && npm run test:webview",
+    "test": "npm run test:core && npm run test:rpc && npm run test:route && npm run test:swimlane && npm run test:webview",
     "icon": "node scripts/make-icon.mjs",
     "probe": "node scripts/probe.mjs engine/build/probe --edges",
     "stress:gen": "node scripts/gen-stress.mjs stress 3000 100",

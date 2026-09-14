@@ -29,7 +29,7 @@ const hostKey = `${process.platform}-${process.arch}`;
 
 // .vscodeignore 的目录级否定（!media/**）会连带把 sourcemap 一起包含进来，
 // 这里直接删掉开发用 sourcemap，保证 vsix 里只有运行时必需的产物。
-for (const rel of ['media/webview.js.map', 'dist/extension.js.map']) {
+for (const rel of ['media/webview.js.map', 'media/swimlane.js.map', 'dist/extension.js.map']) {
   const p = resolve(root, rel);
   if (existsSync(p)) {
     rmSync(p, { force: true });

@@ -145,6 +145,7 @@ export interface Strings {
     route: string;
     routeFromCursor: string;
     resetRouteStart: string;
+    routeDiagram: string;
     docs: string;
     current: string;
   };
@@ -181,6 +182,31 @@ export interface Strings {
     candidateHint: (n: number) => string;
     /** 光标处没有可用符号 */
     cursorMissing: (file: string, line: number) => string;
+    /** 泳道图的名称（命令标题 / 树条目） */
+    diagram: string;
+    /** 泳道图面板标题，例：阅读路线 · main */
+    diagramTitle: (from: string) => string;
+    /** 面板顶部说明：横轴是什么、箭头是什么意思 */
+    diagramHint: string;
+    /** 规模行，例：13 步 · 8 个文件 · 5 次换文件 */
+    diagramStatus: (steps: number, lanes: number, cross: number) => string;
+    /** 因为超过绘图上限没画出来的步骤 */
+    diagramTruncated: (drawn: number, total: number) => string;
+    /** 导出 SVG 成功 */
+    diagramExported: (file: string) => string;
+    /** 没有路线可画 */
+    diagramEmpty: string;
+    diagramFit: string;
+    diagramZoomIn: string;
+    diagramZoomOut: string;
+    diagramReset: string;
+    diagramExport: string;
+    diagramRefresh: string;
+    diagramLegend: string;
+    diagramLegendStep: string;
+    diagramLegendAmbiguous: string;
+    diagramLegendCross: string;
+    diagramLegendSame: string;
     /** 项目外符号（关掉 projectOnly 才出现） */
     external: string;
     /** 首次进入某文件 */

@@ -88,6 +88,7 @@ function topNodes(indexer: IndexService, route?: RouteTreeProvider): ActionNode[
   return [
     { kind: 'command', id: 'depscan.showRoute', label: t.route, icon: 'list-ordered' },
     { kind: 'command', id: 'depscan.routeFromCursor', label: t.routeFromCursor, icon: 'target' },
+    { kind: 'command', id: 'depscan.showRouteDiagram', label: t.routeDiagram, icon: 'graph' },
     // 只有起点真的被改过才显示「回去」，否则这一行是噪音
     ...(route?.customStart
       ? [{ kind: 'command', id: 'depscan.resetRouteStart', label: t.resetRouteStart, icon: 'home' } as ActionNode]

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import type { RouteOptions } from '../engine/protocol';
+import type { RouteOptions, RouteResult } from '../engine/protocol';
 import type { NodeKind } from '../graph/model';
 import { s } from '../i18n';
 import type { IndexService } from '../index/indexer';
@@ -10,6 +10,7 @@ import {
   needIndexNode,
   noEntryNode,
   overrideKey,
+  startLabel,
   treeChildren,
   type RouteTree,
   type RouteTreeNode
@@ -36,6 +37,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
   readonly onDidChangeTreeData = this.emitter.event;
 
   private tree: RouteTree | undefined;
+  private lastOptions: RouteOptions | undefined;
   private loading = false;
   private stale = true;
   private byFile = false;
@@ -142,7 +144,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
   statusMessage(): string | undefined {
     if (!this.tree) return undefined;
     const result = this.tree.result;
-    const name = result.from.replace(/^func:/, '').replace(/^ext:[^:]+:/, '');
+    const name = startLabel(result.from);
     const first = result.steps[0];
     const at = first?.file ? `${first.file}:${first.line}` : '';
     let from: string;
@@ -260,6 +262,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
         maxDepth: 6,
         overrides: this.overrides.size ? Object.fromEntries(this.overrides) : undefined
       };
+      this.lastOptions = options;
       const result = await this.indexer.route(options);
       this.tree = result ? buildRouteTree(result) : undefined;
     } finally {
@@ -268,6 +271,29 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       this.updateContext();
       this.updateMessage();
     }
+  }
+
+  /**
+   * 泳道图要用的快照：确保路线已生成，并连同**当初的查询参数**一起给出。
+   *
+   * 为什么要带参数：泳道图必须画和侧边栏**同一条**路线（同一个起点、同一批纠偏），
+   * 不能自己另算一条 —— 否则两个界面会各说各话：
+   * 你在侧边栏把某个候选换掉了，图里却还是原来的顺序。
+   */
+  async routeSnapshot(): Promise<{ options: RouteOptions; result: RouteResult } | undefined> {
+    if (!this.indexer.currentStatus.stats) {
+      return undefined;
+    }
+    if (this.stale && !this.loading) {
+      await this.load();
+      // 这次加载是命令（泳道图）触发的，不是 TreeView 拉取触发的，
+      // 得自己通知一次视图，否则侧边栏会停在旧内容上。
+      this.updateContext();
+      this.updateMessage();
+      this.emitter.fire();
+    }
+    if (!this.tree || !this.lastOptions) return undefined;
+    return { options: this.lastOptions, result: this.tree.result };
   }
 }
 

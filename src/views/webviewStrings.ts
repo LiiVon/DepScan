@@ -52,3 +52,29 @@ export function buildWebviewStrings(t: Strings): Record<string, string> {
   for (const [kind, label] of Object.entries(t.edgeKinds)) i18n[`edge.${kind}`] = label;
   return i18n;
 }
+
+/**
+ * 泳道图页面用的文案。
+ *
+ * 与依赖图分开成两个函数，而不是塞进同一张表：两边的 key 集合各自独立，
+ * 改动一边不会让另一边的「缺键 / 多余键」断言跟着抖动。
+ * 仍然是纯函数 —— 插件、离线自检、离线预览共用同一份 Strings。
+ */
+export function buildSwimlaneStrings(t: Strings): Record<string, string> {
+  return {
+    title: t.route.diagram,
+    hint: t.route.diagramHint,
+    empty: t.route.diagramEmpty,
+    fit: t.route.diagramFit,
+    zoomIn: t.route.diagramZoomIn,
+    zoomOut: t.route.diagramZoomOut,
+    reset: t.route.diagramReset,
+    exportSvg: t.route.diagramExport,
+    refresh: t.route.diagramRefresh,
+    legend: t.route.diagramLegend,
+    legendStep: t.route.diagramLegendStep,
+    legendAmbiguous: t.route.diagramLegendAmbiguous,
+    legendCross: t.route.diagramLegendCross,
+    legendSame: t.route.diagramLegendSame
+  };
+}

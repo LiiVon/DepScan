@@ -83,6 +83,8 @@ The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tri
 | Click a step | Jump to its source |
 | Title bar `$(arrow-both)` | Breadth first (outline first) ↔ depth first (follow one chain) |
 | Title bar `$(file-code)` | File level ↔ function level (file level keeps only the first entry per file) |
+| Title bar `$(list-ordered)` | Regenerate |
+| Title bar `$(graph)` | Open the **swimlane diagram** — one lane per file, orange arrows for file switches |
 | Title bar `$(target)` | Start from **the function under the cursor** — for library projects, or when `main` is not where you want to start |
 | Title bar `$(home)` | Back to `main` (appears only once you changed the start) |
 | Expand a ⚠ step → **Candidates** | Same-named definitions this call could have meant — pick another one, or click the current one to undo |
@@ -90,7 +92,8 @@ The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tri
 **Why the ⚠ marks are not decoration.** Without a compile database, call edges are resolved *by name*. A wrong edge in a graph is one extra line; a wrong edge in a route means **everything after it is the wrong reading order**. So whenever the name is defined more than once in the project, DepScan says so and lets you pick — instead of silently guessing and pretending to be sure. Enabling a compile database is still the real fix (see below).
 
 > Steps are *session state*: a custom start and manual corrections reset when VS Code restarts.
-> To inspect a route without the UI: `npm run route:dump -- --dfs --files`.
+> To inspect a route without the UI: `npm run route:dump -- --dfs --files` —
+> add `--svg out.svg` or `--html` to render the swimlane diagram instead of a text tree.
 
 ---
 
@@ -170,6 +173,7 @@ Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or *
 | `DepScan: Reading Route: Read from Here (cursor)` | Start the route at the function under the cursor |
 | `DepScan: Reading Route: Start Back at main` | Undo a custom start |
 | `DepScan: Reading Route: Toggle File Level` | File level ↔ function level |
+| `DepScan: Reading Route: Swimlane Diagram` | Control flow across files, as a diagram |
 | `DepScan: Reading Route: Switch Traversal Strategy` | Breadth first ↔ depth first |
 | `DepScan: Show Dependency Graph` | Graph focused on the current file |
 | `DepScan: Show Dependency Graph for Symbol` | Graph focused on the symbol under the cursor |

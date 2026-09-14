@@ -7,6 +7,7 @@ import type { IndexService } from '../index/indexer';
 import { findCompileCommands } from '../index/compileDb';
 import type { Logger } from '../util/log';
 import { GraphPanel } from './graphPanel';
+import { RoutePanel } from './routePanel';
 import type { CandidateArgs, RouteTreeProvider } from './routeProvider';
 import type { DependencyTreeProvider, IndexTreeProvider } from './treeProvider';
 
@@ -172,6 +173,14 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   commands.push(
     vscode.commands.registerCommand('depscan.resetRouteStart', async () => {
       routeTree.setStart(undefined);
+    })
+  );
+
+  // 泳道图：唯一需要画布的那部分 —— 「控制权在哪些文件之间来回」用文字讲不清
+  commands.push(
+    vscode.commands.registerCommand('depscan.showRouteDiagram', async () => {
+      if (!(await ensureIndex())) return;
+      RoutePanel.createOrShow({ context, indexer, routeTree, logger });
     })
   );
 

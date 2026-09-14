@@ -9,12 +9,23 @@
 //   node scripts/dump-route.mjs --dfs --files        # 深度优先 + 文件级
 //   node scripts/dump-route.mjs --file src/core/engine.cpp --line 29   # 从光标处出发
 //   node scripts/dump-route.mjs --from func:demo::Engine::run
+//   node scripts/dump-route.mjs --svg  out.svg       # 顺便导出泳道图（不打开 VS Code 也能看图）
+//   node scripts/dump-route.mjs --html               # 生成泳道图**页面**的离线预览
+//
+// `--svg` 让这张图有一个**不经 UI** 的出口：既能直接丢进浏览器核对，
+// 也方便把它贴进 issue / 文档。导出用的与面板里显示的是同一对纯函数。
+//
+// `--html` 更进一步：把真实页面（真实 HTML 生成器 + 真实文案 + 真实前端脚本）
+// 拿去浏览器里跑，并**用 postMessage 投递数据** —— 也就是真正走一遍面板的链路。
+// Webview 的问题只能在浏览器里才暴露（这个项目已经踩过一次「打开一片空白」），
+// 所以这一条是唯一能替代 F5 的验证手段。
 import { spawn } from 'child_process';
+import { build } from 'esbuild';
 import { createInterface } from 'readline';
-import { existsSync, mkdtempSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const exe = process.platform === 'win32' ? '.exe' : '';
@@ -181,6 +192,72 @@ try {
   );
   const ambiguous = route.steps.filter((s) => s.ambiguous).length;
   console.log(`同名定义候选：${ambiguous} / ${route.steps.length} 步存在「可能是错边」的情况`);
+
+  if (args.svg !== undefined || args.flags.has('svg') || args.flags.has('html')) {
+    // 需要 TS 纯函数时现打一份（与离线自检脚本同一套路）
+    const bundleModule = async (entry, name) => {
+      const outfile = join(tmpdir(), `depscan-swimlane-${name}-${Date.now()}.mjs`);
+      await build({
+        entryPoints: [resolve(root, entry)],
+        bundle: true,
+        platform: 'node',
+        format: 'esm',
+        target: 'node18',
+        outfile,
+        logLevel: 'error'
+      });
+      return { mod: await import(pathToFileURL(outfile).href), outfile };
+    };
+    const swim = await bundleModule('src/views/swimlane.ts', 'layout');
+    const layout = swim.mod.layoutSwimlane(route, { maxSteps: 400 });
+    const svg = swim.mod.renderSwimlaneSvg(layout);
+    rmSync(swim.outfile, { recursive: true, force: true });
+
+    if (args.svg !== undefined || args.flags.has('svg')) {
+      const out = resolve(root, args.svg ?? 'engine/build/route-swimlane.svg');
+      writeFileSync(out, svg, 'utf8');
+      console.log(
+        `\n泳道图已写入：${out}` +
+          `（${layout.stepCount} 步 / ${layout.lanes.length} 个文件 / ${layout.crossFileEdges} 次换文件）`
+      );
+    }
+
+    if (args.html !== undefined || args.flags.has('html')) {
+      const htmlMod = await bundleModule('src/views/swimlaneHtml.ts', 'html');
+      const strings = await bundleModule('src/views/webviewStrings.ts', 'strings');
+      const zhMod = await bundleModule('src/i18n/zh.ts', 'zh');
+      const modelMod = await bundleModule('src/views/routeTreeModel.ts', 'model');
+      const i18n = strings.mod.buildSwimlaneStrings(zhMod.mod.zh);
+      // 标题用生产代码里的同一个函数，别让预览页与面板显示得不一样
+      const title = zhMod.mod.zh.route.diagramTitle(modelMod.mod.startLabel(route.from));
+      const status = `${layout.stepCount} 步 · ${layout.lanes.length} 个文件 · ${layout.crossFileEdges} 次换文件`;
+      let html = htmlMod.mod.renderSwimlaneHtml({
+        cspSource: "'self'",
+        scriptUri: '../../media/swimlane.js',
+        nonce: 'preview',
+        lang: 'zh-CN',
+        title,
+        status,
+        svg: undefined, // 故意**不内联**：让数据走 postMessage，与面板里完全同一条链路
+        emptyText: '（预览：等待 render 消息）',
+        i18n
+      });
+      // 预览页：去掉 CSP、打桩 vscode api，然后在末尾投递真实的 svg 消息
+      html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\s*/, '');
+      html = html.replace(
+        '<script nonce="preview"',
+        `<script>window.acquireVsCodeApi=function(){return{postMessage:function(m){(window.__posted=window.__posted||[]).push(m);},getState:function(){},setState:function(){}};};</script>\n<script nonce="preview"`
+      );
+      const payload = JSON.stringify({ type: 'svg', svg, title, status });
+      html = html.replace(
+        '</body>',
+        `<script>window.postMessage(${payload}, '*');</script>\n</body>`
+      );
+      const out = resolve(root, args.html ?? 'engine/build/route-swimlane.html');
+      writeFileSync(out, html, 'utf8');
+      console.log(`泳道图页面预览已写入：${out}`);
+    }
+  }
 } catch (err) {
   console.error(`[dump-route] 失败: ${err.message}`);
   process.exitCode = 1;

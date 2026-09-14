@@ -52,6 +52,14 @@ export function overrideKey(parentId: string, name: string): string {
   return `${parentId}|${name}`;
 }
 
+/**
+ * 把节点 id 变成给人看的起点名：`func:demo::Engine::run` → `demo::Engine::run`。
+ * 侧边栏顶部提示与泳道图标题共用它 —— 两边显示同一个起点，不该各自实现一次。
+ */
+export function startLabel(from: string): string {
+  return from.replace(/^func:/, '').replace(/^ext:[^:]+:/, '');
+}
+
 export function buildRouteTree(result: RouteResult): RouteTree {
   const childrenByParent = new Map<number, RouteStep[]>();
   for (const step of result.steps) {
