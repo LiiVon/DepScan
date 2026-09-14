@@ -30,6 +30,8 @@ export class EngineClient extends EventEmitter {
   private readonly pending = new Map<number, PendingCall>();
   private nextId = 1;
   private stopping = false;
+  /** 引擎 stderr 的滚动尾部，崩溃时用来给出可读原因 */
+  private stderrTail: string[] = [];
 
   constructor(
     private readonly enginePath: string,
@@ -45,6 +47,7 @@ export class EngineClient extends EventEmitter {
   start(cwd: string): void {
     if (this.running) return;
     this.stopping = false;
+    this.stderrTail = [];
     this.logger.info(`启动引擎: ${this.enginePath}`);
     this.proc = spawn(this.enginePath, [], {
       cwd,
@@ -57,7 +60,21 @@ export class EngineClient extends EventEmitter {
 
     this.proc.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString('utf8').trimEnd();
-      if (text) this.logger.debug(`[engine] ${text}`);
+      if (!text) return;
+      for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trimEnd();
+        if (!line.trim()) continue;
+        this.stderrTail.push(line);
+        if (this.stderrTail.length > 40) this.stderrTail.shift();
+        // 引擎的报错以前只在 debug 级别可见 —— 但崩溃时用户根本不会去开 debug，
+        // 于是「引擎进程异常退出」就变成了一条没有原因的报错。
+        // 凡是看起来像错误的行都按 warn 记，默认日志里就能看到。
+        if (/error|failed|failure|cannot|unable|异常|失败|错误/i.test(line)) {
+          this.logger.warn(`[engine] ${line}`);
+        } else {
+          this.logger.debug(`[engine] ${line}`);
+        }
+      }
     });
 
     this.proc.on('error', (err) => {
@@ -68,10 +85,16 @@ export class EngineClient extends EventEmitter {
     this.proc.on('exit', (code, signal) => {
       const message = `code=${code ?? 'null'} signal=${signal ?? 'null'}`;
       this.logger.warn(`引擎退出 (${message})`);
+      // 把崩溃前的最后几行 stderr 一起放到日志里，紧挨着退出信息，
+      // 否则用户要在一个几千行的输出面板里自己找原因。
+      for (const line of this.stderrTail) this.logger.warn(`[engine] ${line}`);
       this.proc = undefined;
       this.rl?.close();
       this.rl = undefined;
-      this.failAll(new Error(this.stopping ? s().engine.stopped : s().engine.crashed(message)));
+      const reason = this.stderrTail.length > 0 ? `\n${this.stderrTail.slice(-6).join('\n')}` : '';
+      this.failAll(
+        new Error(this.stopping ? s().engine.stopped : s().engine.crashed(message) + reason)
+      );
       if (!this.stopping) this.emit('exit', code, signal);
     });
   }

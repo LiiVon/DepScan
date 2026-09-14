@@ -328,6 +328,21 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   std::atomic<int> doneCount{0};
   std::atomic<bool> cancelled{false};
   std::atomic<int> skipped{0};
+  // 解析失败（抛异常）的文件数。跟「被跳过」（太大/被排除）区分开，
+  // 因为这是真正的 bug，必须让用户看到。
+  std::atomic<int> failed{0};
+  std::mutex warnMutex;
+  std::vector<std::string> failureWarnings;
+
+  const auto recordFailure = [&](const std::string& rel, const std::string& why) {
+    failed.fetch_add(1);
+    std::lock_guard<std::mutex> lock(warnMutex);
+    // 只保留前若干条：一个病态项目可能让成百上千个文件都失败，
+    // 刷屏反而掩盖了真正的原因。
+    if (failureWarnings.size() < 20) {
+      failureWarnings.push_back("文件解析失败，已跳过：" + rel + "\n  原因：" + why);
+    }
+  };
 
   int threads = req.threads;
   if (threads <= 0) {
@@ -352,18 +367,30 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
       fa.size = size;
 
       if (size >= 0 && static_cast<size_t>(size) <= req.options.fileSizeLimitBytes) {
-        const std::string src = util::readFile(abs);
-        AnalyzerOptions fileOpts = baseOpts;
-        auto dbIt = db.fileIndex.find(util::normalizePath(abs));
-        if (dbIt != db.fileIndex.end()) {
-          fa.fromCompileCommand = true;
-          const std::vector<std::string>& extra = db.includePathsByEntry[dbIt->second];
-          fileOpts.includePaths.insert(fileOpts.includePaths.end(), extra.begin(), extra.end());
+        // ⚠ 关键：这里是工作线程。任何从 analyzeFile / readFile 逸出的异常
+        //   都不会被 rpc.cpp 的 try/catch 接住（那是主线程），而是直接
+        //   触发 std::terminate —— 表现就是“引擎进程异常退出”，
+        //   一个大公司项目里只要有一个文件契死，整个索引就全部失败。
+        try {
+          const std::string src = util::readFile(abs);
+          AnalyzerOptions fileOpts = baseOpts;
+          auto dbIt = db.fileIndex.find(util::normalizePath(abs));
+          const bool inDb = dbIt != db.fileIndex.end();
+          if (inDb) {
+            const std::vector<std::string>& extra = db.includePathsByEntry[dbIt->second];
+            fileOpts.includePaths.insert(fileOpts.includePaths.end(), extra.begin(), extra.end());
+          }
+          fa = analyzeFile(rel, src, fileOpts);
+          fa.fromCompileCommand = fa.fromCompileCommand || inDb;
+        } catch (const std::exception& e) {
+          recordFailure(rel, e.what());
+        } catch (...) {
+          recordFailure(rel, "未知异常");
         }
-        fa = analyzeFile(rel, src, fileOpts);
         fa.mtimeMs = stamps[fi];
         fa.size = size;
-        fa.fromCompileCommand = fa.fromCompileCommand || (dbIt != db.fileIndex.end());
+        // 注意：fa 可能被上面的异常路径留在初始状态，file 仍为 rel ——
+        // 这样它至少会作为一个「无符号的空文件」出现在图里，而不是凭空消失。
         fa.file = rel;
       } else {
         skipped.fetch_add(1);
@@ -395,9 +422,20 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   session_.statsMutable().skippedFiles = skipped.load();
   session_.statsMutable().cacheReused = cacheLoaded && reused > 0;
 
+  // 把解析失败的文件上报给 UI。以前这里什么都没有 —— 要么静默漏掉，要么整个进程挂掉。
+  for (const std::string& w : failureWarnings) session_.statsMutable().warnings.push_back(w);
+  if (failed.load() > 0) {
+    session_.statsMutable().warnings.push_back(
+        "共 " + std::to_string(failed.load()) + " 个文件解析失败（已跳过，其余文件不受影响）。");
+  }
+
   // --- 构建模型 + 重建图 ---
   if (req.options.links) {
-    session_.setBuildModel(parseBuildModel(root));
+    try {
+      session_.setBuildModel(parseBuildModel(root));
+    } catch (const std::exception& e) {
+      session_.statsMutable().warnings.push_back(std::string("CMake 构建模型解析失败，已跳过 links 依赖：") + e.what());
+    }
   }
   session_.rebuild();
 
@@ -433,8 +471,15 @@ bool Scanner::runSingle(const ScanRequest& req, const std::string& relPath, std:
 
   FileAnalysis fa;
   const std::string src = util::readFile(abs);
-  if (size >= 0 && static_cast<size_t>(size) <= req.options.fileSizeLimitBytes) {
-    fa = analyzeFile(relPath, src, opts);
+  try {
+    if (size >= 0 && static_cast<size_t>(size) <= req.options.fileSizeLimitBytes) {
+      fa = analyzeFile(relPath, src, opts);
+    }
+  } catch (const std::exception& e) {
+    session_.statsMutable().warnings.push_back(
+        std::string("文件解析失败，已跳过：") + relPath + "\n  原因：" + e.what());
+  } catch (...) {
+    session_.statsMutable().warnings.push_back(std::string("文件解析失败，已跳过：") + relPath + "\n  原因：未知异常");
   }
   fa.file = relPath;
   fa.mtimeMs = stamp;
@@ -442,7 +487,11 @@ bool Scanner::runSingle(const ScanRequest& req, const std::string& relPath, std:
 
   session_.putFile(std::move(fa));
   if (req.options.links) {
-    session_.setBuildModel(parseBuildModel(root));
+    try {
+      session_.setBuildModel(parseBuildModel(root));
+    } catch (const std::exception& e) {
+      session_.statsMutable().warnings.push_back(std::string("CMake 构建模型解析失败，已跳过 links 依赖：") + e.what());
+    }
   }
   session_.rebuild();
 

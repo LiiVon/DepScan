@@ -19,16 +19,9 @@
 		{
 			"label": "core:build",
 			"type": "shell",
-			"command": "cmake",
+			"command": "node",
 			"args": [
-				"--build",
-				"engine/build",
-				"--config",
-				"Release",
-				"--parallel"
-			],
-			"dependsOn": [
-				"core:configure"
+				"scripts/build-core.mjs"
 			],
 			"problemMatcher": [
 				"$msCompile"
