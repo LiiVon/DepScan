@@ -85,6 +85,13 @@ if (target && target !== hostKey) {
     copied = 1;
     break;
   }
+
+  // CI 场景：打包机器上没有本机构建（比如在 ubuntu 上打 win32-x64 的包），
+  // 但 engines/<key>/<exe> 已经由 artifact 归位好了 —— 直接沿用。
+  if (copied === 0 && existsSync(resolve(root, 'engines', engineKey, exe))) {
+    console.log(`[package] 沿用已归位的引擎: engines/${engineKey}/${exe}`);
+    copied = 1;
+  }
 }
 
 const enginesDir = resolve(root, 'engines');

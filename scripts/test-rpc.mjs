@@ -113,7 +113,17 @@ const config = {
   includeExternal: true,
   cachePath: join(cacheDir, 'index-v1.txt'),
   useCache: true,
-  excludeGlobs: ['**/build/**', '**/.git/**']
+  // 与插件/引擎的默认排除保持一致：只排 **/build/** 是不够的，
+  // 开发者本地可能有 build-ninja / build-debug（含 CMakeFiles 里的探测源码），
+  // 否则测试会因为「本机多了一个构建目录」而出现莫名其妙的计数漂移。
+  excludeGlobs: [
+    '**/build/**',
+    '**/build-*/**',
+    '**/out/**',
+    '**/CMakeFiles/**',
+    '**/.git/**',
+    '**/_deps/**'
+  ]
 };
 
 try {

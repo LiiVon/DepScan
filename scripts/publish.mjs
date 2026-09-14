@@ -132,8 +132,9 @@ if (dryRun) {
 }
 
 const flags = ['publish', '--packagePath', vsixPath];
-// 平台专用包：manifest 里已带 targetPlatform，但显式再传一次更稳（旧版 vsce 只认参数）
-if (target) flags.push('--target', target);
+// 不传 --target：官方文档的做法是 `vsce package --target X` 之后
+// `vsce publish --packagePath <那个 vsix>`，平台信息在 vsixmanifest 里，
+// 再传一次 --target 反而可能冲突。
 
 const command = useOpenVsx ? 'ovsx' : '@vscode/vsce';
 const args = useOpenVsx ? ['publish', vsixPath] : flags;

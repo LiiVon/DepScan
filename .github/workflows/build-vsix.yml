@@ -1,0 +1,150 @@
+name: Build VSIX
+
+# 为什么需要这个工作流
+# ------------------------------------------------------------------
+# 引擎是**原生二进制，不能交叉编译**。想在 Windows / Linux / macOS 上都做到
+# 「装上就能用、不需要用户自己装编译器」，唯一的办法是在各平台的原生机器上
+# 各编译一次，再把产物合成 vsix。
+#
+# 仓库是 public 的，GitHub Actions 对公开仓库的构建分钟数**免费且不限量**，
+# 所以这条路是零成本的。
+#
+# 产物：每个平台一个专用 vsix（win32-x64 / linux-x64 / darwin-x64 / darwin-arm64）。
+# 不产出「通用包」—— 通用包会被 ARM Linux、Windows ARM 之类的平台也装到，
+# 然后报「引擎缺失」，比直接装不上更糟。
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: '同时发布到 VS Code Marketplace（需要先配置 VSCE_PAT secret）'
+        type: boolean
+        default: false
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # 打 tag 时创建 Release 需要
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ---------------------------------------------------------------- 1) 各平台编译引擎
+  engine:
+    name: 引擎 ${{ matrix.key }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, key: win32-x64 }
+          - { os: ubuntu-latest, key: linux-x64 }
+          - { os: macos-13, key: darwin-x64 } # macos-13 是 Intel
+          - { os: macos-14, key: darwin-arm64 } # macos-14 是 Apple Silicon
+          # 想覆盖 ARM 平台可以再加（runner 处于 public preview，稳定性一般）：
+          # - { os: ubuntu-24.04-arm, key: linux-arm64 }
+          # - { os: windows-11-arm,   key: win32-arm64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # runner 上已经有 CMake + MSVC / GCC / Xcode CLT，build-core.mjs 会自己找 cmake
+      - name: 配置 + 编译引擎
+        run: npm run build:core
+
+      - name: 引擎自测（29 项）
+        run: node scripts/test-core.mjs
+
+      - name: 归位到 engines/${{ matrix.key }}/
+        run: node scripts/collect-engine.mjs --key ${{ matrix.key }}
+
+      # upload-artifact 不保留文件权限位，所以先打成 tar 再上传，
+      # 否则 Linux/macOS 的 depscan-core 下载回来就没有 +x 了。
+      - name: 打包成 artifact
+        shell: bash
+        run: tar -czf engine-${{ matrix.key }}.tar.gz -C engines/${{ matrix.key }} .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-${{ matrix.key }}
+          path: engine-${{ matrix.key }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------- 2) 合成 vsix
+  package:
+    name: 打包 vsix
+    needs: engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: engine-*
+          path: artifacts
+
+      - name: 把四个平台的引擎归位到 engines/
+        shell: bash
+        run: |
+          set -euo pipefail
+          for d in artifacts/engine-*; do
+            key="${d#artifacts/engine-}"
+            mkdir -p "engines/$key"
+            tar -xzf "$d"/*.tar.gz -C "engines/$key"
+          done
+          chmod +x engines/*/depscan-core 2>/dev/null || true
+          ls -lR engines
+
+      - name: 安装依赖
+        run: npm ci --no-audit --no-fund
+
+      # 会跑 typecheck + esbuild + webview 构建 + Webview 自检（32 项）
+      - name: 构建扩展
+        run: npm run build:prod
+
+      - name: 逐平台打包（每个平台一个 vsix）
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in win32-x64 linux-x64 darwin-x64 darwin-arm64; do
+            node scripts/package.mjs --target "$key"
+          done
+          ls -l ./*.vsix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: '*.vsix'
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 打 tag 时创建 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes ./*.vsix
+
+      - name: 发布到 VS Code Marketplace
+        if: ${{ inputs.publish }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VSCE_PAT:-}" ]; then
+            echo "::error::打了 publish 但没配 VSCE_PAT secret。见 docs/06-发布与版本管理.md"
+            exit 1
+          fi
+          for f in ./*.vsix; do
+            echo "== 发布 $f"
+            npx --yes @vscode/vsce publish --packagePath "$f" -p "$VSCE_PAT"
+          done

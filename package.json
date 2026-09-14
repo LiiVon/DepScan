@@ -413,6 +413,7 @@
     "build:webview": "node scripts/build-webview.mjs",
     "check:webview": "node scripts/check-webview.mjs",
     "build:core": "node scripts/build-core.mjs",
+    "collect:engine": "node scripts/collect-engine.mjs",
     "compile": "node esbuild.mjs",
     "build": "npm run typecheck && npm run compile && npm run build:webview && npm run check:webview",
     "build:prod": "npm run typecheck && node esbuild.mjs --production && node scripts/build-webview.mjs --production && node scripts/check-webview.mjs",

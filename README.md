@@ -140,15 +140,34 @@ vsix 内按 `engines/<platform>-<arch>/depscan-core[.exe]` 分发，插件运行
 
 ```
 engines/
-├── win32-x64/depscan-core.exe      ← 当前仓库发布包里内置的
-├── linux-x64/depscan-core          ← 需要你在 Linux 上构建
-└── darwin-arm64/depscan-core       ← 需要你在 macOS 上构建
+├── win32-x64/depscan-core.exe
+├── linux-x64/depscan-core
+├── darwin-x64/depscan-core
+└── darwin-arm64/depscan-core
 ```
 
-**现状要说清楚**：引擎是原生二进制，不能交叉编译，所以只能在对应平台上各跑一次
-`npm run build:core`，把产物放进 `engines/<platform>-<arch>/`。
-在这件事做完之前，请用平台专用包发布（`npm run publish:win32-x64`），
-这样 Marketplace 只会把包发给 Windows 用户，不会让 Linux/macOS 用户装到一个跑不起来的扩展。
+**引擎是原生二进制，不能交叉编译** —— 所以这四个目录得在各自的平台上编译出来。
+本项目用 **GitHub Actions 自动完成**（公开仓库的构建分钟数免费且不限量）：
+
+```
+.github/workflows/build-vsix.yml
+  ① 四个原生 runner 各编译一次引擎（windows / ubuntu / macos-13 / macos-14）
+     + 跑引擎自测 29 项
+  ② 汇到一个 ubuntu runner，构建扩展 + 逐平台打 vsix
+     + 跑 Webview 自检 32 项
+  ③ 打 tag（v*）时自动创建 Release 并附上四个 vsix
+     手动触发时可选直接发布到 Marketplace（需 VSCE_PAT）
+```
+
+触发方式：仓库页面 → **Actions** → `Build VSIX` → **Run workflow**。
+
+本地单平台则很简单（在对应平台上执行）：
+
+```bash
+npm run build:core        # 编译引擎
+npm run collect:engine    # 归位到 engines/<当前平台>/
+npm run package           # 打包 vsix
+```
 
 用户也可以用 `depscan.engine.path` 指定自编译引擎覆盖内置版本。
 
