@@ -224,7 +224,10 @@ export const en: Strings = {
     diagramTruncated: (drawn, total) =>
       `The route is too large to draw whole: showing the first ${drawn} of ${total} steps. Use the Reading Route list in the sidebar for the rest.`,
     diagramExported: (file) => `Exported: ${file} (self-contained; open it in any browser)`,
-    diagramEmpty: 'No route to draw yet. Index the project first, or open Reading Route in the sidebar to generate one.',
+    diagramNavHint:
+      'Drag to pan · wheel to zoom (anchored at the pointer) · keys + − 0 f · click a dot to jump to source',
+    diagramEmpty:
+      'No route to draw yet. Index the project first, or open Reading Route in the sidebar to generate one.',
     diagramFit: 'Fit width',
     diagramZoomIn: 'Zoom in',
     diagramZoomOut: 'Zoom out',

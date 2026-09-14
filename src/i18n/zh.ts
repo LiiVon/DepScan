@@ -221,6 +221,7 @@ export const zh: Strings = {
     diagramTruncated: (drawn, total) =>
       `图太大，只画了前 ${drawn} 步（共 ${total} 步）。剩下的用侧边栏的「阅读路线」列表看。`,
     diagramExported: (file) => `已导出：${file}（自包含的单文件，可直接用浏览器打开）`,
+    diagramNavHint: '拖拽平移 · 滚轮缩放（以鼠标位置为锚点）· 键盘 + − 0 f · 点圆点跳源码',
     diagramEmpty: '还没有可画的路线。先建立索引，或先用侧边栏的「阅读路线」生成一次。',
     diagramFit: '适应宽度',
     diagramZoomIn: '放大',

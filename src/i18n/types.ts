@@ -188,6 +188,8 @@ export interface Strings {
     diagramTitle: (from: string) => string;
     /** 面板顶部说明：横轴是什么、箭头是什么意思 */
     diagramHint: string;
+    /** 面板顶部第二行：怎么操作这张图（拖拽/滚轮/键盘） */
+    diagramNavHint: string;
     /** 规模行，例：13 步 · 8 个文件 · 5 次换文件 */
     diagramStatus: (steps: number, lanes: number, cross: number) => string;
     /** 因为超过绘图上限没画出来的步骤 */

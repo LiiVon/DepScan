@@ -339,7 +339,37 @@ if (existsSync(scriptPath)) {
     '页面脚本里没有画布绘制代码（绘制全在插件侧，SVG 由宿主生成）'
   );
   check(code.includes('ds-step'), '页面脚本认得 ds-step（点击跳源码用的）');
+  check(
+    code.includes('elementFromPoint') && code.includes('finishPan'),
+    '点击在 pointerup 里用坐标反查 —— 指针被 setPointerCapture 捕获后，click 委托收不到圆点'
+  );
+
+  // 导航：拖拽平移 + 滚轮缩放。这几条只能用浏览器真跑一遍才算数（下面还有一条说明），
+  // 但至少先钉住「别哪天把其中一条交互删了」。
+  check(code.includes('wheel'), '滚轮处理存在（滚轮缩放）');
+  check(
+    code.includes('pointerdown') && code.includes('pointermove') && code.includes('pointerup'),
+    '指针事件齐全（拖拽平移）'
+  );
+  check(code.includes('setPointerCapture'), '拖拽时捕获指针（拖出视口也不丢）');
+  check(
+    code.includes('translate(') && code.includes('scale('),
+    '平移与缩放都走 transform（不是改 svg 尺寸 —— 那样做不到以鼠标为锚点缩放）'
+  );
+  check(code.includes('movedSinceDown'), '区分「拖拽」与「点一下」，拖完不会误跳源码');
+  check(code.includes('clampPan'), '平移有边界保护（不会把图拖飞）');
+  check(
+    code.includes('deltaMode') && code.includes('1.0013'),
+    '滚轮缩放量随 deltaY 连续变化（鼠标滚轮一格 ≈1.17 倍，触控板小步才是平滑的）'
+  );
 }
+
+// 页面骨架里那几条「画布式导航」的样式：不是装饰，缺了就拖不动
+check(/cursor:\s*grab/.test(html), '视口光标是抓取手势（能看出这里可以拖）');
+check(/touch-action:\s*none/.test(html), '视口声明 touch-action: none（触控/触控板拖拽才不会被浏览器吃掉）');
+check(/#viewport\s*\{[^}]*overflow:\s*hidden/.test(html), '视口不靠原生滚动条（改成 transform 平移）');
+check(/#canvas\s*\{[^}]*transform-origin/.test(html), '画布声明了 transform-origin: 0 0（缩放原点才对得上）');
+check(/<span class="muted">/.test(html), '页面上写了「怎么操作这张图」的提示');
 
 rmSync(workDir, { recursive: true, force: true });
 

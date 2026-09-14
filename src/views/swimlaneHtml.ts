@@ -69,14 +69,21 @@ button:hover { background: var(--vscode-button-secondaryHoverBackground, rgba(12
 #zoom-label { min-width: 40px; text-align: center; opacity: .8; font-variant-numeric: tabular-nums; }
 #hint, #status { margin: 0; padding: 4px 10px; }
 #hint { opacity: .75; line-height: 1.5; }
+#hint .muted { opacity: .8; }
 #status { opacity: .85; font-variant-numeric: tabular-nums; }
 #notice {
   margin: 0; padding: 4px 10px; line-height: 1.5;
   color: var(--vscode-editorWarning-foreground, #cca700);
 }
 #stage { flex: 1; display: flex; min-height: 0; }
-#viewport { flex: 1; overflow: auto; padding: 8px; }
-#canvas { transform-origin: top left; width: max-content; }
+/* 画布式导航：不用原生滚动条，而是拖拽平移 + 滚轮缩放（与依赖图面板同一种手感）。
+   overflow:hidden + transform 才做得到「以鼠标位置为锚点缩放」。 */
+#viewport {
+  flex: 1; position: relative; overflow: hidden;
+  cursor: grab; touch-action: none;
+}
+#viewport.ds-panning { cursor: grabbing; }
+#canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
 #canvas svg { display: block; }
 #legend {
   width: 250px; flex: none; padding: 8px 10px; overflow: auto;
@@ -110,7 +117,7 @@ button:hover { background: var(--vscode-button-secondaryHoverBackground, rgba(12
     <button id="btn-refresh" title="${t('refresh', 'Regenerate')}">⟳</button>
   </div>
 </header>
-<p id="hint">${t('hint', '')}</p>
+<p id="hint">${t('hint', '')}<br /><span class="muted">${t('navHint', '')}</span></p>
 <div id="status">${esc(status)}</div>
 <p id="notice"${notice ? '' : ' hidden'}>${esc(notice ?? '')}</p>
 <main id="stage">

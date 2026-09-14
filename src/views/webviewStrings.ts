@@ -64,6 +64,7 @@ export function buildSwimlaneStrings(t: Strings): Record<string, string> {
   return {
     title: t.route.diagram,
     hint: t.route.diagramHint,
+    navHint: t.route.diagramNavHint,
     empty: t.route.diagramEmpty,
     fit: t.route.diagramFit,
     zoomIn: t.route.diagramZoomIn,
