@@ -195,3 +195,22 @@ jobs:
             echo "== 发布 $f"
             npx --yes @vscode/vsce publish --packagePath "$f" -p "$VSCE_PAT"
           done
+
+      # Open VSX 覆盖 Cursor / VSCodium / Gitpod 等非官方发行版。
+      # 它的令牌只需一个 GitHub 账号，不像 Marketplace 那样必须绑定 Azure 订阅，
+      # 所以这是「想立刻自动化」时成本最低的一条路。
+      - name: 发布到 Open VSX
+        if: ${{ inputs.publish || startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OVSX_PAT:-}" ]; then
+            echo "::warning::未配置 OVSX_PAT，跳过 Open VSX 发布（不影响 Marketplace）"
+            exit 0
+          fi
+          for f in ./*.vsix; do
+            echo "== 发布到 Open VSX: $f"
+            npx --yes ovsx publish "$f" -p "$OVSX_PAT"
+          done
