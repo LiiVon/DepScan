@@ -27,6 +27,10 @@ struct Child {
   int line = 0;  // 调用点行号
 };
 
+// 候选列表上限：同名定义在真实项目里可能几十个（init / size / run 这种名字），
+// 全塞进 JSON 既没用又拖慢。超出后总数仍然如实报出（candidateTotal）。
+constexpr size_t kMaxCandidates = 20;
+
 struct Frame {
   size_t node = 0;
   int parentOrder = 0;
@@ -45,6 +49,39 @@ std::string findEntryPoint(const Graph& g) {
     if (fallback.empty()) fallback = n.id;
   }
   return fallback;
+}
+
+// 光标位置 → 该处所属的函数。读代码时的直觉是「我在这个函数里」，
+// 所以从光标取起点时优先给函数，而不是最近的任意符号。
+std::string functionAtLocation(const Graph& g, const std::string& relFile, int line) {
+  std::string fn;
+  int fnLine = -1;
+  std::string other;
+  int otherLine = -1;
+  std::string fileNode;
+  for (const Node& n : g.nodes) {
+    if (n.file != relFile) continue;
+    if (n.line > line) continue;
+    if (n.kind == NodeKind::File) {
+      if (fileNode.empty()) fileNode = n.id;
+      continue;
+    }
+    if (n.kind == NodeKind::Target) continue;
+    if (n.kind == NodeKind::Function) {
+      if (n.line >= fnLine) {
+        fnLine = n.line;
+        fn = n.id;
+      }
+      continue;
+    }
+    if (n.line >= otherLine) {
+      otherLine = n.line;
+      other = n.id;
+    }
+  }
+  if (!fn.empty()) return fn;
+  if (!other.empty()) return other;
+  return fileNode;
 }
 
 RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
@@ -85,6 +122,65 @@ RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
     });
   }
 
+  // 同名**定义**索引。
+  // 没有 compile_commands 时调用边是按名字消解的，所以在「项目里还有别的同名定义」时
+  // 就可能挑错了那一个。把这些同名定义列出来交给用户核对 / 切换，而不是替他挑一个然后假装确定。
+  //
+  // 只收定义、不收声明：`class Engine { void run(); };` 的声明不是「读代码要去的另一处」，
+  // 收进来会让每个成员函数都变成「有候选」，把信号淹掉。
+  std::unordered_map<std::string, std::vector<size_t>> defsByName;
+  for (size_t i = 0; i < g.nodes.size(); ++i) {
+    const Node& n = g.nodes[i];
+    if (n.kind != NodeKind::Function) continue;
+    if (n.external || n.declaration) continue;
+    defsByName[n.name].push_back(i);
+  }
+  for (auto& kv : defsByName) {
+    std::sort(kv.second.begin(), kv.second.end(), [&](size_t a, size_t b) {
+      const Node& x = g.nodes[a];
+      const Node& y = g.nodes[b];
+      if (x.file != y.file) return x.file < y.file;
+      if (x.line != y.line) return x.line < y.line;
+      return x.id < y.id;
+    });
+  }
+
+  // 人工纠偏：把某个调用点上「按名字消解」的结果换成用户选的那个同名定义。
+  // 选中的节点即使原本不是该父节点的子节点（图里解析到了别处）也照走 —— 这正是纠偏的意义；
+  // 行号沿用原调用点，所以排序与遍历策略的行为完全不变，只有「走到哪个节点」变了。
+  const auto applyOverrides = [&](size_t parentNode, const std::vector<Child>& in) -> std::vector<Child> {
+    if (opt.overrides.empty()) return in;
+    const std::string& pid = g.nodes[parentNode].id;
+    std::unordered_map<std::string, std::string> picked;  // 简单名 → 选中的节点 id
+    for (const Child& c : in) {
+      const auto it = opt.overrides.find(pid + "|" + g.nodes[c.nodeIndex].name);
+      if (it != opt.overrides.end() && !it->second.empty()) {
+        picked[g.nodes[c.nodeIndex].name] = it->second;
+      }
+    }
+    if (picked.empty()) return in;
+
+    std::vector<Child> out;
+    out.reserve(in.size());
+    std::unordered_set<std::string> settled;
+    for (const Child& c : in) {
+      const std::string& name = g.nodes[c.nodeIndex].name;
+      const auto p = picked.find(name);
+      if (p == picked.end()) {
+        out.push_back(c);
+        continue;
+      }
+      if (!settled.insert(name).second) continue;  // 同名只保留一份
+      const auto chosen = index.find(p->second);
+      if (chosen == index.end()) {
+        out.push_back(c);  // 选了个图里不存在的 id：忽略这次纠偏
+        continue;
+      }
+      out.push_back({chosen->second, c.line});
+    }
+    return out;
+  };
+
   const int maxSteps = std::max(1, std::min(opt.maxSteps, 100000));
   const int maxDepth = std::max(0, std::min(opt.maxDepth, 64));
 
@@ -116,14 +212,15 @@ RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
     const std::vector<Child>* kids = childrenOf(f.node);
     if (!kids) return 0;
 
-    std::vector<const Child*> usable;
-    usable.reserve(kids->size());
+    std::vector<Child> source;
+    source.reserve(kids->size());
     for (const Child& c : *kids) {
       if (opt.projectOnly && g.nodes[c.nodeIndex].external) continue;
-      usable.push_back(&c);
+      source.push_back(c);
     }
+    const std::vector<Child> usable = applyOverrides(f.node, source);
     for (size_t i = 0; i < usable.size(); ++i) {
-      const Child& c = reverse ? *usable[usable.size() - 1 - i] : *usable[i];
+      const Child& c = reverse ? usable[usable.size() - 1 - i] : usable[i];
       pending.push_back({c.nodeIndex, s.order, f.depth + 1});
     }
     return static_cast<int>(usable.size());
@@ -170,18 +267,20 @@ RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
     r.truncated = r.frontierNodes > 0;
   }
 
-  // 同名兄弟 = 按名字消解出来的多个候选，可能走错边。标出来让用户自己判断。
-  {
-    std::unordered_map<int, std::vector<int>> byParent;  // parent -> step 下标
-    for (size_t i = 0; i < r.steps.size(); ++i) byParent[r.steps[i].parent].push_back(static_cast<int>(i));
-    for (const auto& kv : byParent) {
-      std::unordered_map<std::string, std::vector<int>> byName;
-      for (int i : kv.second) byName[g.nodes[r.steps[i].nodeIndex].name].push_back(i);
-      for (const auto& n : byName) {
-        if (n.second.size() < 2) continue;
-        for (int i : n.second) r.steps[i].ambiguous = true;
-      }
+  // 候选：这一步的名字在项目里还有别的定义 → 按名字消解可能选错了那一个。
+  // 判定依据是「图里别处还有同名定义」，而不是「同一个父节点下有两个同名子节点」——
+  // 后者在真实项目里几乎不会发生，会出错的恰恰是前者。
+  for (RouteStep& s : r.steps) {
+    const Node& n = g.nodes[s.nodeIndex];
+    if (n.kind != NodeKind::Function) continue;
+    const auto it = defsByName.find(n.name);
+    if (it == defsByName.end()) continue;
+    for (size_t i : it->second) {
+      if (i == s.nodeIndex) continue;
+      ++s.candidateTotal;
+      if (s.candidates.size() < kMaxCandidates) s.candidates.push_back(i);
     }
+    s.ambiguous = s.candidateTotal > 0;
   }
 
   // 函数级 → 文件级：只保留每个文件首次进入的那一步，
@@ -238,6 +337,23 @@ json::Value routeToJson(const Graph& g, const RouteResult& r) {
     o.set("detail", json::Value::makeString(n.detail));
     o.set("external", json::Value::makeBool(n.external));
     o.set("precision", json::Value::makeString(toString(n.precision)));
+    o.set("candidateTotal", json::Value::makeInt(s.candidateTotal));
+    if (!s.candidates.empty()) {
+      json::Value cands = json::Value::makeArray({});
+      for (size_t ci : s.candidates) {
+        const Node& c = g.nodes[ci];
+        json::Value co = json::Value::makeObject();
+        co.set("id", json::Value::makeString(c.id));
+        co.set("name", json::Value::makeString(c.name));
+        co.set("file", json::Value::makeString(c.file));
+        co.set("line", json::Value::makeInt(c.line));
+        co.set("column", json::Value::makeInt(c.column));
+        co.set("declaration", json::Value::makeBool(c.declaration));
+        co.set("detail", json::Value::makeString(c.detail));
+        cands.arrayValue.push_back(std::move(co));
+      }
+      o.set("candidates", std::move(cands));
+    }
     steps.arrayValue.push_back(std::move(o));
   }
   out.set("steps", std::move(steps));

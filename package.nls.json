@@ -5,6 +5,8 @@
   "cmd.showIndexStatus": "Show Index Status",
   "cmd.diagnosePrecision": "Why is it Approx? (Precision Diagnosis)",
   "cmd.showRoute": "Reading Route (from main)",
+  "cmd.routeFromCursor": "Reading Route: Read from Here (cursor)",
+  "cmd.resetRouteStart": "Reading Route: Start Back at main",
   "cmd.toggleRouteGroupByFile": "Reading Route: Toggle File Level",
   "cmd.toggleRouteStrategy": "Reading Route: Switch Traversal Strategy",
   "cmd.showGraph": "Show Dependency Graph",

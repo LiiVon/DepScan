@@ -192,18 +192,29 @@ export const en: Strings = {
     compileGuide: 'How to generate compile_commands.json',
     diagnosePrecision: 'Why is it Approx?',
     route: 'Reading Route (from main)',
+    routeFromCursor: 'Read from here',
+    resetRouteStart: 'Back to main',
     docs: 'Documentation',
     current: 'current'
   },
   route: {
     needIndex: 'Not indexed yet. Run "Rebuild Index" first, then come back.',
-    noEntry: 'No entry point found (main / WinMain / DllMain). For a library project, pick a start node from the command palette.',
+    noEntry:
+      'No entry point found (main / WinMain / DllMain). For a library project, put the cursor on an exported interface and use "Read from here".',
     failed: 'Could not build the reading route — see Output → DepScan for details.',
     from: (name, file) => `Start: ${name} (auto-detected, ${file})`,
+    fromPicked: (name, file) => `Start: ${name} (from cursor, ${file})`,
     fromShort: (name) => `Start: ${name}`,
     root: 'start',
     step: (order) => `#${order}`,
-    ambiguous: 'Several same-named candidates — this step may be wrong (references are resolved by name)',
+    ambiguous:
+      'This name is defined elsewhere in the project too — by-name resolution may have stopped at the wrong function',
+    candidates: (n) => `Candidates (${n} other definitions with this name)`,
+    current: 'current',
+    useCandidate: (file, line) => `Use ${file}:${line} for this step instead`,
+    resetCandidate: 'This is the one in use — click to undo the correction',
+    candidateHint: (n) => `${n} step(s) have same-named definitions — expand "Candidates" to check them.`,
+    cursorMissing: (file, line) => `No function at ${file}:${line} (put the cursor inside a function body).`,
     external: 'outside the project',
     newFile: 'first time in this file',
     truncated: (nodes, files) =>

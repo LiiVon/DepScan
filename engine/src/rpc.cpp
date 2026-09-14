@@ -282,6 +282,32 @@ int runStdioServer() {
         session.eraseFile(util::normalizePath(params.getString("file")));
         session.rebuild();
         writeResult(id, session.statsToJson());
+      } else if (method == "nodeAt") {
+        // 光标位置 → 符号节点。供「从光标处开始读」用：
+        // 大项目的 main 常常在平台相关文件里，真正想读的那条线往往从别处起头。
+        std::lock_guard<std::mutex> lock(g_sessionMutex);
+        const std::string file = util::normalizePath(params.getString("file"));
+        const std::string rel = util::relativeTo(session.root(), util::joinPath(session.root(), file));
+        const int line = static_cast<int>(params.getNumber("line", 1));
+        const std::string hit = functionAtLocation(session.graph(), rel, line);
+        if (hit.empty()) {
+          throw std::runtime_error("该位置没有可用符号：" + rel + ":" + std::to_string(line));
+        }
+        json::Value node = json::Value::makeObject();
+        for (const Node& n : session.graph().nodes) {
+          if (n.id != hit) continue;
+          node.set("id", json::Value::makeString(n.id));
+          node.set("name", json::Value::makeString(n.name));
+          node.set("kind", json::Value::makeString(toString(n.kind)));
+          node.set("file", json::Value::makeString(n.file));
+          node.set("line", json::Value::makeInt(n.line));
+          node.set("column", json::Value::makeInt(n.column));
+          node.set("external", json::Value::makeBool(n.external));
+          node.set("declaration", json::Value::makeBool(n.declaration));
+          node.set("detail", json::Value::makeString(n.detail));
+          break;
+        }
+        writeResult(id, std::move(node));
       } else if (method == "route") {
         // 阅读路线：从入口（默认 main）出发的有序阅读清单。
         // 与 subgraph 的区别是「有序」—— 遍历在引擎里做，前端只负责渲染，
@@ -296,6 +322,14 @@ int runStdioServer() {
         if (maxDepth >= 0) opt.maxDepth = maxDepth;
         opt.projectOnly = params.getBool("projectOnly", true);
         opt.groupByFile = params.getBool("groupByFile", false);
+        // 人工纠偏：{"<父节点 id>|<简单名>": "<改用的节点 id>"}
+        if (const json::Value* ov = params.find("overrides"); ov && ov->isObject()) {
+          for (const auto& kv : ov->objectValue) {
+            if (kv.second.isString() && !kv.second.stringValue.empty()) {
+              opt.overrides[kv.first] = kv.second.stringValue;
+            }
+          }
+        }
         const std::vector<std::string> kinds = params.getStringArray("kinds");
         if (!kinds.empty()) {
           std::vector<EdgeKind> parsed;

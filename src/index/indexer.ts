@@ -6,7 +6,15 @@ import { readConfig, toEngineConfig, type DepScanConfig } from '../config';
 import { findCompileCommands, fileMtimeMs } from './compileDb';
 import { EngineClient } from '../engine/client';
 import { resolveEnginePath, type EngineLocation } from '../engine/locator';
-import type { Direction, ExportResult, PingResult, RouteOptions, RouteResult, SubgraphResult } from '../engine/protocol';
+import type {
+  Direction,
+  ExportResult,
+  NodeAtResult,
+  PingResult,
+  RouteOptions,
+  RouteResult,
+  SubgraphResult
+} from '../engine/protocol';
 import type { GraphData, ScanStats } from '../graph/model';
 import { s } from '../i18n';
 import { precisionLabel } from '../i18n';
@@ -404,6 +412,9 @@ export class IndexService implements vscode.Disposable {
   /**
    * 阅读路线：从入口（main / WinMain / DllMain …）出发的有序阅读清单。
    * 遍历在引擎侧完成 —— 大项目下这里可能是几万个节点，不能拉到前端再算。
+   *
+   * `from` 可以是任意节点 id（不只是 main）：库项目从导出接口起、或者
+   * 「从光标处开始读」都走这里。
    */
   async route(options: RouteOptions = {}): Promise<RouteResult | undefined> {
     if (!(await this.requireStats())) return undefined;
@@ -414,11 +425,27 @@ export class IndexService implements vscode.Disposable {
         maxSteps: options.maxSteps ?? 200,
         maxDepth: options.maxDepth ?? 6,
         projectOnly: options.projectOnly ?? true,
-        groupByFile: options.groupByFile ?? false
+        groupByFile: options.groupByFile ?? false,
+        overrides: options.overrides ?? {}
       });
     } catch (err) {
       // 找不到入口是「可预期」的失败（库项目没有 main），不当成错误刷日志
       this.logger.warn(`阅读路线查询失败：${String(err)}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * 光标位置（相对路径 + 行号）→ 该处所属的符号节点。
+   * 取所在**函数**而不是最近的任意符号 —— 读代码时的直觉是「我在这个函数里」。
+   * 找不到可用符号时返回 undefined（比如光标停在文件末尾的空白处）。
+   */
+  async nodeAt(relFile: string, line: number): Promise<NodeAtResult | undefined> {
+    if (!(await this.requireStats())) return undefined;
+    try {
+      return await this.client!.request<NodeAtResult>('nodeAt', { file: relFile, line });
+    } catch (err) {
+      this.logger.warn(`光标定位失败：${String(err)}`);
       return undefined;
     }
   }

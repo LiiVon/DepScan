@@ -5,6 +5,8 @@
   "cmd.showIndexStatus": "查看索引状态",
   "cmd.diagnosePrecision": "为什么是近似？（精度诊断）",
   "cmd.showRoute": "阅读路线（从 main 开始）",
+  "cmd.routeFromCursor": "阅读路线：从光标处开始读",
+  "cmd.resetRouteStart": "阅读路线：起点回到 main",
   "cmd.toggleRouteGroupByFile": "阅读路线：切换文件级 / 函数级",
   "cmd.toggleRouteStrategy": "阅读路线：切换遍历策略",
   "cmd.showGraph": "查看依赖图",

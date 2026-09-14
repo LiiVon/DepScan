@@ -1,14 +1,22 @@
 import * as vscode from 'vscode';
 
-import type { RouteOptions, RouteResult, RouteStep } from '../engine/protocol';
+import type { RouteOptions } from '../engine/protocol';
 import type { NodeKind } from '../graph/model';
 import { s } from '../i18n';
 import type { IndexService } from '../index/indexer';
+import {
+  buildRouteTree,
+  failedNode,
+  needIndexNode,
+  noEntryNode,
+  overrideKey,
+  treeChildren,
+  type RouteTree,
+  type RouteTreeNode
+} from './routeTreeModel';
 
-type RouteNode =
-  | { kind: 'info'; text: string; icon?: string; command?: vscode.Command }
-  | { kind: 'step'; step: RouteStep }
-  | { kind: 'tail'; text: string; icon: string };
+/** 树模型节点 → vscode.TreeItem；结构本身在 routeTreeModel.ts（纯函数，可离线断言） */
+type RouteNode = RouteTreeNode;
 
 /**
  * 侧边栏「阅读路线」视图。
@@ -18,18 +26,29 @@ type RouteNode =
  * 「有序 + 可缩进 + 键盘上下走 + 点一下跳源码」这四件事，
  * 而力导向图恰恰会把顺序揉乱 —— 那是给「关系」用的，不是给「顺序」用的。
  * 泳道图（每个文件一条泳道）留给后续版本，先确认路线本身读起来合理。
+ *
+ * 两个可撤销的手工干预：
+ *  - 起点：默认 main，也可以从编辑器光标处取（库项目 / 想在项目中间起头时用）
+ *  - 候选：同名定义之间的消解可能选错，展开「候选」直接换成另一个
  */
 export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vscode.Disposable {
   private readonly emitter = new vscode.EventEmitter<RouteNode | undefined | void>();
   readonly onDidChangeTreeData = this.emitter.event;
 
-  private readonly children = new Map<number, RouteStep[]>();
-  private result: RouteResult | undefined;
+  private tree: RouteTree | undefined;
   private loading = false;
   private stale = true;
   private byFile = false;
   private strategy: 'bfs' | 'dfs' = 'bfs';
   private view: vscode.TreeView<RouteNode> | undefined;
+  /** 手工指定的起点节点 id；undefined = 自动找入口 */
+  private from: string | undefined;
+  /**
+   * 人工纠偏：`"<父节点 id>|<简单名>"` → 改用的节点 id。
+   * 用节点 id 而不是步号做 key —— 步号会随纠偏本身变化，节点 id 不会。
+   * 与引擎侧的约定必须一字不差，见 engine/src/route.cpp 的 applyOverrides。
+   */
+  private readonly overrides = new Map<string, string>();
 
   /** 用 TreeView.message 显示起点与精度提示 —— 不然这些文字会占掉节点行 */
   attachView(view: vscode.TreeView<RouteNode>): void {
@@ -39,6 +58,15 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
 
   private updateMessage(): void {
     if (this.view) this.view.message = this.statusMessage();
+  }
+
+  /** 让「起点回到 main」这类按钮只在真的改了起点时才出现 */
+  private updateContext(): void {
+    void vscode.commands.executeCommand('setContext', 'depscan.routeCustomStart', !!this.from);
+  }
+
+  get customStart(): boolean {
+    return !!this.from;
   }
 
   constructor(private readonly indexer: IndexService) {
@@ -56,9 +84,27 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
     this.emitter.dispose();
   }
 
+  /** 设置起点（undefined = 回到自动识别 main） */
+  setStart(nodeId: string | undefined): void {
+    this.from = nodeId;
+    this.refresh();
+  }
+
+  /**
+   * 纠偏：把「父节点下叫 name 的那个子节点」换成 nodeId。
+   * nodeId === undefined 表示撤回这条纠偏。
+   */
+  correct(parentId: string, name: string, nodeId: string | undefined): void {
+    const key = overrideKey(parentId, name);
+    if (nodeId) this.overrides.set(key, nodeId);
+    else this.overrides.delete(key);
+    this.refresh();
+  }
+
   /** 重新生成并刷新 */
   refresh(): void {
     this.invalidate();
+    this.updateContext();
     this.updateMessage();
     this.emitter.fire();
   }
@@ -94,12 +140,17 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
 
   /** 起点 + 精度提示显示在视图顶部（TreeView.message），不占用节点行 */
   statusMessage(): string | undefined {
-    if (!this.result) return undefined;
-    const head = this.result.from;
-    const name = head.replace(/^func:/, '').replace(/^ext:[^:]+:/, '');
-    const file = this.result.steps[0]?.file ?? '';
-    const from = file ? s().route.from(name, file) : s().route.fromShort(name);
-    return `${from}\n${s().route.precisionHint}`;
+    if (!this.tree) return undefined;
+    const result = this.tree.result;
+    const name = result.from.replace(/^func:/, '').replace(/^ext:[^:]+:/, '');
+    const first = result.steps[0];
+    const at = first?.file ? `${first.file}:${first.line}` : '';
+    let from: string;
+    if (this.from) from = at ? s().route.fromPicked(name, at) : s().route.fromShort(name);
+    else from = at ? s().route.from(name, first.file) : s().route.fromShort(name);
+    const lines = [from, s().route.precisionHint];
+    if (this.tree.riskyCount > 0) lines.push(s().route.candidateHint(this.tree.riskyCount));
+    return lines.join('\n');
   }
 
   getTreeItem(element: RouteNode): vscode.TreeItem {
@@ -115,14 +166,42 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       item.tooltip = element.text;
       return item;
     }
+    if (element.kind === 'candidates') {
+      const item = new vscode.TreeItem(element.text, vscode.TreeItemCollapsibleState.Collapsed);
+      item.iconPath = new vscode.ThemeIcon('list-selection');
+      item.tooltip = element.tooltip;
+      item.contextValue = 'depscan.routeCandidates';
+      return item;
+    }
+    if (element.kind === 'candidate') {
+      const { candidate, isCurrent, args } = element;
+      const label = isCurrent ? `${candidate.id}（${s().route.current}）` : candidate.id;
+      const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+      item.description = `${candidate.file}:${candidate.line}`;
+      item.iconPath = isCurrent
+        ? new vscode.ThemeIcon('check')
+        : new vscode.ThemeIcon('circle-small-filled');
+      item.tooltip = [candidate.id, `${candidate.file}:${candidate.line}`, candidate.detail]
+        .filter(Boolean)
+        .join('\n');
+      // 「当前」那一项点了就是撤回纠偏（args.reset）
+      item.command = {
+        command: 'depscan.pickRouteCandidate',
+        title: isCurrent
+          ? s().route.resetCandidate
+          : s().route.useCandidate(candidate.file, candidate.line),
+        arguments: [args]
+      };
+      return item;
+    }
 
     const step = element.step;
     // 步号放最左边 —— 这个视图里「第几步」比「叫什么」更重要
     const label = `${s().route.step(step.order)} ${step.name}`;
-    const kids = this.children.get(step.order) ?? [];
     const item = new vscode.TreeItem(
       label,
-      kids.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
+      // 「可展开」由模型算（含「有候选就必须展开」这条）—— 写在这儿容易漏
+      element.expandable ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
     );
     item.description = `${step.file}:${step.line}`;
 
@@ -156,76 +235,44 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
   }
 
   async getChildren(element?: RouteNode): Promise<RouteNode[]> {
-    if (element) {
-      if (element.kind !== 'step') return [];
-      return (this.children.get(element.step.order) ?? []).map((step) => ({ kind: 'step', step }));
+    if (!element) {
+      if (!this.indexer.currentStatus.stats) return [needIndexNode()];
+      if (this.stale && !this.loading) await this.load();
+      if (!this.tree) {
+        // 正在加载：不要返回 [] 去覆盖上一次的内容
+        return this.loading ? [] : [failedNode()];
+      }
+      if (this.tree.result.steps.length === 0) return [noEntryNode()];
+      return treeChildren(this.tree, undefined, this.overrides);
     }
-
-    if (!this.indexer.currentStatus.stats) {
-      return [
-        {
-          kind: 'info',
-          text: s().route.needIndex,
-          icon: 'info',
-          command: { command: 'depscan.indexWorkspace', title: s().actions.reindex }
-        }
-      ];
-    }
-
-    if (this.stale && !this.loading) {
-      await this.load();
-    }
-    if (!this.result) {
-      // 正在加载：不要返回 [] 去覆盖上一次的内容
-      return this.loading ? [] : [{ kind: 'info', text: s().route.failed, icon: 'warning' }];
-    }
-    if (this.result.steps.length === 0) {
-      return [{ kind: 'info', text: s().route.noEntry, icon: 'info' }];
-    }
-
-    const out: RouteNode[] = this.result.steps
-      .filter((step) => step.parent === 0)
-      .map((step) => ({ kind: 'step', step }) as RouteNode);
-
-    if (this.result.truncated) {
-      out.push({
-        kind: 'tail',
-        icon: 'ellipsis',
-        text: s().route.truncated(this.result.frontierNodes, this.result.frontierFiles)
-      });
-    } else {
-      out.push({ kind: 'tail', icon: 'check', text: s().route.complete });
-    }
-    return out;
+    if (!this.tree) return [];
+    return treeChildren(this.tree, element, this.overrides);
   }
 
   private async load(): Promise<void> {
     this.loading = true;
     try {
       const options: RouteOptions = {
+        from: this.from,
         strategy: this.strategy,
         groupByFile: this.byFile,
         maxSteps: 300,
-        maxDepth: 6
+        maxDepth: 6,
+        overrides: this.overrides.size ? Object.fromEntries(this.overrides) : undefined
       };
-      this.result = await this.indexer.route(options);
-      this.children.clear();
-      if (this.result) {
-        // 一次把父子关系建好：getChildren 会被高频调用，不能每次都扫全表
-        for (const step of this.result.steps) {
-          if (step.parent === 0) continue;
-          const list = this.children.get(step.parent);
-          if (list) list.push(step);
-          else this.children.set(step.parent, [step]);
-        }
-      }
+      const result = await this.indexer.route(options);
+      this.tree = result ? buildRouteTree(result) : undefined;
     } finally {
       this.loading = false;
       this.stale = false;
+      this.updateContext();
       this.updateMessage();
     }
   }
 }
+
+/** 「候选」条目点击时传给 depscan.pickRouteCandidate 的参数（定义在纯模型里） */
+export type { CandidateArgs } from './routeTreeModel';
 
 function kindIcon(kind: NodeKind): string {
   switch (kind) {

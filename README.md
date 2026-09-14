@@ -41,12 +41,56 @@ Prebuilt engines ship for **Windows x64**, **Linux x64** and **macOS** (Intel an
 1. **Open** a folder that contains C/C++ sources. DepScan indexes it in the background — progress shows in the status bar and in the **Index Status** sidebar view.
 2. **Pick a starting point** — right-click any `.cpp` / `.h` file → **Show Dependency Graph**, or put the cursor inside a function and run `DepScan: Show Dependency Graph for Symbol`.
 3. **Read the graph** — click a node to jump to its source, double-click it to expand one more level.
+4. **Or follow a route** — see **Reading route** below to get a *numbered reading order* instead of a graph.
 
 <!--
   TODO(screenshot): 依赖图特写（含工具栏 + 图例 + 选中节点详情）
   文件名：media/screenshots/graph.png
   ![Dependency graph](media/screenshots/graph.png)
 -->
+
+---
+
+## Reading route
+
+> A dependency graph answers *“what is related to what”*. When you open a 200-file project you usually want a different question answered: **what do I read first, and what next?** That is what the reading route does.
+
+Sidebar → **DepScan → Reading Route** (or *Actions → Reading route*):
+
+```
+Start: main (auto-detected, src/main.cpp)
+The route is a reading suggestion, not an exact call stack: call edges are resolved by name, so treat ⚠ steps with care.
+1 step(s) have same-named definitions — expand "Candidates" to check them.
+
+#1 main                     src/main.cpp:6
+  #2 setVerbose             src/main.cpp:9
+  #3 Application::start     src/app/application.cpp:9
+    #4 config                include/demo/config.h:24
+    #5 Engine::run           src/core/engine.cpp:27
+      #7 trim                src/util/string_utils.cpp:7
+      #8 Registry::add       src/core/registry.cpp:8
+      #9 Engine::describe    src/core/engine.cpp:23
+      #10 ⚠ Base::describe   src/core/base.h:25
+      #11 Registry::size     src/core/registry.cpp:16
+    #6 Panel::render         src/ui/panel.cpp:13
+✓ Route is complete
+```
+
+The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tried too) and walks call edges **in source order**, so step numbers are the order you should read in.
+
+| Control | What it does |
+| --- | --- |
+| Click a step | Jump to its source |
+| Title bar `$(arrow-both)` | Breadth first (outline first) ↔ depth first (follow one chain) |
+| Title bar `$(file-code)` | File level ↔ function level (file level keeps only the first entry per file) |
+| Title bar `$(target)` | Start from **the function under the cursor** — for library projects, or when `main` is not where you want to start |
+| Title bar `$(home)` | Back to `main` (appears only once you changed the start) |
+| Expand a ⚠ step → **Candidates** | Same-named definitions this call could have meant — pick another one, or click the current one to undo |
+
+**Why the ⚠ marks are not decoration.** Without a compile database, call edges are resolved *by name*. A wrong edge in a graph is one extra line; a wrong edge in a route means **everything after it is the wrong reading order**. So whenever the name is defined more than once in the project, DepScan says so and lets you pick — instead of silently guessing and pretending to be sure. Enabling a compile database is still the real fix (see below).
+
+> Steps are *session state*: a custom start and manual corrections reset when VS Code restarts.
+> To inspect a route without the UI: `npm run route:dump -- --dfs --files`.
 
 ---
 
@@ -94,7 +138,8 @@ Precision is also marked **per edge** — solid lines are exact, dashed lines ar
 
 | View | Contents |
 | --- | --- |
-| **Actions** | Every frequent command as a single click — open graph, reindex, export, switch language. No command palette needed. Shows the current precision level next to *Rebuild Index*. |
+| **Actions** | Every frequent command as a single click — open route, read from cursor, open graph, reindex, export, switch language. No command palette needed. Shows the current precision level next to *Rebuild Index*. |
+| **Reading Route** | Ordered reading list from `main`, with same-named candidate steps marked for review |
 | **Dependencies** | Upstream / downstream tree for the current file, expandable level by level |
 | **Index Status** | Progress, file / symbol / edge counts, precision, and warnings |
 
@@ -121,6 +166,11 @@ Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or *
 
 | Command | Description |
 | --- | --- |
+| `DepScan: Reading Route (from main)` | Ordered reading list from the program entry point |
+| `DepScan: Reading Route: Read from Here (cursor)` | Start the route at the function under the cursor |
+| `DepScan: Reading Route: Start Back at main` | Undo a custom start |
+| `DepScan: Reading Route: Toggle File Level` | File level ↔ function level |
+| `DepScan: Reading Route: Switch Traversal Strategy` | Breadth first ↔ depth first |
 | `DepScan: Show Dependency Graph` | Graph focused on the current file |
 | `DepScan: Show Dependency Graph for Symbol` | Graph focused on the symbol under the cursor |
 | `DepScan: Architecture View` | Whole-project view, aggregated by directory |
@@ -193,9 +243,10 @@ Detailed, example-driven documentation is currently written in Chinese:
 | --- | --- |
 | [01 · Quick start](docs/01-快速开始.md) | Install, prepare `compile_commands.json`, first index |
 | [02 · Interface guide](docs/02-界面与操作指南.md) | Three synced views, export, indexing and caching |
-| [03 · Reading a project with DepScan](docs/03-如何用%20DepScan%20学习项目.md) | Four copy-paste reading recipes |
+| [03 · Reading a project with DepScan](docs/03-如何用%20DepScan%20学习项目.md) | Copy-paste reading recipes: from the reading route to include / inheritance / reference graphs |
 | [04 · Parsing and precision](docs/04-解析与精度说明.md) | Exact vs approximate, the boundary of each dependency kind, FAQ |
 | [05 · Performance and settings](docs/05-性能与配置参考.md) | Every setting, tuning for million-line repos |
+| [07 · Reading route](docs/07-阅读路线.md) | Why an ordered list instead of a fourth graph, candidates, acceptance criteria |
 
 ---
 

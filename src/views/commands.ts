@@ -7,7 +7,7 @@ import type { IndexService } from '../index/indexer';
 import { findCompileCommands } from '../index/compileDb';
 import type { Logger } from '../util/log';
 import { GraphPanel } from './graphPanel';
-import type { RouteTreeProvider } from './routeProvider';
+import type { CandidateArgs, RouteTreeProvider } from './routeProvider';
 import type { DependencyTreeProvider, IndexTreeProvider } from './treeProvider';
 
 export interface CommandDeps {
@@ -144,6 +144,45 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   commands.push(
     vscode.commands.registerCommand('depscan.toggleRouteStrategy', async () => {
       await routeTree.toggleStrategy();
+    })
+  );
+
+  // 阅读路线：起点取自编辑器光标所在的函数。
+  // 大项目的 main 常常在平台相关文件里，真正想读的那条线未必从 main 起头；
+  // 库项目则压根没有 main —— 这两种情况都靠「换个起点」解决。
+  commands.push(
+    vscode.commands.registerCommand('depscan.routeFromCursor', async () => {
+      const active = indexer.activeRelFile();
+      if (!active) {
+        void vscode.window.showWarningMessage(s().errors.noActiveFile);
+        return;
+      }
+      // 先把视图露出来，再等索引（大项目下构图可能要几秒）
+      await vscode.commands.executeCommand('depscan.routeView.focus');
+      if (!(await ensureIndex())) return;
+      const node = await indexer.nodeAt(active.rel, active.line);
+      if (!node?.id) {
+        void vscode.window.showWarningMessage(s().route.cursorMissing(active.rel, active.line));
+        return;
+      }
+      routeTree.setStart(node.id);
+    })
+  );
+
+  commands.push(
+    vscode.commands.registerCommand('depscan.resetRouteStart', async () => {
+      routeTree.setStart(undefined);
+    })
+  );
+
+  // 候选切换：这一步的名字在项目里还有别的定义，由用户决定该读哪一个。
+  // 参数由 RouteTreeProvider 拼好（见 CandidateArgs）：parentId 为空 = 这是起点。
+  commands.push(
+    vscode.commands.registerCommand('depscan.pickRouteCandidate', async (args?: CandidateArgs) => {
+      if (!args) return;
+      const nodeId = args.reset ? undefined : args.nodeId || undefined;
+      if (!args.parentId) routeTree.setStart(nodeId);
+      else routeTree.correct(args.parentId, args.name, nodeId);
     })
   );
 

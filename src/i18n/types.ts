@@ -143,6 +143,8 @@ export interface Strings {
     compileGuide: string;
     diagnosePrecision: string;
     route: string;
+    routeFromCursor: string;
+    resetRouteStart: string;
     docs: string;
     current: string;
   };
@@ -157,14 +159,28 @@ export interface Strings {
     failed: string;
     /** 起点说明，例：起点：main（自动识别） */
     from: (name: string, file: string) => string;
+    /** 手动指定起点时的说明，例：起点：Engine::run（来自光标，src/core/engine.cpp:29） */
+    fromPicked: (name: string, file: string) => string;
     /** 起点无法使用限定名时的兑底：起点：main */
     fromShort: (name: string) => string;
     /** 已经是最高优先级 / 根节点 */
     root: string;
     /** 步号前缀，例：#3 */
     step: (order: number) => string;
-    /** 该步有多个同名候选，可能是错边 */
+    /** 该步有同名定义，按名字消解可能选错了 */
     ambiguous: string;
+    /** 同名定义候选分组标题，例：候选（另有 2 个同名定义） */
+    candidates: (n: number) => string;
+    /** 候选里当前正在用的那一个 */
+    current: string;
+    /** 候选条目的提示，例：改用 src/core/base.h:25 作为这一步 */
+    useCandidate: (file: string, line: number) => string;
+    /** 候选条目就是当前用的那个 → 点它是撤回纠偏 */
+    resetCandidate: string;
+    /** 视图顶部提示：有 N 步存在同名定义 */
+    candidateHint: (n: number) => string;
+    /** 光标处没有可用符号 */
+    cursorMissing: (file: string, line: number) => string;
     /** 项目外符号（关掉 projectOnly 才出现） */
     external: string;
     /** 首次进入某文件 */

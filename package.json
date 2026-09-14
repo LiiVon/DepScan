@@ -86,6 +86,18 @@
         "icon": "$(arrow-both)"
       },
       {
+        "command": "depscan.routeFromCursor",
+        "title": "%cmd.routeFromCursor%",
+        "category": "DepScan",
+        "icon": "$(target)"
+      },
+      {
+        "command": "depscan.resetRouteStart",
+        "title": "%cmd.resetRouteStart%",
+        "category": "DepScan",
+        "icon": "$(home)"
+      },
+      {
         "command": "depscan.showGraph",
         "title": "%cmd.showGraph%",
         "category": "DepScan",
@@ -215,6 +227,16 @@
           "command": "depscan.toggleRouteGroupByFile",
           "when": "view == depscan.routeView",
           "group": "navigation@3"
+        },
+        {
+          "command": "depscan.routeFromCursor",
+          "when": "view == depscan.routeView && editorLangId == cpp",
+          "group": "navigation@4"
+        },
+        {
+          "command": "depscan.resetRouteStart",
+          "when": "view == depscan.routeView && depscan.routeCustomStart",
+          "group": "navigation@5"
         }
       ],
       "explorer/context": [
@@ -222,6 +244,11 @@
           "command": "depscan.showGraph",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@1"
+        },
+        {
+          "command": "depscan.routeFromCursor",
+          "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
+          "group": "depscan@2"
         }
       ],
       "editor/context": [
@@ -234,12 +261,25 @@
           "command": "depscan.showGraphForSymbol",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@2"
+        },
+        {
+          "command": "depscan.routeFromCursor",
+          "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
+          "group": "depscan@3"
         }
       ],
       "commandPalette": [
         {
           "command": "depscan.showGraphForSymbol",
           "when": "editorLangId == cpp || editorLangId == c"
+        },
+        {
+          "command": "depscan.routeFromCursor",
+          "when": "editorLangId == cpp || editorLangId == c"
+        },
+        {
+          "command": "depscan.resetRouteStart",
+          "when": "depscan.routeCustomStart"
         },
         {
           "command": "depscan.setLanguage",
@@ -468,7 +508,9 @@
     "test:core": "node scripts/test-core.mjs",
     "test:rpc": "node scripts/test-rpc.mjs",
     "test:webview": "node scripts/check-webview.mjs",
-    "test": "npm run test:core && npm run test:rpc && npm run test:webview",
+    "test:route": "node scripts/test-route-tree.mjs",
+    "route:dump": "node scripts/dump-route.mjs",
+    "test": "npm run test:core && npm run test:rpc && npm run test:route && npm run test:webview",
     "icon": "node scripts/make-icon.mjs",
     "probe": "node scripts/probe.mjs engine/build/probe --edges",
     "stress:gen": "node scripts/gen-stress.mjs stress 3000 100",

@@ -22,10 +22,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const indexer = new IndexService(context, logger);
   await indexer.initialize();
 
-  const actionsTree = new ActionsTreeProvider(indexer);
+  const routeTree = new RouteTreeProvider(indexer);
+  const actionsTree = new ActionsTreeProvider(indexer, routeTree);
   const indexTree = new IndexTreeProvider(indexer);
   const dependencyTree = new DependencyTreeProvider(indexer);
-  const routeTree = new RouteTreeProvider(indexer);
   const statusBar = new StatusBar(indexer);
 
   const routeView = vscode.window.createTreeView('depscan.routeView', {

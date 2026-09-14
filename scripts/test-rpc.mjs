@@ -234,6 +234,113 @@ try {
     '同样参数下路线完全确定（可复现，测试才能打靶）'
   );
 
+  // --- V2：候选（同名定义）与人工纠偏 ---
+  // 无 compile_commands 时调用边按名字消解，「项目里还有别的同名定义」就等于可能走错边。
+  // 这里只断言「引擎把候选如实报出来、并且允许改」，不断言「哪个候选才是对的」——
+  // 那件事只有读代码的人知道。
+  const withCand = route.steps.find((s) => (s.candidates ?? []).length > 0);
+  check(
+    !!withCand,
+    withCand
+      ? `同名定义候选：${withCand.name} 另有 ${withCand.candidateTotal} 处定义`
+      : '同名定义候选：（demo 里应至少有一处）'
+  );
+  check(
+    route.steps.every((s) => s.ambiguous === ((s.candidates ?? []).length > 0)),
+    'ambiguous 与候选列表一致（不会出现「标了黄却无候选可选」）'
+  );
+  if (withCand) {
+    const cands = withCand.candidates;
+    check(cands.every((c) => c.id !== withCand.id), '候选里不含它自己');
+    check(
+      cands.every((c) => c.id && c.name === withCand.name && c.file && c.line > 0),
+      '候选都带 id / 同名 / 文件位置'
+    );
+    check(
+      withCand.candidateTotal >= cands.length && cands.length <= 20,
+      `candidateTotal(${withCand.candidateTotal}) ≥ 列出的候选数(${cands.length})，且列出的不超过 20`
+    );
+  }
+
+  // 纠偏：把某个调用点上按名字消解的结果换成同名候选里的另一个，路线必须真的改道。
+  // 挑样本的条件只是「这一步不是起点且有候选」——
+  // 断言写成「同名兄弟被去重」而不是「候选被搬到某个位置」：
+  // 候选可能本来就在路线的别处（visited 只记一次），那样位置会漂，断言就不稳了。
+  const overrideTarget = (() => {
+    for (const step of route.steps) {
+      if (step.parent === 0) continue;
+      const parentStep = route.steps.find((x) => x.order === step.parent);
+      if (parentStep && (step.candidates ?? []).length > 0) return { step, parentStep };
+    }
+    return undefined;
+  })();
+  if (overrideTarget) {
+    const { step, parentStep } = overrideTarget;
+    const chosen = step.candidates[0];
+    // key 用「父节点 id|简单名」而不是步号：步号会随纠偏本身变化，节点 id 不会
+    const key = `${parentStep.id}|${step.name}`;
+    const corrected = await request('route', {
+      from: '',
+      strategy: 'bfs',
+      maxDepth: 4,
+      maxSteps: 80,
+      overrides: { [key]: chosen.id }
+    });
+    const parentOrder = corrected.steps.find((s) => s.id === parentStep.id)?.order ?? -1;
+    const siblings = corrected.steps.filter((s) => s.parent === parentOrder && s.name === step.name);
+    check(
+      siblings.length === 1 && siblings[0].id === chosen.id,
+      `纠偏生效：${parentStep.name} 下的 ${step.name} 改走 ${chosen.file}:${chosen.line}` +
+        `（原为 ${step.file}:${step.line}，同名兄弟由 2 个收敛为 1 个）`
+    );
+    check(
+      !corrected.steps.some((s) => s.parent === parentOrder && s.id === step.id),
+      `纠偏后 ${step.file}:${step.line} 不再是 ${parentStep.name} 的子节点（原边被换掉）`
+    );
+    const restored = await request('route', {
+      from: '',
+      strategy: 'bfs',
+      maxDepth: 4,
+      maxSteps: 80,
+      overrides: {}
+    });
+    check(
+      restored.steps.map((s) => s.id).join('>') === route.steps.map((s) => s.id).join('>'),
+      '空 overrides 与不传 overrides 结果一致（纠偏可撤销）'
+    );
+  } else {
+    check(false, '找不到可纠偏的样本（demo 应至少有一处同名定义）');
+  }
+
+  // --- V2：光标 → 符号（「从光标这里开始读」的入口）---
+  // 大项目的 main 常常在平台相关文件里，真正想读的那条线未必从 main 起头。
+  const mainStep = route.steps[0];
+  const atMain = await request('nodeAt', { file: mainStep.file, line: mainStep.line + 1 });
+  check(
+    atMain.id === mainStep.id,
+    `光标定位：${mainStep.file}:${mainStep.line + 1} → ${atMain.name}`
+  );
+  const runStep = route.steps.find((s) => s.id.endsWith('::Engine::run'));
+  if (runStep) {
+    const atRun = await request('nodeAt', { file: runStep.file, line: runStep.line + 2 });
+    check(
+      atRun.id === runStep.id,
+      `光标定位：${runStep.file}:${runStep.line + 2} → ${atRun.name}（取所在函数，不是最近的任意符号）`
+    );
+  }
+  // 从「光标定位到的节点」出发，第一条就是它自己 —— 这条链路要能闭合
+  const cursorFrom = runStep ? runStep.id : atMain.id;
+  const fromCursor = await request('route', {
+    from: cursorFrom,
+    strategy: 'bfs',
+    maxDepth: 3,
+    maxSteps: 40
+  });
+  check(
+    fromCursor.from === cursorFrom && fromCursor.steps[0].id === cursorFrom,
+    `从光标处出发：起点是 ${fromCursor.steps[0].name} 而不是 main`
+  );
+
   const cancelled = await request('cancel');
   check(cancelled.cancelled === true, '取消指令被接受');
 

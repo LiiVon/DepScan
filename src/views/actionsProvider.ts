@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { readConfig } from '../config';
 import { languageLabel, precisionLabel, s, type UiLanguage } from '../i18n';
 import type { IndexService } from '../index/indexer';
+import type { RouteTreeProvider } from './routeProvider';
 
 export type ActionNode =
   | { kind: 'command'; id: string; label: string; icon: string; description?: string }
@@ -17,9 +18,15 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionNode>,
   private readonly emitter = new vscode.EventEmitter<ActionNode | undefined | void>();
   readonly onDidChangeTreeData = this.emitter.event;
 
-  constructor(private readonly indexer: IndexService) {
+  private readonly routeRef: RouteTreeProvider | undefined;
+  private readonly routeSub: vscode.Disposable | undefined;
+
+  constructor(private readonly indexer: IndexService, route?: RouteTreeProvider) {
     // 索引状态变化时刷新（比如把"取消索引"置灰的时机）
     this.indexer.onDidChangeStatus.event(() => this.emitter.fire());
+    // 起点被改过 / 改回来，都会决定「起点回到 main」这一项该不该出现
+    this.routeRef = route;
+    this.routeSub = route?.onDidChangeTreeData(() => this.emitter.fire());
   }
 
   refresh(): void {
@@ -60,7 +67,7 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionNode>,
   }
 
   getChildren(element?: ActionNode): ActionNode[] {
-    if (!element) return topNodes(this.indexer);
+    if (!element) return topNodes(this.indexer, this.routeRef);
     if (element.kind === 'language') {
       const values: UiLanguage[] = ['auto', 'zh', 'en'];
       return values.map((value) => ({ kind: 'language-choice', value }));
@@ -69,16 +76,22 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionNode>,
   }
 
   dispose(): void {
+    this.routeSub?.dispose();
     this.emitter.dispose();
   }
 }
 
 /** 顺序按使用频率排：先导航，再索引维护，再导出，最后设置与帮助 */
-function topNodes(indexer: IndexService): ActionNode[] {
+function topNodes(indexer: IndexService, route?: RouteTreeProvider): ActionNode[] {
   const t = s().actions;
   const stats = indexer.currentStatus.stats;
   return [
     { kind: 'command', id: 'depscan.showRoute', label: t.route, icon: 'list-ordered' },
+    { kind: 'command', id: 'depscan.routeFromCursor', label: t.routeFromCursor, icon: 'target' },
+    // 只有起点真的被改过才显示「回去」，否则这一行是噪音
+    ...(route?.customStart
+      ? [{ kind: 'command', id: 'depscan.resetRouteStart', label: t.resetRouteStart, icon: 'home' } as ActionNode]
+      : []),
     { kind: 'command', id: 'depscan.showGraph', label: t.graph, icon: 'type-hierarchy' },
     { kind: 'command', id: 'depscan.showGraphForSymbol', label: t.symbolGraph, icon: 'symbol-method' },
     { kind: 'command', id: 'depscan.showArchitecture', label: t.architecture, icon: 'list-tree' },

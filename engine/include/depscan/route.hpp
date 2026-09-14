@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "depscan/json.hpp"
@@ -28,6 +29,11 @@ struct RouteOptions {
   bool groupByFile = false;
   // 参与遍历的边类型，默认只跟调用关系
   std::vector<EdgeKind> kinds = {EdgeKind::Calls};
+  // 人工纠偏：把某个调用点上「按名字消解」的结果换成同名候选中的另一个。
+  //   key   = "<父节点 id>|<简单名>"   —— 用节点 id 而不是步号：
+  //           步号会随纠偏本身变化（换了候选 → 后面的 order 全变），节点 id 不会。
+  //   value = 选中的那个子节点 id（可为图里任意同名定义，不限于原来的那条边）
+  std::unordered_map<std::string, std::string> overrides;
 };
 
 struct RouteStep {
@@ -36,7 +42,11 @@ struct RouteStep {
   int depth = 0;           // 距离起点的跳数
   size_t nodeIndex = 0;    // 指向 Graph::nodes 的下标
   bool newFile = false;    // 这一步是首次进入该文件
-  bool ambiguous = false;  // 有多个同名候选 —— 近似精度下按名字消解，可能是错边
+  // 同一个简单名在项目里还有别的定义 —— 无 compile_commands 时调用边是按名字消解的，
+  // 所以这一步可能是错边。candidates 就是「别的那些同名定义」，交给用户自己选。
+  bool ambiguous = false;
+  std::vector<size_t> candidates;  // 不含自己，按（文件, 行号）排序，已截断
+  int candidateTotal = 0;          // 未截断的同名定义总数（不含自己）
 };
 
 struct RouteResult {
@@ -50,6 +60,12 @@ struct RouteResult {
 
 // 自动寻找程序入口；找不到返回空串
 std::string findEntryPoint(const Graph& g);
+
+// 光标位置（相对路径 + 行号）→ 该处「所属函数」的节点 id。
+// 取同文件里行号 <= 给定行的最后一个函数节点；找不到函数时依次退回
+// 「最近的其它符号」→「该文件节点」。都找不到返回空串。
+// 读代码时的直觉是「我在这个函数里」，所以起点从光标取时优先给函数。
+std::string functionAtLocation(const Graph& g, const std::string& relFile, int line);
 
 RouteResult computeRoute(const Graph& g, const RouteOptions& opt);
 
