@@ -1,9 +1,9 @@
 node_modules/
 dist/
 out/
-media/webview.js
-media/webview.js.map
-media/webview.css
+media/*.js
+media/*.js.map
+media/*.css
 *.vsix
 engines/
 engine/build/
