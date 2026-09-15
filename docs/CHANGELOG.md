@@ -14,6 +14,10 @@
   而 `depscan` 那条早先被「**Remove（删除）**」掉了 —— 官方规则是移除后**名字永久保留**，
   连原发布者也不能再用。`depscaner` 只是取消发布（Unpublish），名字仍归我们，可以继续发新版本。
 - 所以 0.1.1 是**对 `liivon.depscaner` 那条的更新**；用户看到的仍然是 DepScan。
+- **列表元数据（`displayName` / `description`）改用英文**：实测中文上传到 Marketplace 后
+  在列表页与 VS Code 扩展面板里会变成一串 `?`（英文部分完好，典型的编码丢失）。
+  中文继续用在 `package.nls*.json`、README、docs 与 Webview 文案里（这些不走列表接口），
+  自检里加了两条「这两个字段只用 ASCII」的断言。
 - 教训写进了 [06-发布与版本管理 §0.1](06-发布与版本管理.md)：
   **Remove ≠ Unpublish** —— 前者不可逆（名字永久失效、统计清空），后者才是「先下线、以后还能发」。
 

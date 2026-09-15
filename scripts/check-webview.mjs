@@ -264,6 +264,15 @@ check(
   'package.nls*.json 里没有把扩展名当命令前缀用'
 );
 
+// displayName 与 description **只用 ASCII**。
+// 实测事故：这两个字段里的中文上传到 Marketplace 后变成了 `???`（英文部分完好，
+// 典型的编码丢失），VS Code 扩展面板与列表页于是显示成一串问号。
+// 与其赌上传链路的编码，不如把这两个字段限死在 ASCII ——
+// 中文留给 nls、README、docs 与 Webview 文案（那些不经过列表接口）。
+const asciiOnly = (v) => typeof v === 'string' && [...v].every((ch) => ch.codePointAt(0) < 128);
+check(asciiOnly(pkg.displayName), `displayName 只用 ASCII（实际：${pkg.displayName}）`);
+check(asciiOnly(pkg.description), `description 只用 ASCII（列表里显示的就是它）`);
+
 const contributedCommands = new Set((pkg.contributes?.commands ?? []).map((c) => c.command));
 const registeredCommands = new Set(
   [...tsText.matchAll(/registerCommand\(\s*'(depscan\.[A-Za-z0-9_.]+)'/g)].map((m) => m[1])
