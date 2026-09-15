@@ -322,6 +322,10 @@ int runStdioServer() {
         if (maxDepth >= 0) opt.maxDepth = maxDepth;
         opt.projectOnly = params.getBool("projectOnly", true);
         opt.groupByFile = params.getBool("groupByFile", false);
+        // 降噪：折叠「短且只调一处」的琐碎步骤（get / size / 纯转发）
+        opt.skipTrivial = params.getBool("skipTrivial", false);
+        const int trivialBodyLines = static_cast<int>(params.getNumber("trivialBodyLines", 3));
+        if (trivialBodyLines > 0) opt.trivialBodyLines = trivialBodyLines;
         // 人工纠偏：{"<父节点 id>|<简单名>": "<改用的节点 id>"}
         if (const json::Value* ov = params.find("overrides"); ov && ov->isObject()) {
           for (const auto& kv : ov->objectValue) {

@@ -39,14 +39,16 @@ core/ ──► ui/     ← 注意这条
 **最快做法**：侧边栏 → **DepScaner → 阅读路线**。它已经把从 `main` 出发的那条线排好了：
 
 ```
-#1 main ─► #2 setVerbose / #3 Application::start
-         ─► #5 Engine::run
-         ─► #8 Registry::add ─► #7 Panel::render
+#1 main ─► #2 Application::start ─► #3 config / #4 Engine::run / #5 Panel::render
+                                          └─ #6 trim / #7 Registry::add / #8 Engine::describe
 ```
 
 点一步跳一处，顺着号往下读就行。**先看骨架就用广度优先，想追一条具体流程就切深度优先。**
 大项目里 `main` 不是你想要的起点（或者在平台相关文件里），用「**从光标处开始读**」换成
 你正看的那个函数。
+
+> 步号里跳掉的那些（`setVerbose`、`Registry::size`）是默认开着的**降噪**折叠掉的
+> 一行 getter —— 悬停那一步能看到它们。想全看就点标题栏的 `$(filter)`。
 
 **想看「关系」而不是「顺序」时**，再用图：
 

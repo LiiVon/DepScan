@@ -6,6 +6,7 @@ import { readConfig, toEngineConfig, type DepScanerConfig } from '../config';
 import { findCompileCommands, fileMtimeMs } from './compileDb';
 import { EngineClient } from '../engine/client';
 import { resolveEnginePath, type EngineLocation } from '../engine/locator';
+import { DEFAULT_TRIVIAL_BODY_LINES } from '../engine/protocol';
 import type {
   Direction,
   ExportResult,
@@ -426,6 +427,10 @@ export class IndexService implements vscode.Disposable {
         maxDepth: options.maxDepth ?? 6,
         projectOnly: options.projectOnly ?? true,
         groupByFile: options.groupByFile ?? false,
+        // 降噪默认关：RPC 层原样返回引擎算出的全部步骤，
+        // 「要不要折叠」是界面上的选择（RouteTreeProvider 默认开着）
+        skipTrivial: options.skipTrivial ?? false,
+        trivialBodyLines: options.trivialBodyLines ?? DEFAULT_TRIVIAL_BODY_LINES,
         overrides: options.overrides ?? {}
       });
     } catch (err) {

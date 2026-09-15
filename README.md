@@ -60,21 +60,24 @@ Sidebar → **DepScaner → Reading Route** (or *Actions → Reading route*):
 ```
 Start: main (auto-detected, src/main.cpp)
 The route is a reading suggestion, not an exact call stack: call edges are resolved by name, so treat ⚠ steps with care.
+2 trivial step(s) folded (pure forwarders / tiny functions) — click the toolbar toggle to see them all.
 1 step(s) have same-named definitions — expand "Candidates" to check them.
 
 #1 main                     src/main.cpp:6
-  #2 setVerbose             src/main.cpp:9
-  #3 Application::start     src/app/application.cpp:9
-    #4 config                include/demo/config.h:24
-    #5 Engine::run           src/core/engine.cpp:27
-      #7 trim                src/util/string_utils.cpp:7
-      #8 Registry::add       src/core/registry.cpp:8
-      #9 Engine::describe    src/core/engine.cpp:23
-      #10 ⚠ Base::describe   src/core/base.h:25
-      #11 Registry::size     src/core/registry.cpp:16
-    #6 Panel::render         src/ui/panel.cpp:13
+  #2 Application::start     src/app/application.cpp:9
+    #3 config                include/demo/config.h:24
+    #4 Engine::run           src/core/engine.cpp:27
+      #6 trim                src/util/string_utils.cpp:7
+      #7 Registry::add       src/core/registry.cpp:8
+      #8 Engine::describe    src/core/engine.cpp:23
+        #10 join             src/util/string_utils.cpp:30
+        #11 split            src/util/string_utils.cpp:15
+      #9 ⚠ Base::describe    src/core/base.h:25
+    #5 Panel::render         src/ui/panel.cpp:13
 ✓ Route is complete
 ```
+
+The step numbers above are intentionally not contiguous: the **noise filter is on by default**. One-line getters and pure forwarders (`setVerbose`, `Registry::size`) do not get a step of their own — but they are never hidden silently: the view reports how many were folded, and the tooltip of the step that called them lists their names. Click `$(filter)` in the title bar to see every step.
 
 The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tried too) and walks call edges **in source order**, so step numbers are the order you should read in.
 
@@ -83,6 +86,7 @@ The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tri
 | Click a step | Jump to its source |
 | Title bar `$(arrow-both)` | Breadth first (outline first) ↔ depth first (follow one chain) |
 | Title bar `$(file-code)` | File level ↔ function level (file level keeps only the first entry per file) |
+| Title bar `$(filter)` | **Noise filter**: fold / unfold pure forwarders and tiny functions (folded by default) |
 | Title bar `$(list-ordered)` | Regenerate |
 | Title bar `$(graph)` | Open the **swimlane diagram** — one lane per file, orange arrows for file switches |
 | Title bar `$(target)` | Start from **the function under the cursor** — for library projects, or when `main` is not where you want to start |

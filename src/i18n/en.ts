@@ -244,6 +244,12 @@ export const en: Strings = {
     truncated: (nodes, files) =>
       `Step limit reached: ${nodes} more functions (from ${files} files) are not expanded. Raise the limit, or switch to file level for the outline.`,
     complete: 'Route is complete',
+    trimmed: (n) =>
+      `${n} trivial step(s) folded (pure forwarders / tiny functions) — click the toolbar toggle to see them all.`,
+    bodyLines: (n) => `Body: ${n} line(s)`,
+    skippedNames: (names) => `Folded: ${names.join(', ')}`,
+    hideTrivial: 'Noise filter on: pure forwarders / tiny functions no longer take a step (hover to see what was folded)',
+    showTrivial: 'Noise filter off: every step is listed',
     toggleGroupByFile: 'Only first entry per file',
     toggleStrategy: 'Switch traversal strategy',
     bfs: 'Breadth first (outline first)',

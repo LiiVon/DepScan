@@ -10,6 +10,7 @@
   "cmd.showRouteDiagram": "阅读路线：泳道图（每个文件一条泳道）",
   "cmd.toggleRouteGroupByFile": "阅读路线：切换文件级 / 函数级",
   "cmd.toggleRouteStrategy": "阅读路线：切换遍历策略",
+  "cmd.toggleRouteSkipTrivial": "阅读路线：降噪（折叠纯转发 / 小函数）",
   "cmd.showGraph": "查看依赖图",
   "cmd.showGraphForSymbol": "查看当前符号的依赖图",
   "cmd.exportJson": "导出依赖数据（JSON）",

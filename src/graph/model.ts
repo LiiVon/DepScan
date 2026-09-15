@@ -35,6 +35,11 @@ export interface GraphNode {
   precision: Precision;
   external: boolean;
   declaration: boolean;
+  /**
+   * 函数体行数（含花括号那两行）；0 = 只有声明 / 不是函数。
+   * 聚合出来的目录节点没有函数体，所以是可选的。
+   */
+  bodyLines?: number;
   inDegree: number;
   outDegree: number;
 }

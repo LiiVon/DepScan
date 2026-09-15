@@ -10,6 +10,7 @@
 //   node scripts/dump-route.mjs --file src/core/engine.cpp --line 29   # 从光标处出发
 //   node scripts/dump-route.mjs --from func:demo::Engine::run
 //   node scripts/dump-route.mjs --svg  out.svg       # 顺便导出泳道图（不打开 VS Code 也能看图）
+//   node scripts/dump-route.mjs --trim               # 开降噪：折叠「短且只调一处」的琐碎步骤
 //   node scripts/dump-route.mjs --html               # 生成泳道图**页面**的离线预览
 //
 // `--svg` 让这张图有一个**不经 UI** 的出口：既能直接丢进浏览器核对，
@@ -144,6 +145,7 @@ try {
     from,
     strategy: args.dfs ? 'dfs' : 'bfs',
     groupByFile: !!args.files,
+    skipTrivial: args.flags.has('trim'),
     maxDepth: Number(args.depth ?? 6),
     maxSteps: Number(args.steps ?? 200)
   });
@@ -166,9 +168,11 @@ try {
   const pad = String(route.steps.length).length;
   const walk = (step, depth) => {
     const mark = step.ambiguous ? ' ⚠' : step.newFile ? ' ·' : '';
+    const size = step.bodyLines > 0 ? ` <${step.bodyLines}行>` : '';
+    const skipped = step.skipped?.length ? `〔跳过：${step.skipped.join('、')}〕` : '';
     console.log(
-      `${String(step.order).padStart(pad)} ${'  '.repeat(depth)}${step.name}${mark}` +
-        `\t${step.file}:${step.line}`
+      `${String(step.order).padStart(pad)} ${'  '.repeat(depth)}${step.name}${mark}${size}` +
+        `\t${step.file}:${step.line}${skipped}`
     );
     if (step.ambiguous) {
       for (const c of step.candidates ?? []) {
@@ -192,6 +196,9 @@ try {
   );
   const ambiguous = route.steps.filter((s) => s.ambiguous).length;
   console.log(`同名定义候选：${ambiguous} / ${route.steps.length} 步存在「可能是错边」的情况`);
+  if (route.skippedCount > 0) {
+    console.log(`降噪折叠：${route.skippedCount} 个琐碎步骤（跳过的不删掉，列在各自的父步骤后面）`);
+  }
 
   if (args.svg !== undefined || args.flags.has('svg') || args.flags.has('html')) {
     // 需要 TS 纯函数时现打一份（与离线自检脚本同一套路）

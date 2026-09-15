@@ -94,6 +94,16 @@ export interface RouteStep {
   detail: string;
   external: boolean;
   precision: Precision;
+  /**
+   * 函数体行数（含花括号那两行）；0 = 只有声明，或者根本不是函数。
+   * 降噪判「小函数」用的就是它 —— 声明处没有花括号，所以声明只能是 0。
+   */
+  bodyLines: number;
+  /**
+   * 被降噪折叠掉的琐碎步骤名（纯转发 / 小函数）。
+   * 折叠**不是静默删除**：名字挂到最近的那个保留祖先上，由 UI 如实展示。
+   */
+  skipped?: string[];
 }
 
 /** 编辑器里「这个符号是什么」—— 供「从光标处开始读」用 */
@@ -116,7 +126,16 @@ export interface RouteResult {
   frontierNodes: number;
   frontierFiles: number;
   maxReachedDepth: number;
+  /** 本次折叠掉的琐碎步骤数（关掉 skipTrivial 时为 0） */
+  skippedCount: number;
 }
+
+/**
+ * 「小函数」的函数体行数上限，默认 3。
+ * **必须与 engine/src/route.hpp 的 RouteOptions::trivialBodyLines 保持一致** ——
+ * 插件总是显式传这个值，免得同一个阈值在两个语言里各写一遍、各改一次。
+ */
+export const DEFAULT_TRIVIAL_BODY_LINES = 3;
 
 export interface RouteOptions {
   from?: string;
@@ -125,6 +144,13 @@ export interface RouteOptions {
   maxDepth?: number;
   projectOnly?: boolean;
   groupByFile?: boolean;
+  /**
+   * 降噪：折叠「纯转发 / 小函数」（只调一处、且函数体不超过 trivialBodyLines 行）。
+   * 起点永不被折叠。引擎默认 false（原样给出全部步骤），插件默认开启。
+   */
+  skipTrivial?: boolean;
+  /** 判「小函数」的函数体行数上限，默认 3 */
+  trivialBodyLines?: number;
   /**
    * 人工纠偏：`"<父节点 id>|<简单名>": "<改用的节点 id>"`。
    * 用节点 id 而不是步号做 key —— 步号会随纠偏本身变化，节点 id 不会。

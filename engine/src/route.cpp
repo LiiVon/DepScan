@@ -272,6 +272,7 @@ RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
   // 后者在真实项目里几乎不会发生，会出错的恰恰是前者。
   for (RouteStep& s : r.steps) {
     const Node& n = g.nodes[s.nodeIndex];
+    s.bodyLines = n.bodyLines;
     if (n.kind != NodeKind::Function) continue;
     const auto it = defsByName.find(n.name);
     if (it == defsByName.end()) continue;
@@ -283,8 +284,76 @@ RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
     s.ambiguous = s.candidateTotal > 0;
   }
 
+  // ---------- 降噪：折叠「琐碎」步骤 ----------
+  // 一个 3 行的 getter 或纯转发函数出现在阅读清单里，对读者只是噪音 ——
+  // 你要读的是它调用的那个，不是它本身。
+  //
+  // 判定（两个条件都满足才算）：
+  //   1. 有函数体，且行数 <= trivialBodyLines（默认 3）—— **只认定义**：
+  //      声明没有体（bodyLines == 0），判断不了，一律保留；
+  //   2. 这个函数自己只调了 <= 1 处（getter / 纯转发就是这个形状）。
+  //      调用处数直接数图上的出边，是它的真实行为，与它在路线里的位置无关。
+  //
+  // 折叠方式沿用文件级折叠那套：把子步骤接到「最近的、还被保留的祖先」上，
+  // 并把它自己的名字记到那个祖先的 skipped 里 —— 折叠 ≠ 假装它不存在。
+  if (opt.skipTrivial && !r.steps.empty()) {
+    const auto callKids = [&](size_t nodeIndex) -> size_t {
+      const auto it = children.find(g.nodes[nodeIndex].id);
+      return it == children.end() ? 0 : it->second.size();
+    };
+    const auto trivial = [&](const RouteStep& s) {
+      if (s.parent == 0) return false;  // 起点永远保留
+      const Node& n = g.nodes[s.nodeIndex];
+      if (n.bodyLines <= 0 || n.bodyLines > opt.trivialBodyLines) return false;
+      return callKids(s.nodeIndex) <= 1;
+    };
+
+    std::vector<int> stepByOrder(r.steps.size() + 1, -1);
+    for (size_t i = 0; i < r.steps.size(); ++i) stepByOrder[r.steps[i].order] = static_cast<int>(i);
+    const auto nearestKept = [&](int parentOrder) {
+      int p = parentOrder;
+      while (p != 0) {
+        const int idx = stepByOrder[p];
+        if (idx >= 0 && !trivial(r.steps[idx])) break;
+        p = idx >= 0 ? r.steps[idx].parent : 0;
+      }
+      return p;
+    };
+
+    // 被折叠的步骤 → 挂到最近的保留祖先上
+    std::unordered_map<int, std::vector<std::string>> skippedByAnchor;
+    bool anySkipped = false;
+    for (const RouteStep& s : r.steps) {
+      if (!trivial(s)) continue;
+      anySkipped = true;
+      const int anchor = nearestKept(s.parent);
+      skippedByAnchor[anchor].push_back(g.nodes[s.nodeIndex].name);
+    }
+
+    if (anySkipped) {
+      std::vector<RouteStep> kept;
+      std::unordered_map<int, int> newOrderByOld;
+      for (const RouteStep& s : r.steps) {
+        if (trivial(s)) continue;
+        const int p = nearestKept(s.parent);
+        RouteStep t = s;
+        t.parent = p == 0 ? 0 : newOrderByOld[p];
+        t.order = static_cast<int>(kept.size()) + 1;
+        const auto sk = skippedByAnchor.find(s.order);  // 按**旧** order 取自己的那份
+        if (sk != skippedByAnchor.end()) {
+          t.skipped = sk->second;
+          r.skippedCount += static_cast<int>(sk->second.size());
+        }
+        newOrderByOld[s.order] = t.order;
+        kept.push_back(t);
+      }
+      r.steps = std::move(kept);
+    }
+  }
+
   // 函数级 → 文件级：只保留每个文件首次进入的那一步，
   // 并把它的 parent 接到「最近的、还被保留的祖先」上，避免出现悬空父节点。
+  // 放在降噪之后：否则一个 1 行的 getter 可能让某个文件「因为被经过」而留在文件级清单里。
   if (opt.groupByFile && !r.steps.empty()) {
     std::vector<RouteStep> kept;
     std::vector<int> stepByOrder(r.steps.size() + 1, -1);
@@ -317,6 +386,7 @@ json::Value routeToJson(const Graph& g, const RouteResult& r) {
   out.set("frontierNodes", json::Value::makeInt(r.frontierNodes));
   out.set("frontierFiles", json::Value::makeInt(r.frontierFiles));
   out.set("maxReachedDepth", json::Value::makeInt(r.maxReachedDepth));
+  out.set("skippedCount", json::Value::makeInt(r.skippedCount));
 
   json::Value steps = json::Value::makeArray({});
   for (const RouteStep& s : r.steps) {
@@ -337,7 +407,13 @@ json::Value routeToJson(const Graph& g, const RouteResult& r) {
     o.set("detail", json::Value::makeString(n.detail));
     o.set("external", json::Value::makeBool(n.external));
     o.set("precision", json::Value::makeString(toString(n.precision)));
+    o.set("bodyLines", json::Value::makeInt(s.bodyLines));
     o.set("candidateTotal", json::Value::makeInt(s.candidateTotal));
+    if (!s.skipped.empty()) {
+      json::Value sk = json::Value::makeArray({});
+      for (const std::string& name : s.skipped) sk.arrayValue.push_back(json::Value::makeString(name));
+      o.set("skipped", std::move(sk));
+    }
     if (!s.candidates.empty()) {
       json::Value cands = json::Value::makeArray({});
       for (size_t ci : s.candidates) {

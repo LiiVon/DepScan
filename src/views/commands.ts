@@ -148,6 +148,19 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     })
   );
 
+  // 降噪开关：折叠「纯转发 / 小函数」。默认开着 —— 路线是给人读的，
+  // 一堆一行 getter 夹在中间只会把真正要读的那几步冲淡；
+  // 但折叠不能是静默的（视图顶部会报「已折叠 N 个」），也要能随时关掉核对。
+  commands.push(
+    vscode.commands.registerCommand('depscaner.toggleRouteSkipTrivial', async () => {
+      await routeTree.toggleSkipTrivial();
+      void vscode.window.setStatusBarMessage(
+        routeTree.hideTrivial ? s().route.hideTrivial : s().route.showTrivial,
+        4000
+      );
+    })
+  );
+
   // 阅读路线：起点取自编辑器光标所在的函数。
   // 大项目的 main 常常在平台相关文件里，真正想读的那条线未必从 main 起头；
   // 库项目则压根没有 main —— 这两种情况都靠「换个起点」解决。

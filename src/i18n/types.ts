@@ -217,6 +217,16 @@ export interface Strings {
     truncated: (nodes: number, files: number) => string;
     /** 生成完整了 */
     complete: string;
+    /** 视图顶部：已折叠 N 个琐碎步骤 */
+    trimmed: (n: number) => string;
+    /** tooltip：这一步的函数体有多大 */
+    bodyLines: (n: number) => string;
+    /** tooltip：这一步里被折叠掉的名字 */
+    skippedNames: (names: string[]) => string;
+    /** 刚打开降噪时的状态栏提示 */
+    hideTrivial: string;
+    /** 刚关掉降噪时的状态栏提示 */
+    showTrivial: string;
     /** 切换「只显示每个文件首次进入」的按钮文案 */
     toggleGroupByFile: string;
     /** 切换遍历策略的按钮文案 */

@@ -239,6 +239,11 @@ export const zh: Strings = {
     truncated: (nodes, files) =>
       `到达步数上限，还有 ${nodes} 个函数（来自 ${files} 个文件）未展开。调大步数或先用文件级看个轮廓。`,
     complete: '路线已完整生成',
+    trimmed: (n) => `已折叠 ${n} 个琐碎步骤（纯转发 / 小函数）—— 点标题栏的「降噪」按钮可以展开看全部。`,
+    bodyLines: (n) => `函数体 ${n} 行`,
+    skippedNames: (names) => `已折叠：${names.join('、')}`,
+    hideTrivial: '降噪已开：「纯转发 / 小函数」不再占一个阅读步骤（悬停可见被折叠的名字）',
+    showTrivial: '降噪已关：所有步骤都列出来了',
     toggleGroupByFile: '只显示每个文件首次进入',
     toggleStrategy: '切换遍历策略',
     bfs: '广度优先（先看骨架）',

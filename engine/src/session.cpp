@@ -255,14 +255,23 @@ void Session::rebuild() {
         n.module = util::dirName(d.file);
         if (n.module.empty()) n.module = ".";
         n.declaration = d.declaration;
+        n.bodyLines = d.bodyLines;
       } else {
         // 只有「所有出现都是声明」时才算声明；只要有一处是定义就标为定义
+        const bool wasDeclaration = n.declaration;
         n.declaration = n.declaration && d.declaration;
-        if (n.declaration && !d.declaration) {
+        // 有定义就跟着定义走：否则点击会落到头文件声明、甚至**调用点**上
+        // （必须用改之前的 wasDeclaration 判断：旧写法先赋值再判断，条件恒为假，
+        //   实测 func:demo::setVerbose 停在 src/main.cpp:9 的调用处而非 logger.cpp:16 的定义）
+        if (wasDeclaration && !d.declaration) {
           n.file = d.file;
           n.line = d.line;
           n.column = d.column;
+          n.module = util::dirName(d.file);
+          if (n.module.empty()) n.module = ".";
         }
+        // 体量取最大：声明那次是 0，定义那次才是真值
+        if (d.bodyLines > n.bodyLines) n.bodyLines = d.bodyLines;
       }
       if (!d.signature.empty() && n.detail.empty()) n.detail = d.signature;
       n.precision = fa.fromCompileCommand ? Precision::Exact : Precision::Approximate;
@@ -611,6 +620,7 @@ json::Value Session::graphToJson(const Graph& g) const {
     o.set("precision", json::Value::makeString(toString(n.precision)));
     o.set("external", json::Value::makeBool(n.external));
     o.set("declaration", json::Value::makeBool(n.declaration));
+    o.set("bodyLines", json::Value::makeInt(n.bodyLines));
     o.set("inDegree", json::Value::makeInt(n.inDegree));
     o.set("outDegree", json::Value::makeInt(n.outDegree));
     nodes.arrayValue.push_back(std::move(o));

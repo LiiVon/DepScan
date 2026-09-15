@@ -56,6 +56,7 @@ const step = (order, parent, name, file, line, extra = {}) => ({
   detail: '',
   external: false,
   precision: 'approx',
+  bodyLines: 0,
   ...extra
 });
 
@@ -78,6 +79,8 @@ const result = {
       newFile: true,
       ambiguous: true,
       candidateTotal: 1,
+      bodyLines: 6,
+      skipped: ['setVerbose'],
       candidates: [candidate('wmain', 'src/wmain.cpp', 3)]
     }),
     step(2, 1, 'start', 'src/app/application.cpp', 9, { newFile: true }),
@@ -105,7 +108,8 @@ const result = {
   truncated: false,
   frontierNodes: 0,
   frontierFiles: 0,
-  maxReachedDepth: 4
+  maxReachedDepth: 4,
+  skippedCount: 1
 };
 
 const tree = model.buildRouteTree(result);
@@ -250,6 +254,44 @@ check(
 check(
   model.noEntryNode().kind === 'info' && model.failedNode().icon === 'warning',
   '找不到入口 / 查询失败都有提示行'
+);
+
+// --- 10. 降噪：折叠「纯转发 / 小函数」之后，那些名字怎么给人看到 ---
+// 折叠**不做成子节点**：被折叠的多半本来就挂在这一步下面（对 getter 来说，
+// 最近的保留祖先几乎就是它的调用者），做成子节点等于原地不动、白多一层缩进 ——
+// 那样折叠就完全失去意义了。所以它只出现在 tooltip 与视图顶部那行里。
+const mainStep = result.steps[0];
+check(
+  model.foldedNames(mainStep).join() === 'setVerbose',
+  `被折叠的名字能取出来：${model.foldedNames(mainStep).join('、')}`
+);
+check(
+  Array.isArray(model.foldedNames(result.steps[2])) && model.foldedNames(result.steps[2]).length === 0,
+  '没被折叠的步骤返回空数组（而不是 undefined，省得调用方到处判空）'
+);
+const mainLines = model.stepDetailLines(mainStep);
+check(
+  mainLines.some((t) => t.includes('setVerbose')) && mainLines.some((t) => t.includes('6')),
+  `tooltip 里既有被折叠的名字、也有函数体大小：${mainLines.join(' / ')}`
+);
+check(
+  model.stepDetailLines(result.steps[2]).length === 0,
+  '既没折叠、也拿不到函数体时 tooltip 不加多余行'
+);
+const trimmedText = model.trimmedLine(result);
+check(
+  typeof trimmedText === 'string' && trimmedText.includes('1'),
+  `视图顶部报出折叠了几个步骤：${trimmedText}`
+);
+check(
+  model.trimmedLine({ ...result, skippedCount: 0 }) === undefined,
+  '一个都没折叠时不写「已折叠 0 个」（那一行只占地方）'
+);
+check(
+  model
+    .treeChildren(tree, { kind: 'step', step: mainStep, expandable: true }, noOverrides)
+    .every((n) => n.kind !== 'step' || n.step.name !== 'setVerbose'),
+  '被折叠的步骤不会作为子节点冒出来（否则等于原地不动、白多一层缩进）'
 );
 
 rmSync(workDir, { recursive: true, force: true });

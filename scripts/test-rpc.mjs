@@ -206,6 +206,27 @@ try {
   }
   check(route.steps.every((s) => !s.external), 'projectOnly 生效：路线里不含项目外符号');
   check(route.steps.every((s) => s.name && s.file), '每一步都带符号名与文件位置（可点击跳转）');
+  check(
+    route.steps.every((s) => Number.isInteger(s.bodyLines) && s.bodyLines >= 0),
+    '每一步都带函数体行数（0 = 只有声明 / 不是函数）'
+  );
+  // 位置必须指向**定义**，而不是这个符号第一次出现的地方。
+  // 曾经的 bug：合并符号时先改 declaration、再判断要不要搬位置，于是条件恒为假 ——
+  // “先见到声明（甚至只是调用点）、后见到定义”的函数，位置永远停在前一处，
+  // 表现就是点一步跳到调用点上去（读代码的人当然想落在定义上）。
+  // demo 里的样本：setVerbose 在 src/main.cpp:9 被调用，定义在 src/util/logger.cpp:14。
+  {
+    const setVerbose = route.steps.find((s) => s.name === 'setVerbose');
+    check(
+      !!setVerbose && setVerbose.file === 'src/util/logger.cpp' && setVerbose.line === 14,
+      `有定义的函数定位到定义处：setVerbose → ${setVerbose?.file}:${setVerbose?.line}` +
+        '（曾经停在调用点 src/main.cpp:9）'
+    );
+    check(
+      (setVerbose?.bodyLines ?? 0) > 0,
+      `定义处能算出函数体行数：${setVerbose?.bodyLines} 行（声明处只能是 0）`
+    );
+  }
 
   const grouped = await request('route', {
     from: '',
@@ -220,6 +241,76 @@ try {
   );
   check(grouped.steps.every((s) => s.newFile), '折叠后每一步都是「首次进入某文件」');
   check(grouped.steps[0].parent === 0, '折叠后仍然只有一个根');
+
+  // --- V3：降噪（折叠「纯转发 / 小函数」）---
+  // 两个条件同时满足才折叠：函数体不超过 3 行、且只调一处（getter / 纯转发）。
+  // 折叠**不是删除**：名字挂到最近的那个保留步骤上，并统计在 skippedCount 里 ——
+  // “静默消失”是这类功能最容易犯的错（用户会以为工具漏了这处调用）。
+  const trimmed = await request('route', {
+    from: '',
+    strategy: 'bfs',
+    maxDepth: 4,
+    maxSteps: 80,
+    skipTrivial: true
+  });
+  check(
+    trimmed.steps.length > 0 && trimmed.steps.length < route.steps.length,
+    `降噪折叠琐碎步骤：${route.steps.length} 步 → ${trimmed.steps.length} 步`
+  );
+  {
+    const kept = new Set(trimmed.steps.map((s) => s.id));
+    const dropped = route.steps.filter((s) => !kept.has(s.id));
+    const reported = trimmed.steps.flatMap((s) => s.skipped ?? []);
+    check(
+      dropped.length > 0 && dropped.every((s) => reported.includes(s.name)),
+      `被折叠的步骤如实列在某个保留步骤的 skipped 里：${reported.join('、')}（不是静默删掉）`
+    );
+    check(
+      trimmed.skippedCount === reported.length,
+      `skippedCount(${trimmed.skippedCount}) 与 skipped 列表长度(${reported.length})一致`
+    );
+    check(
+      dropped.length > 0 && dropped.every((s) => s.bodyLines > 0 && s.bodyLines <= 3),
+      `只折叠「小函数」：被折叠的最大 ${Math.max(0, ...dropped.map((s) => s.bodyLines))} 行`
+    );
+    check(trimmed.steps[0].id === route.steps[0].id, '起点永不被折叠（起手那一步不该被藏掉）');
+    const tid = trimmed.steps.map((s) => s.id);
+    const iRun = tid.findIndex((x) => x.endsWith('::Engine::run'));
+    const iAdd = tid.findIndex((x) => x.endsWith('::Registry::add'));
+    check(iRun >= 0 && iAdd > iRun, '降噪不会把打靶链（Engine::run → Registry::add）拆断');
+    // 反例：3 行但调了两处（join / split）—— 它不是纯转发，必须留下
+    const describeStep = route.steps.find((s) => s.id === 'func:demo::Engine::describe');
+    check(
+      !!describeStep && kept.has(describeStep.id),
+      '只调一处才算琐碎：Engine::describe 虽然只有 3 行，但它调了 join / split 两处，必须保留'
+    );
+    check(
+      trimmed.steps.slice(1).every((s) => s.parent >= 1 && s.parent !== s.order && tid[s.parent - 1]),
+      '折叠后不会留下悬空的父步骤（parent 一定指向另一个真实步骤）'
+    );
+    const again = await request('route', {
+      from: '',
+      strategy: 'bfs',
+      maxDepth: 4,
+      maxSteps: 80,
+      skipTrivial: true
+    });
+    check(
+      again.steps.map((s) => s.id).join('>') === trimmed.steps.map((s) => s.id).join('>'),
+      '降噪结果是确定的（同样参数下折叠集合不变，否则「打靶」断言写不了）'
+    );
+    const off = await request('route', {
+      from: '',
+      strategy: 'bfs',
+      maxDepth: 4,
+      maxSteps: 80,
+      skipTrivial: false
+    });
+    check(
+      off.steps.length === route.steps.length && off.skippedCount === 0,
+      '显式关掉降噪时与默认结果一致（降噪是开关，不是隐式行为）'
+    );
+  }
 
   const capped = await request('route', { from: '', strategy: 'bfs', maxDepth: 6, maxSteps: 3 });
   check(

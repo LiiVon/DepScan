@@ -107,6 +107,37 @@ export function tailNode(result: RouteResult): RouteTreeNode {
 }
 
 /**
+ * 降噪折叠掉的琐碎步骤名（纯转发 / 小函数）。
+ *
+ * 折叠**不是静默删除**：引擎把折叠掉的名字挂到最近的那个保留步骤上
+ * （`RouteStep.skipped`），这里只负责把它变成给人看的一行。
+ *
+ * 为什么不做成子节点：被折叠的多数本来就挂在这一步下面（对 getter 来说，
+ * 最近的保留祖先几乎就是它的调用者），做成子节点等于原地不动、白多一层缩进 ——
+ * 那样折叠就完全失去意义了。所以它只出现在 tooltip 与视图顶部那行里。
+ */
+export function foldedNames(step: RouteStep): string[] {
+  return step.skipped ?? [];
+}
+
+/** 步骤 tooltip 的附加行：函数体大小 + 被折叠掉的名字 */
+export function stepDetailLines(step: RouteStep): string[] {
+  const out: string[] = [];
+  if (step.bodyLines > 0) out.push(s().route.bodyLines(step.bodyLines));
+  const folded = foldedNames(step);
+  if (folded.length > 0) out.push(s().route.skippedNames(folded));
+  return out;
+}
+
+/**
+ * 视图顶部那一行「已折叠 N 个琐碎步骤」；没折叠时返回 undefined
+ * （没折叠还写一行「已折叠 0 个」只会占地方）。
+ */
+export function trimmedLine(result: RouteResult): string | undefined {
+  return result.skippedCount > 0 ? s().route.trimmed(result.skippedCount) : undefined;
+}
+
+/**
  * 取某个节点的子节点。`element` 为 undefined 时返回根。
  *
  * 三条容易写错的规则都在这里，且都有断言兜着：

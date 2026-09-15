@@ -505,15 +505,9 @@ FileAnalysis analyzeFile(const std::string& relPath, const std::string& source,
     if (d.signature.size() > 400) d.signature.resize(400);
     d.id = makeNodeId(NodeKind::Function, qualified);
 
-    // 同名只保留第一个定义（近似：不做重载签名区分）
-    if (declaredIds.insert(qualified).second) {
-      fa.symbols.push_back(d);
-    } else if (!d.declaration) {
-      for (SymbolDef& s : fa.symbols) {
-        if (s.id == d.id) { s.declaration = false; s.signature = d.signature; break; }
-      }
-    }
-
+    // 函数体范围：既用来把调用边归到所属函数，也给出「这个函数有多大」。
+    // 阅读路线的降噪靠它（纯转发 / 小函数不值得在清单里占一行）。
+    // 必须放在 push 之前：bodyLines 属于这次解析出来的符号本身。
     if (isDefinition) {
       size_t braceIdx = scanFrom;
       // 定位 '{'
@@ -521,12 +515,27 @@ FileAnalysis analyzeFile(const std::string& relPath, const std::string& source,
       if (braceIdx < n) {
         const int bclose = matchBrace(t, braceIdx);
         if (bclose > 0) {
+          d.bodyLines = t[bclose].line - t[braceIdx].line + 1;
           BodyRange br;
           br.open = braceIdx;
           br.close = static_cast<size_t>(bclose);
           br.ownerId = d.id;
           bodies.push_back(br);
         }
+      }
+    }
+
+    // 同名只保留第一个定义（近似：不做重载签名区分）
+    if (declaredIds.insert(qualified).second) {
+      fa.symbols.push_back(d);
+    } else if (!d.declaration) {
+      for (SymbolDef& s : fa.symbols) {
+        if (s.id != d.id) continue;
+        s.declaration = false;
+        s.signature = d.signature;
+        // 体量以「有体的那一次」为准：先看到声明、后看到定义时也要拿到行数
+        if (d.bodyLines > 0) s.bodyLines = d.bodyLines;
+        break;
       }
     }
 

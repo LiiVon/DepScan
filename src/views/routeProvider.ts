@@ -11,7 +11,9 @@ import {
   noEntryNode,
   overrideKey,
   startLabel,
+  stepDetailLines,
   treeChildren,
+  trimmedLine,
   type RouteTree,
   type RouteTreeNode
 } from './routeTreeModel';
@@ -42,6 +44,12 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
   private stale = true;
   private byFile = false;
   private strategy: 'bfs' | 'dfs' = 'bfs';
+  /**
+   * 降噪：折叠「纯转发 / 小函数」。
+   * 引擎默认关（RPC 原样给出全部步骤），插件默认**开** —— 阅读清单里
+   * 一堆 getter 只会把真正要读的那几步冲淡；想全看时点标题栏的按钮即可。
+   */
+  private skipTrivial = true;
   private view: vscode.TreeView<RouteNode> | undefined;
   /** 手工指定的起点节点 id；undefined = 自动找入口 */
   private from: string | undefined;
@@ -140,6 +148,15 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
     this.refresh();
   }
 
+  get hideTrivial(): boolean {
+    return this.skipTrivial;
+  }
+
+  async toggleSkipTrivial(): Promise<void> {
+    this.skipTrivial = !this.skipTrivial;
+    this.refresh();
+  }
+
   /** 起点 + 精度提示显示在视图顶部（TreeView.message），不占用节点行 */
   statusMessage(): string | undefined {
     if (!this.tree) return undefined;
@@ -151,6 +168,8 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
     if (this.from) from = at ? s().route.fromPicked(name, at) : s().route.fromShort(name);
     else from = at ? s().route.from(name, first.file) : s().route.fromShort(name);
     const lines = [from, s().route.precisionHint];
+    const trimmed = trimmedLine(result);
+    if (trimmed) lines.push(trimmed);
     if (this.tree.riskyCount > 0) lines.push(s().route.candidateHint(this.tree.riskyCount));
     return lines.join('\n');
   }
@@ -213,6 +232,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       `${s().kinds[step.kind as NodeKind] ?? step.kind}`
     ];
     if (step.detail) tooltip.push(step.detail);
+    tooltip.push(...stepDetailLines(step));
     if (step.ambiguous) tooltip.push(`⚠ ${s().route.ambiguous}`);
     if (step.external) tooltip.push(s().route.external);
     if (step.newFile) tooltip.push(s().route.newFile);
@@ -258,6 +278,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
         from: this.from,
         strategy: this.strategy,
         groupByFile: this.byFile,
+        skipTrivial: this.skipTrivial,
         maxSteps: 300,
         maxDepth: 6,
         overrides: this.overrides.size ? Object.fromEntries(this.overrides) : undefined

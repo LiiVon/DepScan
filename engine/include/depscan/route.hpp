@@ -27,6 +27,12 @@ struct RouteOptions {
   bool projectOnly = true;
   // 每个文件只保留「首次进入」的那一步（函数级 → 文件级两个粒度）
   bool groupByFile = false;
+  // 折叠「琐碎」步骤：函数体很短、又只调一处（get / size / 纯转发这类）。
+  // 它们出现在阅读清单里只是噪音 —— 但**不静默丢弃**：
+  // 被折叠的名字会记进最近的保留祖先的 `skipped`，界面上如实写着「这里跳过了什么」。
+  bool skipTrivial = false;
+  // 「短」的阈值：函数体行数（含花括号所在行）。默认 3 行。
+  int trivialBodyLines = 3;
   // 参与遍历的边类型，默认只跟调用关系
   std::vector<EdgeKind> kinds = {EdgeKind::Calls};
   // 人工纠偏：把某个调用点上「按名字消解」的结果换成同名候选中的另一个。
@@ -47,6 +53,11 @@ struct RouteStep {
   bool ambiguous = false;
   std::vector<size_t> candidates;  // 不含自己，按（文件, 行号）排序，已截断
   int candidateTotal = 0;          // 未截断的同名定义总数（不含自己）
+  // 函数体行数（含花括号行）；0 = 声明或非函数。降噪判定靠它，也直接暴露给界面。
+  int bodyLines = 0;
+  // 被折叠掉的琐碎步骤名（按阅读顺序）——「走到这一步之前经过了什么」。
+  // 保留这个是为了诚实：折叠 ≠ 假装它们不存在。
+  std::vector<std::string> skipped;
 };
 
 struct RouteResult {
@@ -55,6 +66,7 @@ struct RouteResult {
   int frontierNodes = 0;   // 还没展开的节点数
   int frontierFiles = 0;   // 还没展开的节点涉及多少个文件
   int maxReachedDepth = 0;
+  int skippedCount = 0;    // 被降噪折叠掉的步骤数（0 = 没开降噪或没折到）
   std::string error;       // 非空 = 失败
 };
 

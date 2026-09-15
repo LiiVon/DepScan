@@ -54,6 +54,10 @@ struct Node {
   Precision precision = Precision::Approximate;
   bool external = false; // true = 项目外或未能解析到定义的符号
   bool declaration = false; // true = 仅有声明
+  // 函数体跨的行数（含花括号所在行）；0 = 没有函数体（声明）或非函数。
+  // 用来回答「这函数有多大」——目前只有阅读路线的降噪用它，
+  // 但展示层（表格 / 详情）也可以直接显示它。
+  int bodyLines = 0;
   int inDegree = 0;
   int outDegree = 0;
 };
@@ -90,6 +94,8 @@ struct SymbolDef {
   int column = 0;
   std::string signature;
   bool declaration = false;
+  /** 函数体行数；0 = 声明（无体） */
+  int bodyLines = 0;
 };
 
 struct PendingRef {

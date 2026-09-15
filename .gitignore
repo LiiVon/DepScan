@@ -14,4 +14,6 @@ stress1m/
 .idea/
 *.user
 **/.vscode/depscaner-cache/
+# 旧 ID（liivon.depscan）的扩展还装着时，它仍会往这个名字写缓存 —— 一样不该进版本库
+**/.vscode/depscan-cache/
 require.md
