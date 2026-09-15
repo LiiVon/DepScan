@@ -2,7 +2,7 @@
   "name": "depscaner",
   "displayName": "DepScan - C/C++ Dependency Analyzer",
   "description": "Navigate large C/C++ codebases: include / call / inherit / symbol / link dependency graphs, a guided reading route from main(), and export to PNG / SVG / JSON.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "liivon",
   "license": "MIT",
   "icon": "media/icon.png",

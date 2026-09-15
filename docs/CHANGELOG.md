@@ -4,7 +4,10 @@
 
 ---
 
-## 0.1.1
+## 0.1.2
+
+> 0.1.1 曾上传过一版，但列表元数据（标题 / 描述）里的中文在上传链路上变成了 `?`，
+> 本版改用英文 `displayName` / `description` 后取代它。
 
 ### 名字：产品是 DepScan，扩展 ID 是 `liivon.depscaner`
 
@@ -13,7 +16,7 @@
 - 但**扩展 ID 只能是 `liivon.depscaner`**：Marketplace 要求扩展名全局唯一，
   而 `depscan` 那条早先被「**Remove（删除）**」掉了 —— 官方规则是移除后**名字永久保留**，
   连原发布者也不能再用。`depscaner` 只是取消发布（Unpublish），名字仍归我们，可以继续发新版本。
-- 所以 0.1.1 是**对 `liivon.depscaner` 那条的更新**；用户看到的仍然是 DepScan。
+- 所以这一版（0.1.2）是**对 `liivon.depscaner` 那条的更新**；用户看到的仍然是 DepScan。
 - **列表元数据（`displayName` / `description`）改用英文**：实测中文上传到 Marketplace 后
   在列表页与 VS Code 扩展面板里会变成一串 `?`（英文部分完好，典型的编码丢失）。
   中文继续用在 `package.nls*.json`、README、docs 与 Webview 文案里（这些不走列表接口），

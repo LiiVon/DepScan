@@ -2,7 +2,7 @@
 
 完整版本记录见 [docs/CHANGELOG.md](docs/CHANGELOG.md)（每条决策都写了原因与代价）。
 
-## 0.1.1
+## 0.1.2
 
 - **修：真实大项目上「1/5 发现文件」直接失败**
   （`No mapping for the Unicode character exists in the target multi-byte code page`）。
