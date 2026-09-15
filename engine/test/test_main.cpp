@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "depscan/analyzer.hpp"
+#include "depscan/checks.hpp"
 #include "depscan/json.hpp"
 #include "depscan/lexer.hpp"
 #include "depscan/session.hpp"
@@ -206,6 +207,127 @@ void testSession() {
   check(json.find("\"nodes\"") != std::string::npos, "图 JSON 序列化包含 nodes");
 }
 
+void testChecks() {
+  std::printf("[检查] 公开面泄漏 / 目录循环\n");
+
+  const auto fileNode = [](const std::string& rel) {
+    depscan::Node n;
+    n.id = "file:" + rel;
+    n.kind = depscan::NodeKind::File;
+    n.name = rel;
+    n.file = rel;
+    n.line = 1;
+    return n;
+  };
+  const auto funcNode = [](const std::string& qname, const std::string& rel, int line) {
+    depscan::Node n;
+    n.id = "func:" + qname;
+    n.kind = depscan::NodeKind::Function;
+    n.name = qname;
+    n.file = rel;
+    n.line = line;
+    n.bodyLines = 3;
+    return n;
+  };
+  const auto incEdge = [](const std::string& from, const std::string& to, int line) {
+    depscan::Edge e;
+    e.kind = depscan::EdgeKind::Includes;
+    e.from = "file:" + from;
+    e.to = "file:" + to;
+    e.file = from;
+    e.line = line;
+    return e;
+  };
+  const auto useEdge = [](const std::string& fromFile, const std::string& toNodeId, int line) {
+    depscan::Edge e;
+    e.kind = depscan::EdgeKind::Uses;
+    e.from = "file:" + fromFile;
+    e.to = toNodeId;
+    e.file = fromFile;
+    e.line = line;
+    return e;
+  };
+
+  {
+    // 公开头文件 include 了内部实现 → 一条泄漏
+    depscan::Graph g;
+    g.nodes = {fileNode("include/lib.h"), fileNode("src/internal.h")};
+    g.edges = {incEdge("include/lib.h", "src/internal.h", 3)};
+    int total = 0;
+    const std::vector<depscan::Violation> vs = depscan::findViolations(g, 0, total);
+    check(vs.size() == 1 && vs[0].kind == "public-api-leak",
+          "公开头文件引用内部实现 → 一条泄漏", "got=" + std::to_string(vs.size()));
+    check(!vs.empty() && vs[0].fromFile == "include/lib.h" && vs[0].fromLine == 3 &&
+              vs[0].toFile == "src/internal.h",
+          "泄漏带位置（能跳到那行）与被引用的文件");
+  }
+  {
+    // 反向引用（实现用公开面）与公开面之间互引都不是问题
+    depscan::Graph g;
+    g.nodes = {fileNode("include/a.h"), fileNode("include/b.h"), fileNode("src/impl.cpp")};
+    g.edges = {incEdge("src/impl.cpp", "include/a.h", 2), incEdge("include/a.h", "include/b.h", 4)};
+    int total = 0;
+    check(depscan::findViolations(g, 0, total).empty(),
+          "实现引用公开面 / 公开面互引都不算泄漏（否则就是满屏误报）");
+  }
+  {
+    // 公开头文件里「用」到了内部实现的类型（uses 边）也算泄漏
+    depscan::Graph g;
+    g.nodes = {fileNode("include/lib.h"), funcNode("app::Impl", "src/impl.cpp", 9)};
+    g.edges = {useEdge("include/lib.h", "func:app::Impl", 5)};
+    int total = 0;
+    const std::vector<depscan::Violation> vs = depscan::findViolations(g, 0, total);
+    check(vs.size() == 1 && vs[0].toFile == "src/impl.cpp",
+          "公开头文件用到内部实现的类型，同样算泄漏", "got=" + std::to_string(vs.size()));
+  }
+  {
+    // 两个目录互引 → 一条目录环（带上一条 .cpp 出发的边，验证代表边挑的是头文件那条）
+    depscan::Graph g;
+    g.nodes = {fileNode("src/core/registry.h"), fileNode("src/core/registry.cpp"),
+               fileNode("src/ui/panel.h")};
+    g.edges = {incEdge("src/core/registry.cpp", "src/ui/panel.h", 3),
+               incEdge("src/ui/panel.h", "src/core/registry.h", 5),
+               incEdge("src/core/registry.h", "src/ui/panel.h", 8)};
+    int total = 0;
+    const std::vector<depscan::Violation> vs = depscan::findViolations(g, 0, total);
+    check(vs.size() == 1 && vs[0].kind == "directory-cycle",
+          "两个目录互引 → 一条目录环", "got=" + std::to_string(vs.size()));
+    check(!vs.empty() && vs[0].dirs.size() == 2 && vs[0].dirs[0] == "src/core" &&
+              vs[0].dirs[1] == "src/ui" && vs[0].edgeCount == 3,
+          "环里列出目录与边数（目录名排序，便于断言与展示）",
+          "dirs=" + std::to_string(vs.empty() ? 0 : vs[0].dirs.size()) +
+              " edges=" + std::to_string(vs.empty() ? -1 : vs[0].edgeCount));
+    check(!vs.empty() && vs[0].fromFile == "src/core/registry.h" && vs[0].fromLine == 8,
+          "环的代表边优先取「头文件那条 include」（它会把问题传染给每个包含者）",
+          "got=" + (vs.empty() ? std::string("-") : vs[0].fromFile + ":" + std::to_string(vs[0].fromLine)));
+  }
+  {
+    // 三个目录成环；同目录内部互引不算
+    depscan::Graph g;
+    g.nodes = {fileNode("a/x.h"), fileNode("b/y.h"), fileNode("c/z.h"),
+               fileNode("src/p.h"), fileNode("src/q.h")};
+    g.edges = {incEdge("a/x.h", "b/y.h", 1), incEdge("b/y.h", "c/z.h", 1),
+               incEdge("c/z.h", "a/x.h", 1), incEdge("src/p.h", "src/q.h", 1),
+               incEdge("src/q.h", "src/p.h", 1)};
+    int total = 0;
+    const std::vector<depscan::Violation> vs = depscan::findViolations(g, 0, total);
+    check(vs.size() == 1 && vs[0].dirs.size() == 3,
+          "三目录成环算一个环（强连通分量，不是只找互引对）", "got=" + std::to_string(vs.size()));
+    check(!vs.empty() && vs[0].edgeCount == 3, "环里边数如实报出（3 条）");
+    int capped = 0;
+    check(depscan::findViolations(g, 1, capped).size() == 1 && capped == 1,
+          "maxItems 截断但 total 仍是真实数量");
+  }
+  {
+    // 链式依赖（不回头）不是环
+    depscan::Graph g;
+    g.nodes = {fileNode("a/x.h"), fileNode("b/y.h"), fileNode("c/z.h")};
+    g.edges = {incEdge("a/x.h", "b/y.h", 1), incEdge("b/y.h", "c/z.h", 1)};
+    int total = 0;
+    check(depscan::findViolations(g, 0, total).empty(), "链式依赖（不回头）不是环");
+  }
+}
+
 void testJsonAndUtil() {
   std::printf("[基础] JSON 往返 / glob / 路径\n");
   depscan::json::Value o = depscan::json::Value::makeObject();
@@ -231,6 +353,7 @@ int main() {
   testPreprocessor();
   testAnalyzer();
   testSession();
+  testChecks();
   testJsonAndUtil();
   std::printf("\n通过 %d / 失败 %d\n", g_passed, g_failed);
   return g_failed == 0 ? 0 : 1;

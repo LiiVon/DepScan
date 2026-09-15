@@ -117,6 +117,8 @@ function topNodes(indexer: IndexService, route?: RouteTreeProvider): ActionNode[
     { kind: 'language' },
     { kind: 'command', id: 'depscaner.prepareCompileCommands', label: t.compileGuide, icon: 'book' },
     { kind: 'command', id: 'depscaner.diagnosePrecision', label: t.diagnosePrecision, icon: 'question' },
+    // 边界检查：平时索引完自动跑（结果在「问题」面板），这一行是显式入口
+    { kind: 'command', id: 'depscaner.checkBoundaries', label: t.checkBoundaries, icon: 'shield' },
     { kind: 'command', id: 'depscaner.openDocs', label: t.docs, icon: 'book' }
   ];
 }

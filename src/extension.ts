@@ -6,6 +6,7 @@ import { IndexService } from './index/indexer';
 import { Logger } from './util/log';
 import { ActionsTreeProvider } from './views/actionsProvider';
 import { registerCommands } from './views/commands';
+import { BoundaryDiagnostics } from './views/diagnostics';
 import { GraphPanel } from './views/graphPanel';
 import { RoutePanel } from './views/routePanel';
 import { RouteTreeProvider } from './views/routeProvider';
@@ -27,6 +28,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const actionsTree = new ActionsTreeProvider(indexer, routeTree);
   const indexTree = new IndexTreeProvider(indexer);
   const dependencyTree = new DependencyTreeProvider(indexer);
+  const boundaries = new BoundaryDiagnostics(indexer, logger);
   const statusBar = new StatusBar(indexer);
 
   const routeView = vscode.window.createTreeView('depscaner.routeView', {
@@ -42,15 +44,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     indexTree,
     dependencyTree,
     routeTree,
+    boundaries,
     statusBar,
     routeView,
     vscode.window.registerTreeDataProvider('depscaner.actionsView', actionsTree),
     vscode.window.registerTreeDataProvider('depscaner.indexView', indexTree),
-    vscode.window.registerTreeDataProvider('depscaner.dependencyView', dependencyTree)
+    vscode.window.registerTreeDataProvider('depscaner.dependencyView', dependencyTree),
+    // 图变了（重新索引 / 增量更新）→ 重算边界违规：这条检查是全局属性，不能只跟增量
+    indexer.onDidUpdateGraph.event(() => void boundaries.refresh())
   );
 
   context.subscriptions.push(
-    ...registerCommands({ context, indexer, indexTree, dependencyTree, routeTree, logger })
+    ...registerCommands({ context, indexer, indexTree, dependencyTree, routeTree, boundaries, logger })
   );
 
   /**
@@ -76,6 +81,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('depscaner.ui.language')) applyLanguage();
       if (e.affectsConfiguration('depscaner.log.level')) logger.setLevel(readConfig().logLevel);
+      // 关掉开关时要把已有诊断清掉，否则面板里会留着一堆不会再更新的告警
+      if (e.affectsConfiguration('depscaner.checks.enabled')) void boundaries.refresh();
     })
   );
 

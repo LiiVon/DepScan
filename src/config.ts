@@ -24,6 +24,8 @@ export interface DepScanerConfig {
   clusterByDirectory: boolean;
   cacheEnabled: boolean;
   cacheDirectory: string;
+  /** 把架构边界违规（公开面泄漏 / 目录成环）报到「问题」面板 */
+  checksBoundaryViolations: boolean;
   logLevel: 'off' | 'error' | 'warn' | 'info' | 'debug';
 }
 
@@ -63,6 +65,7 @@ export function readConfig(): DepScanerConfig {
     clusterByDirectory: c.get<boolean>('graph.clusterByDirectory', false),
     cacheEnabled: c.get<boolean>('cache.enabled', true),
     cacheDirectory: c.get<string>('cache.directory', ''),
+    checksBoundaryViolations: c.get<boolean>('checks.enabled', true),
     logLevel: c.get<'off' | 'error' | 'warn' | 'info' | 'debug'>('log.level', 'info')
   };
 }

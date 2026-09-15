@@ -34,7 +34,9 @@ void printUsage() {
       "  --root <dir>    项目根目录（默认当前目录）\n"
       "  --pretty        JSON 输出带缩进（仅 --once）\n"
       "  --jobs <n>      解析线程数（仅 --once）—— 排障用，设为 1 可排除并发问题\n"
-      "  --trace         每个文件都打一行到 stderr（仅 --once）—— 崩溃时最后一行就是元凶文件\n");
+      "  --trace         每个文件都打一行到 stderr（仅 --once）—— 崩溃时最后一行就是元凶文件\n"
+      "  --violations    只输出架构边界违规（仅 --once）—— 公开头文件引用内部实现 / 目录成环，\n"
+      "                  可以直接进 CI：有违规时退出码为 1\n");
 }
 
 }  // namespace
@@ -50,6 +52,7 @@ int main(int argc, char** argv) {
   bool once = false;
   bool pretty = false;
   bool trace = false;
+  bool violationsOnly = false;
   int jobs = 0;
   std::string root;
 
@@ -61,6 +64,9 @@ int main(int argc, char** argv) {
       pretty = true;
     } else if (arg == "--trace") {
       trace = true;
+    } else if (arg == "--violations") {
+      violationsOnly = true;
+      once = true;   // 检查也是一次性扫描，不用再写一遍 --once
     } else if (arg == "--jobs" && i + 1 < argc) {
       jobs = std::atoi(argv[++i]);
     } else if (arg == "--root" && i + 1 < argc) {
@@ -85,7 +91,7 @@ int main(int argc, char** argv) {
   // （子线程里的兜底在 rpc.cpp / scanner.cpp 各有一处）。
   try {
     if (once) {
-      return depscan::runOnce(root, pretty, jobs, trace);
+      return depscan::runOnce(root, pretty, jobs, trace, violationsOnly);
     }
     return depscan::runStdioServer();
   } catch (const std::exception& e) {

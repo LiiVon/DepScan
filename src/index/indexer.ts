@@ -15,7 +15,8 @@ import type {
   PingResult,
   RouteOptions,
   RouteResult,
-  SubgraphResult
+  SubgraphResult,
+  ViolationsResult
 } from '../engine/protocol';
 import type { GraphData, ScanStats } from '../graph/model';
 import { s } from '../i18n';
@@ -437,6 +438,20 @@ export class IndexService implements vscode.Disposable {
     } catch (err) {
       // 找不到入口是「可预期」的失败（库项目没有 main），不当成错误刷日志
       this.logger.warn(`阅读路线查询失败：${String(err)}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * 架构边界检查：公开头文件引用了内部实现、目录之间成环。
+   * 只在「边解析到了项目内文件」时才判得出来 —— 漏报是安全的，误报才让人关掉检查。
+   */
+  async violations(): Promise<ViolationsResult | undefined> {
+    if (!(await this.requireStats())) return undefined;
+    try {
+      return await this.client!.request<ViolationsResult>('violations', { maxItems: 500 });
+    } catch (err) {
+      this.logger.warn(`架构边界检查失败：${String(err)}`);
       return undefined;
     }
   }

@@ -193,6 +193,8 @@ export const zh: Strings = {
     languageHint: '仅影响插件界面与提示；命令标题跟随 VS Code 显示语言',
     compileGuide: '如何生成 compile_commands.json',
     diagnosePrecision: '为什么是近似？',
+    checkBoundaries: '架构边界检查（公开面 / 目录环）',
+    showProblems: '打开「问题」面板',
     route: '阅读路线（从 main 开始）',
     routeFromCursor: '从光标处开始读',
     resetRouteStart: '起点回到 main',
@@ -268,6 +270,19 @@ export const zh: Strings = {
     dfs: '深度优先（先追一条链）',
     regenerate: '重新生成路线',
     precisionHint: '路线是「阅读建议」，不是精确调用栈：调用边按名字消解，标注 ⚠ 的步骤请自行判断。'
+  },
+  checks: {
+    leak: (file) =>
+      `这个公开头文件引用了内部实现（${file}）—— 装了库的人没有这个文件，编译不过。`,
+    cycle: (dirs, edges) =>
+      `目录循环依赖：${dirs} 互相 include（${edges} 条边）—— 谁也不能独立编译/测试，分层也就无从谈起。`,
+    none: '架构边界检查：没问题（没有公开面泄漏，也没有目录循环依赖）。',
+    found: (total, leaks, cycles) =>
+      `架构边界检查：${total} 处 —— 公开面泄漏 ${leaks} 处 / 目录循环 ${cycles} 处。` +
+      '详见「问题」面板，点一下能跳到那一行。',
+    foundTruncated: (total, shown) =>
+      `架构边界检查：共 ${total} 处，这里只列出了前 ${shown} 处（详见「问题」面板）。`,
+    disabled: '架构边界检查已在设置里关掉（depscaner.checks.enabled）。'
   },
   edgeKinds: {
     includes: '包含',

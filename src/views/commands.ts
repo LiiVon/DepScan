@@ -6,10 +6,12 @@ import { precisionHint, precisionLabel, s } from '../i18n';
 import type { IndexService } from '../index/indexer';
 import { findCompileCommands } from '../index/compileDb';
 import type { Logger } from '../util/log';
+import type { BoundaryDiagnostics } from './diagnostics';
 import { GraphPanel } from './graphPanel';
 import { RoutePanel } from './routePanel';
 import type { CandidateArgs, RouteTreeProvider } from './routeProvider';
 import type { DependencyTreeProvider, IndexTreeProvider } from './treeProvider';
+import { violationsSummary } from './violationModel';
 
 export interface CommandDeps {
   context: vscode.ExtensionContext;
@@ -17,13 +19,14 @@ export interface CommandDeps {
   indexTree: IndexTreeProvider;
   dependencyTree: DependencyTreeProvider;
   routeTree: RouteTreeProvider;
+  boundaries: BoundaryDiagnostics;
   logger: Logger;
 }
 
 const SUPPORTED = /\.(c|cc|cpp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|inl|ipp|tcc|inc)$/i;
 
 export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
-  const { context, indexer, indexTree, dependencyTree, routeTree, logger } = deps;
+  const { context, indexer, indexTree, dependencyTree, routeTree, boundaries, logger } = deps;
   const commands: vscode.Disposable[] = [];
 
   /** 确保已有索引；返回是否可用 */
@@ -220,6 +223,26 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
       const nodeId = args.reset ? undefined : args.nodeId || undefined;
       if (!args.parentId) routeTree.setStart(nodeId);
       else routeTree.correct(args.parentId, args.name, nodeId);
+    })
+  );
+
+  // 架构边界检查：公开头文件引用了内部实现 / 目录之间成环。
+  // 平时索引完就自动跑（结果在「问题」面板），这条命令是「现在再查一遍，并告诉我结论」。
+  commands.push(
+    vscode.commands.registerCommand('depscaner.checkBoundaries', async () => {
+      if (!(await ensureIndex())) return;
+      const result = await boundaries.refresh();
+      if (!result) {
+        void vscode.window.showInformationMessage(s().checks.disabled);
+        return;
+      }
+      const summary = violationsSummary(result);
+      if (result.total === 0) {
+        void vscode.window.showInformationMessage(summary);
+        return;
+      }
+      const pick = await vscode.window.showWarningMessage(summary, s().actions.showProblems);
+      if (pick) await vscode.commands.executeCommand('workbench.actions.view.problems');
     })
   );
 

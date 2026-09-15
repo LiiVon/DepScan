@@ -4,6 +4,7 @@
   "cmd.clearCache": "Clear Index Cache",
   "cmd.showIndexStatus": "Show Index Status",
   "cmd.diagnosePrecision": "Why is it Approx? (Precision Diagnosis)",
+  "cmd.checkBoundaries": "Check Architecture Boundaries (public API leaks / directory cycles)",
   "cmd.showRoute": "Reading Route (from main)",
   "cmd.routeFromCursor": "Reading Route: Read from Here (cursor)",
   "cmd.resetRouteStart": "Reading Route: Start Back at main",
@@ -54,5 +55,6 @@
   "cfg.graph.clusterByDirectory": "Enable directory clustering when the panel opens. Very large graphs (>400 nodes) cluster automatically.",
   "cfg.cache.enabled": "Enable on-disk cache to speed up subsequent startups.",
   "cfg.cache.directory": "Cache directory (defaults to .vscode/depscaner-cache in the workspace).",
+  "cfg.checks.enabled": "Report architecture boundary issues (public headers pulling in internals, dependency cycles between directories) to the Problems panel.",
   "cfg.log.level": "Log level."
 }

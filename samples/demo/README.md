@@ -7,7 +7,7 @@
 | 症状 | 位置 | DepScaner 会怎么显示 |
 | --- | --- | --- |
 | 循环包含 | `src/core/engine.h` ↔ `src/core/registry.h` | 依赖图里出现环（红色节点） |
-| 分层违规 | `src/core/registry.h` 反向 `#include "ui/panel.h"` | 架构视图里 core → ui 的违规边 |
+| 分层违规 | `src/core/registry.h` 反向 `#include "ui/panel.h"` | 架构边界检查会自动报出目录循环（`src/core ↔ src/ui`），见 docs/08 |
 | 深层依赖链 | `main.cpp → app/application.cpp → core/engine.cpp → util/*` | 从 main 出发的阅读路径 |
 | 构建目标 | `CMakeLists.txt` | `links` 边（demo_app → demo_core / demo_ui） |
 

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "depscan/analyzer.hpp"
+#include "depscan/checks.hpp"
 #include "depscan/json.hpp"
 #include "depscan/route.hpp"
 #include "depscan/scanner.hpp"
@@ -308,6 +309,34 @@ int runStdioServer() {
           break;
         }
         writeResult(id, std::move(node));
+      } else if (method == "violations") {
+        // 架构边界检查：公开头文件引用内部实现、目录之间成环。
+        // 只报**可证明**的东西（都来自图上的边），不按目录名猜层次 —— 猜的那种会满屏误报。
+        std::lock_guard<std::mutex> lock(g_sessionMutex);
+        const int maxItems = static_cast<int>(params.getNumber("maxItems", 500));
+        int total = 0;
+        const std::vector<Violation> vs = findViolations(session.graph(), maxItems, total);
+        std::vector<json::Value> items;
+        items.reserve(vs.size());
+        for (const Violation& v : vs) {
+          json::Value o = json::Value::makeObject();
+          o.set("kind", json::Value::makeString(v.kind));
+          o.set("fromFile", json::Value::makeString(v.fromFile));
+          o.set("fromLine", json::Value::makeInt(v.fromLine));
+          o.set("toFile", json::Value::makeString(v.toFile));
+          o.set("edgeCount", json::Value::makeInt(v.edgeCount));
+          if (!v.dirs.empty()) {
+            std::vector<json::Value> dirs;
+            dirs.reserve(v.dirs.size());
+            for (const std::string& d : v.dirs) dirs.push_back(json::Value::makeString(d));
+            o.set("dirs", json::Value::makeArray(std::move(dirs)));
+          }
+          items.push_back(std::move(o));
+        }
+        json::Value out = json::Value::makeObject();
+        out.set("violations", json::Value::makeArray(std::move(items)));
+        out.set("total", json::Value::makeInt(total));
+        writeResult(id, std::move(out));
       } else if (method == "entries") {
         // 起点候选：没有 main 的库项目该从哪读起（有 main 时它永远排第一个）。
         // 引擎**不猜**起点 —— 挑错了整条阅读顺序都是错的，所以这里只给候选，由用户点一个。
@@ -437,7 +466,7 @@ int runStdioServer() {
   return 0;
 }
 
-int runOnce(const std::string& root, bool pretty, int jobs, bool trace) {
+int runOnce(const std::string& root, bool pretty, int jobs, bool trace, bool violationsOnly) {
   Session session;
   ScanRequest req;
   req.root = root;
@@ -469,6 +498,32 @@ int runOnce(const std::string& root, bool pretty, int jobs, bool trace) {
     return 1;
   }
   json::Value payload = json::Value::makeObject();
+  if (violationsOnly) {
+    // --violations：只给架构边界违规。有违规时退出码为 1 —— 这样它能直接写进 CI 流水线。
+    int total = 0;
+    const std::vector<Violation> vs = findViolations(session.graph(), 0, total);
+    std::vector<json::Value> items;
+    items.reserve(vs.size());
+    for (const Violation& v : vs) {
+      json::Value o = json::Value::makeObject();
+      o.set("kind", json::Value::makeString(v.kind));
+      o.set("fromFile", json::Value::makeString(v.fromFile));
+      o.set("fromLine", json::Value::makeInt(v.fromLine));
+      o.set("toFile", json::Value::makeString(v.toFile));
+      o.set("edgeCount", json::Value::makeInt(v.edgeCount));
+      json::Value dirs = json::Value::makeArray({});
+      for (const std::string& d : v.dirs) dirs.arrayValue.push_back(json::Value::makeString(d));
+      o.set("dirs", std::move(dirs));
+      items.push_back(std::move(o));
+    }
+    payload.set("violations", json::Value::makeArray(std::move(items)));
+    payload.set("total", json::Value::makeInt(total));
+    const std::string text = json::dump(payload, pretty);
+    std::fwrite(text.data(), 1, text.size(), stdout);
+    std::fputc('\n', stdout);
+    std::fflush(stdout);
+    return total > 0 ? 1 : 0;
+  }
   payload.set("stats", session.statsToJson());
   payload.set("graph", session.graphToJson(session.graph()));
   const std::string text = json::dump(payload, pretty);

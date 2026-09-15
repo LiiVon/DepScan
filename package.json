@@ -68,6 +68,12 @@
         "icon": "$(question)"
       },
       {
+        "command": "depscaner.checkBoundaries",
+        "title": "%cmd.checkBoundaries%",
+        "category": "DepScaner",
+        "icon": "$(shield)"
+      },
+      {
         "command": "depscaner.showRoute",
         "title": "%cmd.showRoute%",
         "category": "DepScaner",
@@ -501,6 +507,11 @@
           "default": "",
           "description": "%cfg.cache.directory%"
         },
+        "depscaner.checks.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%cfg.checks.enabled%"
+        },
         "depscaner.log.level": {
           "type": "string",
           "enum": [
@@ -550,11 +561,12 @@
     "publish:openvsx": "node scripts/publish.mjs --openvsx",
     "test:core": "node scripts/test-core.mjs",
     "test:rpc": "node scripts/test-rpc.mjs",
-    "test:webview": "node scripts/check-webview.mjs",
+    "test:checks": "node scripts/test-checks.mjs",
     "test:route": "node scripts/test-route-tree.mjs",
     "test:swimlane": "node scripts/test-swimlane.mjs",
+    "test:webview": "node scripts/check-webview.mjs",
     "route:dump": "node scripts/dump-route.mjs",
-    "test": "npm run test:core && npm run test:rpc && npm run test:route && npm run test:swimlane && npm run test:webview",
+    "test": "npm run test:core && npm run test:rpc && npm run test:route && npm run test:swimlane && npm run test:webview && npm run test:checks",
     "icon": "node scripts/make-icon.mjs",
     "probe": "node scripts/probe.mjs engine/build/probe --edges",
     "stress:gen": "node scripts/gen-stress.mjs stress 3000 100",

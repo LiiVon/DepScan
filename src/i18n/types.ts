@@ -148,6 +148,10 @@ export interface Strings {
     languageHint: string;
     compileGuide: string;
     diagnosePrecision: string;
+    /** 架构边界检查（公开面泄漏 / 目录成环） */
+    checkBoundaries: string;
+    /** 命令里用的「打开问题面板」按钮 */
+    showProblems: string;
     route: string;
     routeFromCursor: string;
     resetRouteStart: string;
@@ -272,5 +276,21 @@ export interface Strings {
     regenerate: string;
     /** 提示：路线是阅读建议，不是精确调用栈 */
     precisionHint: string;
+  };
+
+  /** 架构边界检查（公开面泄漏 / 目录成环） */
+  checks: {
+    /** 公开头文件引用了内部实现 */
+    leak: (file: string) => string;
+    /** 目录之间成环 */
+    cycle: (dirs: string, edges: number) => string;
+    /** 一个都没找到 */
+    none: string;
+    /** 汇总：共 total 处（leaks 泄漏 / cycles 环） */
+    found: (total: number, leaks: number, cycles: number) => string;
+    /** 列表被截断时如实说 */
+    foundTruncated: (total: number, shown: number) => string;
+    /** 开关被关掉时的提示 */
+    disabled: string;
   };
 }

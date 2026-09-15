@@ -4,6 +4,7 @@
   "cmd.clearCache": "清理索引缓存",
   "cmd.showIndexStatus": "查看索引状态",
   "cmd.diagnosePrecision": "为什么是近似？（精度诊断）",
+  "cmd.checkBoundaries": "架构边界检查（公开面泄漏 / 目录成环）",
   "cmd.showRoute": "阅读路线（从 main 开始）",
   "cmd.routeFromCursor": "阅读路线：从光标处开始读",
   "cmd.resetRouteStart": "阅读路线：起点回到 main",
@@ -54,5 +55,6 @@
   "cfg.graph.clusterByDirectory": "打开面板时启用按目录聚类。超大图（节点数超过 400）会自动启用，无需手动打开。",
   "cfg.cache.enabled": "启用磁盘缓存以加速二次启动。",
   "cfg.cache.directory": "缓存目录（留空使用工作区 .vscode/depscaner-cache）。",
+  "cfg.checks.enabled": "把架构边界问题（公开头文件引用内部实现、目录之间成环）报到「问题」面板。",
   "cfg.log.level": "日志级别。"
 }

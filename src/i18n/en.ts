@@ -194,6 +194,8 @@ export const en: Strings = {
     languageHint: 'Affects DepScaner UI and messages only; command titles follow the VS Code display language',
     compileGuide: 'How to generate compile_commands.json',
     diagnosePrecision: 'Why is it Approx?',
+    checkBoundaries: 'Architecture boundary check (public API / directory cycles)',
+    showProblems: 'Open the Problems panel',
     route: 'Reading Route (from main)',
     routeFromCursor: 'Read from here',
     resetRouteStart: 'Back to main',
@@ -283,6 +285,21 @@ export const en: Strings = {
     precisionHint:
       'The route is a reading suggestion, not an exact call stack: call edges are resolved by name, so treat ⚠ steps with care.'
   },
+
+  checks: {
+    leak: (file) =>
+      `This public header pulls in an internal implementation (${file}) — consumers of the library do not have that file and will fail to compile.`,
+    cycle: (dirs, edges) =>
+      `Dependency cycle between directories: ${dirs} include each other (${edges} edge(s)) — neither can be built or tested on its own, so there is no layering.`,
+    none: 'Boundary check: no problems (no public-API leaks, no directory cycles).',
+    found: (total, leaks, cycles) =>
+      `Boundary check: ${total} issue(s) — ${leaks} public-API leak(s) / ${cycles} directory cycle(s). ` +
+      'See the Problems panel; each item jumps to the line.',
+    foundTruncated: (total, shown) =>
+      `Boundary check: ${total} issue(s), only the first ${shown} are listed (see the Problems panel).`,
+    disabled: 'The boundary check is turned off in settings (depscaner.checks.enabled).'
+  },
+
   edgeKinds: {
     includes: 'Includes',
     calls: 'Calls',

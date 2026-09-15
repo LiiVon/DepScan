@@ -158,6 +158,33 @@ export interface EntriesResult {
   hasMain: boolean;
 }
 
+/**
+ * 架构边界违规（`violations`）。
+ *
+ * 两条检查的共同点是**不需要启发式**：泄漏来自「公开面 vs 非公开面」的边，
+ * 环来自强连通分量 —— 都能自己核对。刻意不做「按目录名猜层次」那种，
+ * 它换个命名习惯就会满屏误报，而误报会让人直接关掉整个检查。
+ */
+export interface Violation {
+  /** `public-api-leak`（公开头文件引用了内部实现）| `directory-cycle`（目录之间成环） */
+  kind: string;
+  /** 能跳到源码的位置 */
+  fromFile: string;
+  fromLine: number;
+  /** 泄漏：被引用的那个非公开文件；目录环：空 */
+  toFile: string;
+  /** 目录环：环里的目录（已排序）；泄漏：空 */
+  dirs?: string[];
+  /** 目录环：环内参与的依赖边数 */
+  edgeCount: number;
+}
+
+export interface ViolationsResult {
+  violations: Violation[];
+  /** 未截断的真实数量（列表可能被 maxItems 截断） */
+  total: number;
+}
+
 export interface RouteResult {
   from: string;
   steps: RouteStep[];

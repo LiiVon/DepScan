@@ -587,6 +587,11 @@ try {
     '内部实现（匿名命名空间）不会被标成公开接口'
   );
 
+  // --- V4（二）：架构边界检查 ---
+  // 干净的库项目不该报任何东西 —— 误报是这类检查的死因（用户会直接关掉它）
+  const libViolations = await request('violations', {});
+  check(libViolations.total === 0, `干净的库项目不误报（${libViolations.total} 处）`);
+
   // 回到 demo：有 main 时它永远是第一个候选（这一条在任何项目上都成立）
   await request('scan', { root: demoRoot, config: { ...config } });
   const demoEntries = await request('entries', {});
@@ -601,6 +606,33 @@ try {
       (c) => c.name === 'config' && c.publicApi && c.apiHeader === 'include/demo/config.h'
     ),
     'demo 里 include/demo/config.h 的 config 也被认成公开接口'
+  );
+
+  // demo 里故意埋了 core → ui 的反向依赖（samples/demo/README.md 写着「可在架构视图里人工识别」），
+  // 现在这条应该由检查自动报出来
+  const demoViolations = await request('violations', {});
+  const cycleHit = demoViolations.violations.find((v) => v.kind === 'directory-cycle');
+  check(
+    !!cycleHit && (cycleHit.dirs ?? []).includes('src/core') && (cycleHit.dirs ?? []).includes('src/ui'),
+    `目录循环被找到：${(cycleHit?.dirs ?? []).join(' ↔ ')}（${cycleHit?.edgeCount} 条边）`
+  );
+  check(
+    !!cycleHit && /\.h$/.test(cycleHit.fromFile) && cycleHit.fromLine > 0,
+    `环定位到头文件那一行（点一下能跳过去）：${cycleHit?.fromFile}:${cycleHit?.fromLine}`
+  );
+  check(
+    demoViolations.violations.length > 0 &&
+      demoViolations.violations.every((v) => v.fromFile && v.fromLine > 0),
+    '每条违规都带可跳转的位置（否则「问题」面板里没法点）'
+  );
+  check(
+    demoViolations.total === demoViolations.violations.length,
+    `total(${demoViolations.total}) 与列表长度一致（没被截断时应当是同一个数）`
+  );
+  const violationsAgain = await request('violations', {});
+  check(
+    JSON.stringify(violationsAgain) === JSON.stringify(demoViolations),
+    '同样输入下违规清单完全确定（顺序也一样，否则没法写断言）'
   );
 
   const bye = await request('shutdown');

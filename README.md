@@ -21,6 +21,8 @@ In a large C++ codebase the entry point isn't `main()` — it's a web of depende
 - Where is this macro or global variable used? *(cross references)*
 - Which build target links which library? *(build & link model)*
 
+It also reports two things that are **provable** rather than guessed: **public-API leaks** (a header under `include/` pulling in an internal file, so consumers of your library cannot compile) and **directory cycles** (two or more directories including each other). Both land in the **Problems** panel, jump straight to the offending line, and the same check runs in CI via `depscaner-core --once --violations` (exit code 1 when something is found). See [docs/08](docs/08-架构边界检查.md) — including why DepScaner deliberately does *not* guess layering from folder names.
+
 ---
 
 ## Requirements
@@ -196,6 +198,7 @@ Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or *
 | `DepScaner: Clear Index Cache` | Delete the on-disk cache |
 | `DepScaner: Show Index Status` | Counts, precision, engine path, cache path |
 | `DepScaner: Why is it Approx?` | Precision diagnosis with next steps |
+| `DepScaner: Check Architecture Boundaries` | Public-API leaks and directory cycles → Problems panel |
 | `DepScaner: Export Dependency Data (JSON)` | Export the focused subgraph (JSON / DOT / Mermaid) |
 | `DepScaner: How to generate compile_commands.json?` | Setup guide for every build system |
 | `DepScaner: Switch UI Language` | `auto` / Chinese / English |
@@ -221,6 +224,7 @@ Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or *
 | `depscaner.index.fileSizeLimitKB` | — | Files larger than this are listed but not deeply parsed |
 | `depscaner.cache.enabled` | `true` | On-disk cache for instant subsequent starts |
 | `depscaner.cache.directory` | `""` | Cache location (defaults to `.vscode/depscaner-cache`) |
+| `depscaner.checks.enabled` | `true` | Report boundary issues (public-API leaks / directory cycles) to the Problems panel |
 | `depscaner.ui.language` | `auto` | `auto` / `zh` / `en` |
 | `depscaner.log.level` | `info` | Set to `debug` to see engine stderr — do this before reporting a crash |
 | `depscaner.engine.path` | `""` | Use your own engine build instead of the bundled one |
@@ -264,6 +268,7 @@ Detailed, example-driven documentation is currently written in Chinese:
 | [04 · Parsing and precision](docs/04-解析与精度说明.md) | Exact vs approximate, the boundary of each dependency kind, FAQ |
 | [05 · Performance and settings](docs/05-性能与配置参考.md) | Every setting, tuning for million-line repos |
 | [07 · Reading route](docs/07-阅读路线.md) | Why an ordered list instead of a fourth graph, candidates, acceptance criteria |
+| [08 · Architecture boundary checks](docs/08-架构边界检查.md) | Public-API leaks and directory cycles — what is *provable*, and why no folder-name heuristics |
 
 ---
 
