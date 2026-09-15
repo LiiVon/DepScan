@@ -11,6 +11,8 @@
   "cmd.toggleRouteGroupByFile": "阅读路线：切换文件级 / 函数级",
   "cmd.toggleRouteStrategy": "阅读路线：切换遍历策略",
   "cmd.toggleRouteSkipTrivial": "阅读路线：降噪（折叠纯转发 / 小函数）",
+  "cmd.toggleRouteByLayer": "阅读路线：按层分组（先看摘要）",
+  "cmd.expandRouteLayer": "阅读路线：展开这一层（下一页）",
   "cmd.showGraph": "查看依赖图",
   "cmd.showGraphForSymbol": "查看当前符号的依赖图",
   "cmd.exportJson": "导出依赖数据（JSON）",

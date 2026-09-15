@@ -29,6 +29,10 @@ export type RouteTreeNode =
   | { kind: 'step'; step: RouteStep; expandable: boolean }
   | { kind: 'candidates'; step: RouteStep; text: string; tooltip: string }
   | { kind: 'candidate'; step: RouteStep; candidate: RouteCandidate; isCurrent: boolean; args: CandidateArgs }
+  /** 层视图里的「第 N 层」分组；默认展开与否由这一层的步骤数决定 */
+  | { kind: 'layer'; layer: number; text: string; tooltip: string; defaultExpanded: boolean }
+  /** 层视图里的分页行：这一层还有几个没列出来 */
+  | { kind: 'more'; layer: number; text: string; tooltip: string; hidden: number }
   | { kind: 'tail'; text: string; icon: string };
 
 export interface RouteTree {
@@ -120,13 +124,20 @@ export function foldedNames(step: RouteStep): string[] {
   return step.skipped ?? [];
 }
 
-/** 步骤 tooltip 的附加行：函数体大小 + 被折叠掉的名字 */
-export function stepDetailLines(step: RouteStep): string[] {
+/** 步骤 tooltip 的附加行：函数体大小、被折叠掉的名字、由谁调起 */
+export function stepDetailLines(step: RouteStep, parent?: RouteStep): string[] {
   const out: string[] = [];
   if (step.bodyLines > 0) out.push(s().route.bodyLines(step.bodyLines));
   const folded = foldedNames(step);
   if (folded.length > 0) out.push(s().route.skippedNames(folded));
+  // 层视图里没有缩进，这一行就是「它从哪来」——树视图里顺带也给（便于跳到调用方）
+  if (parent) out.push(s().route.calledFrom(parent.order, parent.name));
   return out;
+}
+
+/** 这一步的父步骤；起点没有父步骤 → undefined */
+export function parentOf(result: RouteResult, step: RouteStep): RouteStep | undefined {
+  return step.parent === 0 ? undefined : result.steps.find((x) => x.order === step.parent);
 }
 
 /**
@@ -162,10 +173,10 @@ function stepNode(tree: RouteTree, step: RouteStep): RouteTreeNode {
   return { kind: 'step', step, expandable: hasChildren || step.ambiguous };
 }
 
-function stepChildren(tree: RouteTree, step: RouteStep): RouteTreeNode[] {
-  const out: RouteTreeNode[] = (tree.childrenByParent.get(step.order) ?? []).map((child) =>
-    stepNode(tree, child)
-  );
+function stepChildren(tree: RouteTree, step: RouteStep, onlyCandidates = false): RouteTreeNode[] {
+  const out: RouteTreeNode[] = onlyCandidates
+    ? []
+    : (tree.childrenByParent.get(step.order) ?? []).map((child) => stepNode(tree, child));
   if (step.ambiguous) {
     out.push({
       kind: 'candidates',
@@ -217,4 +228,118 @@ function candidateChildren(
 function parentIdOf(tree: RouteTree, step: RouteStep): string {
   if (step.parent === 0) return '';
   return tree.result.steps.find((x) => x.order === step.parent)?.id ?? '';
+}
+
+// ── 层视图：大项目下先给摘要，再一层层展开 ───────────────────────────
+//
+// 为什么要有第二种看法：调用树回答「谁调了谁」，但真实项目第 3 层就可能扇出上百个函数 ——
+// 一口气铺开就成了另一面墙。按层分组时你先看到的是摘要（第 1 层 1 个、第 2 层 4 个、
+// 第 3 层 87 个……），想读哪层就展开哪层（层内按阅读顺序排），一层里太多就先给一页。
+
+/** 层视图里一层先显示多少个步骤（只在层视图用；调用树视图不受影响） */
+export const LAYER_PAGE_SIZE = 15;
+
+export interface LayerGroup {
+  /** 层号（1-based）：1 = 起点本身，N = 从起点数 N−1 次调用能到的函数 */
+  layer: number;
+  /** 这一层的步骤，仍按阅读顺序（step.order）排 */
+  steps: RouteStep[];
+  /** 这一层涉及多少个文件 */
+  files: number;
+  /** 这一层里带同名定义的步骤数 */
+  risky: number;
+}
+
+/**
+ * 按层（BFS 距离）分组。
+ *
+ * 靠的是引擎保证的不变量：非起点步骤的深度一定等于它父步骤的深度 + 1
+ * （`scripts/test-rpc.mjs` 里钉着这条）。DFS 策略下深度仍然是「从起点算的跳数」，
+ * 所以层视图对两种策略都成立 —— 只是同一层内的顺序会不一样。
+ */
+export function groupByDepth(result: RouteResult): LayerGroup[] {
+  const byDepth = new Map<number, RouteStep[]>();
+  for (const step of result.steps) {
+    const list = byDepth.get(step.depth);
+    if (list) list.push(step);
+    else byDepth.set(step.depth, [step]);
+  }
+  return [...byDepth.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([depth, steps]) => ({
+      layer: depth + 1,
+      steps: [...steps].sort((a, b) => a.order - b.order),
+      files: new Set(steps.map((x) => x.file)).size,
+      risky: steps.filter((x) => x.ambiguous).length
+    }));
+}
+
+export interface LayerViewOptions {
+  pageSize?: number;
+  /** 层号 → 这一层已经展开到多少个（缺省 = 一页） */
+  shown?: ReadonlyMap<number, number>;
+}
+
+/**
+ * 层视图的子节点。
+ *
+ * 与调用树视图的差别只有两条：
+ *  1. 根层是「第 N 层」分组，不是步骤本身；
+ *  2. 一层里步骤分页（超过一页时末尾给一行「还有 N 个」）。
+ * 步骤在层视图里**只能展开候选**：它的子步骤已经在下一层里了，再嵌一次是重复。
+ */
+export function layerChildren(
+  tree: RouteTree,
+  element: RouteTreeNode | undefined,
+  overrides: ReadonlyMap<string, string>,
+  options: LayerViewOptions = {}
+): RouteTreeNode[] {
+  const pageSize = options.pageSize ?? LAYER_PAGE_SIZE;
+  if (!element) {
+    return [...groupByDepth(tree.result).map((g) => layerNode(g, pageSize)), tailNode(tree.result)];
+  }
+  if (element.kind === 'layer') {
+    const group = groupByDepth(tree.result).find((g) => g.layer === element.layer);
+    if (!group) return [];
+    const shown = options.shown?.get(element.layer) ?? pageSize;
+    const visible = group.steps.slice(0, Math.max(pageSize, shown));
+    const out: RouteTreeNode[] = visible.map(layerStepNode);
+    const hidden = group.steps.length - visible.length;
+    if (hidden > 0) {
+      out.push({
+        kind: 'more',
+        layer: element.layer,
+        text: s().route.moreInLayer(hidden),
+        tooltip: s().route.moreInLayerHint,
+        hidden
+      });
+    }
+    return out;
+  }
+  if (element.kind === 'step') return stepChildren(tree, element.step, true);
+  if (element.kind === 'candidates') return candidateChildren(tree, element.step, overrides);
+  return [];
+}
+
+/**
+ * 「第 N 层」分组行。
+ *
+ * **只有会被分页的层才默认收起** —— 一页能看完的层收起来只是白多点一下，
+ * 而大层默认铺开就是又一面墙。
+ */
+function layerNode(group: LayerGroup, pageSize: number): RouteTreeNode {
+  const tooltip = [s().route.layerLegend];
+  if (group.risky > 0) tooltip.push(s().route.layerRisky(group.risky));
+  return {
+    kind: 'layer',
+    layer: group.layer,
+    text: s().route.layer(group.layer, group.steps.length, group.files),
+    tooltip: tooltip.join('\n'),
+    defaultExpanded: group.steps.length <= pageSize
+  };
+}
+
+/** 层视图里的步骤行：子步骤在下一层，所以只有候选可展开 */
+function layerStepNode(step: RouteStep): RouteTreeNode {
+  return { kind: 'step', step, expandable: step.ambiguous };
 }

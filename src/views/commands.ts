@@ -148,6 +148,21 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
     })
   );
 
+  // 层视图：调用树回答「谁调了谁」，层视图先给摘要（第几层、几个步骤、几个文件），
+  // 一层太大就分页 —— 大项目里把几百行一次铺开等于又一面墙。
+  commands.push(
+    vscode.commands.registerCommand('depscaner.toggleRouteByLayer', async () => {
+      await routeTree.toggleByLayer();
+    })
+  );
+
+  // 层视图里的「还有 N 个」行（挂在 TreeItem 的 command 上，不出现在命令面板）
+  commands.push(
+    vscode.commands.registerCommand('depscaner.expandRouteLayer', (layer: number) => {
+      routeTree.expandLayer(layer);
+    })
+  );
+
   // 降噪开关：折叠「纯转发 / 小函数」。默认开着 —— 路线是给人读的，
   // 一堆一行 getter 夹在中间只会把真正要读的那几步冲淡；
   // 但折叠不能是静默的（视图顶部会报「已折叠 N 个」），也要能随时关掉核对。

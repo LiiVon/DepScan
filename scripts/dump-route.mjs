@@ -11,6 +11,8 @@
 //   node scripts/dump-route.mjs --from func:demo::Engine::run
 //   node scripts/dump-route.mjs --svg  out.svg       # 顺便导出泳道图（不打开 VS Code 也能看图）
 //   node scripts/dump-route.mjs --trim               # 开降噪：折叠「短且只调一处」的琐碎步骤
+//   node scripts/dump-route.mjs --layers             # 按层打印（大项目下先看摘要的那种看法）
+//   node scripts/dump-route.mjs --layers --all        # 层视图：连被分页藏起来的一起列出
 //   node scripts/dump-route.mjs --html               # 生成泳道图**页面**的离线预览
 //
 // `--svg` 让这张图有一个**不经 UI** 的出口：既能直接丢进浏览器核对，
@@ -200,21 +202,54 @@ try {
     console.log(`降噪折叠：${route.skippedCount} 个琐碎步骤（跳过的不删掉，列在各自的父步骤后面）`);
   }
 
+  // 需要 TS 纯函数时现打一份（与离线自检脚本同一套路）——
+  // 打印的一定是**界面用的那个函数**，否则文档里的清单会和 UI 悄悄漂移
+  const bundleModule = async (entry, name) => {
+    const outfile = join(tmpdir(), `depscaner-swimlane-${name}-${Date.now()}.mjs`);
+    await build({
+      entryPoints: [resolve(root, entry)],
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      target: 'node18',
+      outfile,
+      logLevel: 'error'
+    });
+    return { mod: await import(pathToFileURL(outfile).href), outfile };
+  };
+
+  if (args.flags.has('layers')) {
+    const model = await bundleModule('src/views/routeTreeModel.ts', 'model');
+    const tree = model.mod.buildRouteTree(route);
+    const none = new Map();
+    console.log('');
+    console.log('层视图（--layers）：');
+    for (const row of model.mod.layerChildren(tree, undefined, none)) {
+      if (row.kind === 'tail') {
+        console.log(`  ${row.text}`);
+        continue;
+      }
+      if (row.kind !== 'layer') continue;
+      console.log(`  ${row.text}${row.defaultExpanded ? '' : '〔超过一页，默认收起〕'}`);
+      if (!row.defaultExpanded && !args.flags.has('all')) {
+        console.log('     （想在这一层里全看就再加 --all）');
+        continue;
+      }
+      for (const child of model.mod.layerChildren(tree, row, none)) {
+        if (child.kind === 'step') {
+          console.log(
+            `    ${String(child.step.order).padStart(pad)} ${child.step.name}\t` +
+              `${child.step.file}:${child.step.line}`
+          );
+        } else if (child.kind === 'more') {
+          console.log(`    ${child.text}`);
+        }
+      }
+    }
+    rmSync(model.outfile, { force: true });
+  }
+
   if (args.svg !== undefined || args.flags.has('svg') || args.flags.has('html')) {
-    // 需要 TS 纯函数时现打一份（与离线自检脚本同一套路）
-    const bundleModule = async (entry, name) => {
-      const outfile = join(tmpdir(), `depscaner-swimlane-${name}-${Date.now()}.mjs`);
-      await build({
-        entryPoints: [resolve(root, entry)],
-        bundle: true,
-        platform: 'node',
-        format: 'esm',
-        target: 'node18',
-        outfile,
-        logLevel: 'error'
-      });
-      return { mod: await import(pathToFileURL(outfile).href), outfile };
-    };
     const swim = await bundleModule('src/views/swimlane.ts', 'layout');
     const layout = swim.mod.layoutSwimlane(route, { maxSteps: 400 });
     const svg = swim.mod.renderSwimlaneSvg(layout);

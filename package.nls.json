@@ -11,6 +11,8 @@
   "cmd.toggleRouteGroupByFile": "Reading Route: Toggle File Level",
   "cmd.toggleRouteStrategy": "Reading Route: Switch Traversal Strategy",
   "cmd.toggleRouteSkipTrivial": "Reading Route: Toggle Noise Filter (forwarders / tiny functions)",
+  "cmd.toggleRouteByLayer": "Reading Route: Group by Layer (summary first)",
+  "cmd.expandRouteLayer": "Reading Route: Expand This Layer (next page)",
   "cmd.showGraph": "Show Dependency Graph",
   "cmd.showGraphForSymbol": "Show Dependency Graph for Symbol",
   "cmd.exportJson": "Export Dependency Data (JSON)",

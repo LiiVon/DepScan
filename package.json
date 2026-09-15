@@ -92,6 +92,18 @@
         "icon": "$(filter)"
       },
       {
+        "command": "depscaner.toggleRouteByLayer",
+        "title": "%cmd.toggleRouteByLayer%",
+        "category": "DepScaner",
+        "icon": "$(layers)"
+      },
+      {
+        "command": "depscaner.expandRouteLayer",
+        "title": "%cmd.expandRouteLayer%",
+        "category": "DepScaner",
+        "icon": "$(ellipsis)"
+      },
+      {
         "command": "depscaner.routeFromCursor",
         "title": "%cmd.routeFromCursor%",
         "category": "DepScaner",
@@ -251,14 +263,19 @@
           "group": "navigation@5"
         },
         {
+          "command": "depscaner.toggleRouteByLayer",
+          "when": "view == depscaner.routeView",
+          "group": "navigation@6"
+        },
+        {
           "command": "depscaner.routeFromCursor",
           "when": "view == depscaner.routeView && editorLangId == cpp",
-          "group": "navigation@6"
+          "group": "navigation@7"
         },
         {
           "command": "depscaner.resetRouteStart",
           "when": "view == depscaner.routeView && depscaner.routeCustomStart",
-          "group": "navigation@7"
+          "group": "navigation@8"
         }
       ],
       "explorer/context": [

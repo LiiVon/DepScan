@@ -294,6 +294,123 @@ check(
   '被折叠的步骤不会作为子节点冒出来（否则等于原地不动、白多一层缩进）'
 );
 
+// --- 11. 层视图：大项目下先给摘要，再逐层展开（层内分页）---
+// 层 = BFS 距离。调用树回答「谁调了谁」，层视图回答「第几跳、这一跳有多少东西」——
+// 因为真实项目第 3 层就可能扇出上百个函数，一口气铺开只是又一面墙。
+const wideSteps = [step(1, 0, 'main', 'src/main.cpp', 6, { depth: 0, newFile: true })];
+for (let i = 0; i < 3; i++) {
+  wideSteps.push(
+    step(2 + i, 1, `mid${i}`, 'src/app/mid.cpp', 10 + i, { depth: 1, newFile: i === 0 })
+  );
+}
+// 第 3 层故意超过一页（20 个），其中第 3 个带候选（层视图里也要能展开出候选）
+for (let i = 0; i < 20; i++) {
+  const extra =
+    i === 2
+      ? {
+          ambiguous: true,
+          candidateTotal: 1,
+          candidates: [candidate('Other::wide', 'src/other.cpp', 5)]
+        }
+      : {};
+  wideSteps.push(
+    step(5 + i, 2 + (i % 3), `wide${i}`, `src/core/w${i % 4}.cpp`, 100 + i, { depth: 2, ...extra })
+  );
+}
+const wide = model.buildRouteTree({
+  from: 'func:main',
+  steps: wideSteps,
+  truncated: false,
+  frontierNodes: 0,
+  frontierFiles: 0,
+  maxReachedDepth: 2,
+  skippedCount: 0
+});
+
+const groups = model.groupByDepth(wide.result);
+check(groups.length === 3, `层视图：分出 3 层（实际 ${groups.length}）`);
+check(
+  groups.map((g) => g.steps.length).join('/') === '1/3/20',
+  `每层步骤数 = ${groups.map((g) => g.steps.length).join('/')}`
+);
+check(
+  groups.reduce((n, g) => n + g.steps.length, 0) === wideSteps.length &&
+    new Set(groups.flatMap((g) => g.steps.map((s) => s.order))).size === wideSteps.length,
+  '每个步骤恰好落在一层里（不重不漏）'
+);
+check(groups[0].layer === 1 && groups[0].steps[0].name === 'main', '第 1 层就是起点本身');
+check(
+  groups.every((g, i) => i === 0 || g.layer === groups[i - 1].layer + 1),
+  '层号从 1 开始且连续（第 N 层 = 从起点数 N−1 跳）'
+);
+check(
+  groups[2].files === 4 && groups[2].risky === 1,
+  `每层都说清规模与风险：第 3 层 ${groups[2].files} 个文件 / ${groups[2].risky} 个带同名定义`
+);
+
+const layerRoot = model.layerChildren(wide, undefined, noOverrides);
+check(
+  layerRoot.filter((n) => n.kind === 'layer').length === 3 && layerRoot.at(-1).kind === 'tail',
+  '层视图根层 = 3 个层分组 + 尾行'
+);
+const smallLayer = layerRoot[1];
+const bigLayer = layerRoot[2];
+check(
+  smallLayer.defaultExpanded === true && bigLayer.defaultExpanded === false,
+  '一页能看完的层默认展开，会被分页的层默认收起（收起后就是一行摘要）'
+);
+check(
+  bigLayer.text.includes('第 3 层') && bigLayer.text.includes('20') && bigLayer.text.includes('4'),
+  `大层的摘要行本身就说清了规模：${bigLayer.text}`
+);
+
+const firstPage = model.layerChildren(wide, bigLayer, noOverrides);
+const pageSteps = firstPage.filter((n) => n.kind === 'step');
+check(
+  pageSteps.length === model.LAYER_PAGE_SIZE,
+  `层内先给一页：${pageSteps.length} 步（pageSize=${model.LAYER_PAGE_SIZE}）`
+);
+const moreNode = firstPage.at(-1);
+check(
+  moreNode.kind === 'more' &&
+    moreNode.hidden === 20 - model.LAYER_PAGE_SIZE &&
+    moreNode.layer === 3,
+  `一页之后跟一行「${moreNode.text}」—— 点它展开下一页（带着层号）`
+);
+check(
+  pageSteps.every((n, i) => i === 0 || n.step.order > pageSteps[i - 1].step.order) &&
+    pageSteps[0].step.order === 5,
+  '层内仍按阅读顺序（step.order）排，不是按名字或文件'
+);
+check(
+  pageSteps.every((n) => n.expandable === n.step.ambiguous),
+  '层视图里步骤只展开候选（子步骤已经在下一层里，再嵌一次就是重复）'
+);
+const riskyInLayer = pageSteps.find((n) => n.step.ambiguous);
+check(
+  !!riskyInLayer &&
+    model.layerChildren(wide, riskyInLayer, noOverrides).some((n) => n.kind === 'candidates'),
+  '「有候选必须可展开」在层视图里同样成立（候选是纠偏的唯一入口）'
+);
+
+const secondPage = model.layerChildren(wide, bigLayer, noOverrides, { shown: new Map([[3, 40]]) });
+check(
+  secondPage.filter((n) => n.kind === 'step').length === 20 &&
+    secondPage.every((n) => n.kind !== 'more'),
+  '点过「还有 N 个」之后这一层全部列出，分页行消失'
+);
+
+const childStep = wide.result.steps.find((s) => s.order === 5);
+const childLines = model.stepDetailLines(childStep, model.parentOf(wide.result, childStep));
+check(
+  childLines.some((t) => t.includes('调起')),
+  `层视图里靠这一行说明「它从哪来」：${childLines.join(' / ')}`
+);
+check(
+  model.parentOf(wide.result, wide.result.steps[0]) === undefined,
+  '起点没有父步骤（不会凭空写一行「由 #0 调起」）'
+);
+
 rmSync(workDir, { recursive: true, force: true });
 
 if (failures.length) {

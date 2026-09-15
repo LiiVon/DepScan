@@ -79,6 +79,8 @@ The route is a reading suggestion, not an exact call stack: call edges are resol
 
 The step numbers above are intentionally not contiguous: the **noise filter is on by default**. One-line getters and pure forwarders (`setVerbose`, `Registry::size`) do not get a step of their own — but they are never hidden silently: the view reports how many were folded, and the tooltip of the step that called them lists their names. Click `$(filter)` in the title bar to see every step.
 
+On a big project, `$(layers)` switches to the **layer view**: layer 1 is the start, each layer shows a one-line summary (steps / files), and a layer with more than 15 steps is shown one page at a time ("N more not listed"). That turns a 300-row wall into a skeleton you can drill into — steps inside a layer still stay in reading order.
+
 The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tried too) and walks call edges **in source order**, so step numbers are the order you should read in.
 
 | Control | What it does |
@@ -87,6 +89,7 @@ The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tri
 | Title bar `$(arrow-both)` | Breadth first (outline first) ↔ depth first (follow one chain) |
 | Title bar `$(file-code)` | File level ↔ function level (file level keeps only the first entry per file) |
 | Title bar `$(filter)` | **Noise filter**: fold / unfold pure forwarders and tiny functions (folded by default) |
+| Title bar `$(layers)` | **Layer view**: summary per hop (layer 1 is the start); long layers are paged |
 | Title bar `$(list-ordered)` | Regenerate |
 | Title bar `$(graph)` | Open the **swimlane diagram** — one lane per file, orange arrows for file switches |
 | Title bar `$(target)` | Start from **the function under the cursor** — for library projects, or when `main` is not where you want to start |

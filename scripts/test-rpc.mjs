@@ -228,6 +228,23 @@ try {
     );
   }
 
+  // 层视图（插件侧按 `depth` 分组）靠这条不变量：非起点步骤的深度 = 父步骤深度 + 1。
+  // 它同时也是 BFS 距离 —— 层号就是 depth + 1。不成立的话层视图会漏层或错层。
+  check(
+    route.steps
+      .filter((s) => s.parent !== 0)
+      .every((s) => {
+        const parent = route.steps.find((x) => x.order === s.parent);
+        return !!parent && s.depth === parent.depth + 1;
+      }),
+    '深度与父子关系一致（非起点步骤 depth = 父步骤 depth + 1）—— 层视图分组靠它'
+  );
+  check(
+    route.steps.filter((s) => s.depth === 0).length === 1 &&
+      route.steps.find((s) => s.depth === 0).order === 1,
+    '只有起点在第 1 层（否则「第 1 层」就不是起点了）'
+  );
+
   const grouped = await request('route', {
     from: '',
     strategy: 'bfs',

@@ -14,7 +14,7 @@ export interface SwimlaneHtmlOptions {
   lang: string;
   /** 面板标题（工具栏与 <title> 共用） */
   title: string;
-  /** 规模行：13 步 · 8 个文件 · 5 次换文件 */
+  /** 规模行：13 步 · 9 个文件 · 11 次换文件 */
   status: string;
   /** 可选的告警行（例如「图太大只画了前 N 步」） */
   notice?: string;

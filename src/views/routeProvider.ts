@@ -7,9 +7,12 @@ import type { IndexService } from '../index/indexer';
 import {
   buildRouteTree,
   failedNode,
+  LAYER_PAGE_SIZE,
+  layerChildren,
   needIndexNode,
   noEntryNode,
   overrideKey,
+  parentOf,
   startLabel,
   stepDetailLines,
   treeChildren,
@@ -50,6 +53,14 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
    * 一堆 getter 只会把真正要读的那几步冲淡；想全看时点标题栏的按钮即可。
    */
   private skipTrivial = true;
+  /** 层视图：先给「第 N 层」摘要，再逐层展开 */
+  private byLayer = false;
+  /**
+   * 层号 → 这一层已经展开到多少个步骤。
+   * 分页只是**看法**，不该重新问一遍引擎，所以点「还有 N 个」只重渲染：
+   * 引擎那边 `maxSteps` 得重新遍历，而这里要的是「同一份路线先少看一点」。
+   */
+  private readonly shownByLayer = new Map<number, number>();
   private view: vscode.TreeView<RouteNode> | undefined;
   /** 手工指定的起点节点 id；undefined = 自动找入口 */
   private from: string | undefined;
@@ -157,6 +168,22 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
     this.refresh();
   }
 
+  get byLayerMode(): boolean {
+    return this.byLayer;
+  }
+
+  async toggleByLayer(): Promise<void> {
+    this.byLayer = !this.byLayer;
+    this.shownByLayer.clear();
+    this.refresh();
+  }
+
+  /** 层视图里点「还有 N 个」：这一层再多展开一页 */
+  expandLayer(layer: number): void {
+    this.shownByLayer.set(layer, (this.shownByLayer.get(layer) ?? LAYER_PAGE_SIZE) + LAYER_PAGE_SIZE);
+    this.emitter.fire();
+  }
+
   /** 起点 + 精度提示显示在视图顶部（TreeView.message），不占用节点行 */
   statusMessage(): string | undefined {
     if (!this.tree) return undefined;
@@ -216,6 +243,30 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       return item;
     }
 
+    if (element.kind === 'layer') {
+      const item = new vscode.TreeItem(
+        element.text,
+        element.defaultExpanded
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.Collapsed
+      );
+      item.iconPath = new vscode.ThemeIcon('layers');
+      item.tooltip = element.tooltip;
+      item.contextValue = 'depscaner.routeLayer';
+      return item;
+    }
+    if (element.kind === 'more') {
+      const item = new vscode.TreeItem(element.text, vscode.TreeItemCollapsibleState.None);
+      item.iconPath = new vscode.ThemeIcon('ellipsis');
+      item.tooltip = element.tooltip;
+      item.command = {
+        command: 'depscaner.expandRouteLayer',
+        title: element.text,
+        arguments: [element.layer]
+      };
+      return item;
+    }
+
     const step = element.step;
     // 步号放最左边 —— 这个视图里「第几步」比「叫什么」更重要
     const label = `${s().route.step(step.order)} ${step.name}`;
@@ -232,7 +283,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       `${s().kinds[step.kind as NodeKind] ?? step.kind}`
     ];
     if (step.detail) tooltip.push(step.detail);
-    tooltip.push(...stepDetailLines(step));
+    tooltip.push(...stepDetailLines(step, this.tree ? parentOf(this.tree.result, step) : undefined));
     if (step.ambiguous) tooltip.push(`⚠ ${s().route.ambiguous}`);
     if (step.external) tooltip.push(s().route.external);
     if (step.newFile) tooltip.push(s().route.newFile);
@@ -265,10 +316,17 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
         return this.loading ? [] : [failedNode()];
       }
       if (this.tree.result.steps.length === 0) return [noEntryNode()];
-      return treeChildren(this.tree, undefined, this.overrides);
+      return this.childrenOf(undefined);
     }
+    return this.childrenOf(element);
+  }
+
+  /** 调用树视图与层视图只差「怎么取子节点」，其余（加载、状态行、纠偏）完全共用 */
+  private childrenOf(element: RouteNode | undefined): RouteNode[] {
     if (!this.tree) return [];
-    return treeChildren(this.tree, element, this.overrides);
+    return this.byLayer
+      ? layerChildren(this.tree, element, this.overrides, { shown: this.shownByLayer })
+      : treeChildren(this.tree, element, this.overrides);
   }
 
   private async load(): Promise<void> {

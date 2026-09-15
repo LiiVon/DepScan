@@ -241,6 +241,14 @@ export const en: Strings = {
     diagramLegendSame: 'A call inside the same file',
     external: 'outside the project',
     newFile: 'first time in this file',
+    layerLegend:
+      'Layers: layer 1 is the start itself; layer N is what you reach after N−1 call hops',
+    layer: (layer, steps, files) => `Layer ${layer} · ${steps} step(s) / ${files} file(s)`,
+    layerRisky: (n) => `${n} step(s) here have same-named definitions (expand to check)`,
+    moreInLayer: (hidden) => `${hidden} more not listed — click to keep expanding`,
+    moreInLayerHint:
+      'This layer has too many steps to show at once; click for the next page (steps stay in reading order)',
+    calledFrom: (order, name) => `Called from #${order} ${name}`,
     truncated: (nodes, files) =>
       `Step limit reached: ${nodes} more functions (from ${files} files) are not expanded. Raise the limit, or switch to file level for the outline.`,
     complete: 'Route is complete',
@@ -251,6 +259,7 @@ export const en: Strings = {
     hideTrivial: 'Noise filter on: pure forwarders / tiny functions no longer take a step (hover to see what was folded)',
     showTrivial: 'Noise filter off: every step is listed',
     toggleGroupByFile: 'Only first entry per file',
+    toggleByLayer: 'Group by layer (summary first)',
     toggleStrategy: 'Switch traversal strategy',
     bfs: 'Breadth first (outline first)',
     dfs: 'Depth first (follow one chain)',

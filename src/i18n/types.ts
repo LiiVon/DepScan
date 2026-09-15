@@ -190,7 +190,7 @@ export interface Strings {
     diagramHint: string;
     /** 面板顶部第二行：怎么操作这张图（拖拽/滚轮/键盘） */
     diagramNavHint: string;
-    /** 规模行，例：13 步 · 8 个文件 · 5 次换文件 */
+    /** 规模行，例：13 步 · 9 个文件 · 11 次换文件 */
     diagramStatus: (steps: number, lanes: number, cross: number) => string;
     /** 因为超过绘图上限没画出来的步骤 */
     diagramTruncated: (drawn: number, total: number) => string;
@@ -213,6 +213,18 @@ export interface Strings {
     external: string;
     /** 首次进入某文件 */
     newFile: string;
+    /** 层视图：层号的含义（分组行的 tooltip） */
+    layerLegend: string;
+    /** 层视图：第 N 层分组标题，例：第 2 层 · 4 个步骤 / 3 个文件 */
+    layer: (layer: number, steps: number, files: number) => string;
+    /** 层视图：这一层里有 N 个步骤存在同名定义 */
+    layerRisky: (n: number) => string;
+    /** 层视图：一层被分页藏起来的步骤，例：还有 12 个未列出 —— 点这里继续展开 */
+    moreInLayer: (hidden: number) => string;
+    /** 层视图：分页行的 tooltip */
+    moreInLayerHint: string;
+    /** 这一步由谁调起，例：由 #3 Application::start 调起 */
+    calledFrom: (order: number, name: string) => string;
     /** 被截断时的尾部提示，例：还有 137 个函数/9 个文件未展开 */
     truncated: (nodes: number, files: number) => string;
     /** 生成完整了 */
@@ -229,6 +241,8 @@ export interface Strings {
     showTrivial: string;
     /** 切换「只显示每个文件首次进入」的按钮文案 */
     toggleGroupByFile: string;
+    /** 切换「按层分组」的按钮文案 */
+    toggleByLayer: string;
     /** 切换遍历策略的按钮文案 */
     toggleStrategy: string;
     /** 策略当前值 */
