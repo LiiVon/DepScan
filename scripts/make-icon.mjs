@@ -1,9 +1,4 @@
-// 生成两个图标产物（纯 Node，不依赖图像库）：
-//   media/icon.png        128x128 扩展图标（VS Code / Marketplace 要求 PNG）
-//   media/activitybar.svg 24x24 活动栏图标（必须单色 + currentColor，才能跟随主题）
-//
-// 为什么用代码画而不是塞一张位图：能随时重新生成、任意尺寸、两个产物共用同一套几何，
-// 不会出现「PNG 改了、SVG 忘了改」这种漂移。造型就是那只煎蛋。
+// 生成插件图标 media/icon.png（128x128，纯 Node 实现，不依赖图像库）
 import { deflateSync } from 'zlib';
 import { mkdirSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
@@ -38,6 +33,23 @@ function disc(cx, cy, radius, color) {
   }
 }
 
+function line(x0, y0, x1, y1, width, color) {
+  const [r, g, b] = color;
+  const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = x0 + (x1 - x0) * t;
+    const y = y0 + (y1 - y0) * t;
+    for (let dy = -width; dy <= width; dy++) {
+      for (let dx = -width; dx <= width; dx++) {
+        const d = Math.hypot(dx, dy);
+        if (d <= width) blend(Math.round(x + dx), Math.round(y + dy), r, g, b, 255);
+        else if (d <= width + 1) blend(Math.round(x + dx), Math.round(y + dy), r, g, b, 140);
+      }
+    }
+  }
+}
+
 // 背景：圆角深色方块（用圆角矩形 SDF 求覆盖）
 const BG = [30, 34, 42];
 const R = 24;
@@ -52,38 +64,19 @@ for (let y = 0; y < SIZE; y++) {
   }
 }
 
-// ── 煎蛋 ──
-// 蛋白用极坐标谐波扰动出一个不规则轮廓（手绘感只要几个谐波就够了，不必贴图），
-// 蛋黄是两层圆 + 一块高光。坐标都写死在 128 画布上，改造型就改这几个数。
-const BLOT = { cx: 64, cy: 68, r: 44 };
-function blobRadius(theta) {
-  return (
-    BLOT.r *
-    (1 +
-      0.10 * Math.sin(3 * theta + 0.7) +
-      0.06 * Math.cos(5 * theta + 1.9) +
-      0.035 * Math.sin(7 * theta + 0.3))
-  );
-}
+// 依赖图：三个节点 + 两条连线（表示双向依赖）
+const A = [74, 158, 255];
+const B = [56, 193, 114];
+const C = [246, 166, 35];
+const LINK = [206, 214, 226];
 
-const WHITE = [246, 242, 233];
-for (let y = 0; y < SIZE; y++) {
-  for (let x = 0; x < SIZE; x++) {
-    const dx = x + 0.5 - BLOT.cx;
-    const dy = y + 0.5 - BLOT.cy;
-    const d = Math.hypot(dx, dy);
-    const edge = blobRadius(Math.atan2(dy, dx));
-    // 1.4px 的软边就是抗锯齿：覆盖度直接当 alpha 用
-    const cov = Math.min(1, (edge - d) / 1.4);
-    if (cov > 0) blend(x, y, WHITE[0], WHITE[1], WHITE[2], Math.round(cov * 255));
-  }
-}
+line(38, 34, 86, 64, 2, LINK);
+line(86, 64, 38, 96, 2, LINK);
 
-// 蛋黄：暗边 → 主体 → 高光（后画的盖住先画的）
-const YOLK = { cx: 64, cy: 62, r: 23 };
-disc(YOLK.cx, YOLK.cy, YOLK.r + 1.5, [206, 143, 38]);
-disc(YOLK.cx, YOLK.cy, YOLK.r, [244, 183, 64]);
-disc(YOLK.cx - 7, YOLK.cy - 7, 6.5, [255, 214, 128]);
+disc(86, 64, 13, A);
+disc(38, 34, 10, B);
+disc(38, 96, 10, C);
+disc(86, 64, 5, [20, 24, 32]);
 
 // PNG 编码
 function crc32(buf) {
@@ -128,26 +121,4 @@ const png = Buffer.concat([
 
 mkdirSync(resolve(root, 'media'), { recursive: true });
 writeFileSync(resolve(root, 'media/icon.png'), png);
-console.log(`[make-icon] media/icon.png ${SIZE}x${SIZE} (${png.length} bytes)`);
-
-// ── 活动栏图标：单色 SVG，轮廓与上面共用同一套谐波 ──
-// 必须用 currentColor：VS Code 会按主题给活动栏图标上色，写死颜色会在浅色主题下发白。
-const SVG_SIZE = 24;
-const scale = SVG_SIZE / SIZE;
-const cx = BLOT.cx * scale;
-const cy = BLOT.cy * scale;
-const points = [];
-for (let i = 0; i < 96; i++) {
-  const theta = (i / 96) * Math.PI * 2;
-  const r = blobRadius(theta) * scale;
-  points.push(`${(cx + r * Math.cos(theta)).toFixed(2)} ${(cy + r * Math.sin(theta)).toFixed(2)}`);
-}
-const svg = [
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_SIZE}" height="${SVG_SIZE}" viewBox="0 0 ${SVG_SIZE} ${SVG_SIZE}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">`,
-  `  <path d="M${points.join('L')}Z" />`,
-  `  <circle cx="${(YOLK.cx * scale).toFixed(2)}" cy="${(YOLK.cy * scale).toFixed(2)}" r="${(YOLK.r * scale).toFixed(2)}" fill="currentColor" stroke="none" />`,
-  '</svg>',
-  ''
-].join('\n');
-writeFileSync(resolve(root, 'media/activitybar.svg'), svg);
-console.log(`[make-icon] media/activitybar.svg (${svg.length} bytes)`);
+console.log(`[make-icon] media/icon.png (${png.length} bytes)`);
