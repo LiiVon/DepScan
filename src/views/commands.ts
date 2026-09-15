@@ -38,7 +38,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   // 打开源码位置（供侧边栏树 / 表格 / 图内点击复用）
   commands.push(
-    vscode.commands.registerCommand('depscaner.openNode', async (relFile: string, line = 1, column = 1) => {
+    vscode.commands.registerCommand('depscan.openNode', async (relFile: string, line = 1, column = 1) => {
       const root = indexer.root;
       if (!root || !relFile) return;
       const abs = path.isAbsolute(relFile) ? relFile : path.join(root, relFile);
@@ -59,7 +59,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   // 右键 / 命令面板：查看依赖图
   commands.push(
-    vscode.commands.registerCommand('depscaner.showGraph', async (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('depscan.showGraph', async (uri?: vscode.Uri) => {
       const cfg = readConfig();
       const target = uri?.fsPath ?? vscode.window.activeTextEditor?.document.uri.fsPath;
       if (!target) {
@@ -88,7 +88,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   // 当前符号（光标位置）的依赖图
   commands.push(
-    vscode.commands.registerCommand('depscaner.showGraphForSymbol', async () => {
+    vscode.commands.registerCommand('depscan.showGraphForSymbol', async () => {
       const cfg = readConfig();
       const active = indexer.activeRelFile();
       if (!active) {
@@ -112,7 +112,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   // 全局架构视图（按目录聚合，无需焦点文件）
   commands.push(
-    vscode.commands.registerCommand('depscaner.showArchitecture', async () => {
+    vscode.commands.registerCommand('depscan.showArchitecture', async () => {
       if (!(await ensureIndex())) return;
       GraphPanel.createOrShow(context, indexer, logger, {
         label: s().actions.architecture,
@@ -123,30 +123,30 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   // 切换界面语言。只负责改配置，真正的刷新由 extension.ts 的配置变更监听统一处理。
   commands.push(
-    vscode.commands.registerCommand('depscaner.setLanguage', async (language: 'auto' | 'zh' | 'en') => {
+    vscode.commands.registerCommand('depscan.setLanguage', async (language: 'auto' | 'zh' | 'en') => {
       await vscode.workspace
-        .getConfiguration('depscaner')
+        .getConfiguration('depscan')
         .update('ui.language', language, vscode.ConfigurationTarget.Global);
     })
   );
 
   // 阅读路线：把侧边栏该视图展开并重新生成
   commands.push(
-    vscode.commands.registerCommand('depscaner.showRoute', async () => {
+    vscode.commands.registerCommand('depscan.showRoute', async () => {
       if (!(await ensureIndex())) return;
-      await vscode.commands.executeCommand('depscaner.routeView.focus');
+      await vscode.commands.executeCommand('depscan.routeView.focus');
       routeTree.refresh();
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.toggleRouteGroupByFile', async () => {
+    vscode.commands.registerCommand('depscan.toggleRouteGroupByFile', async () => {
       await routeTree.toggleGroupByFile();
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.toggleRouteStrategy', async () => {
+    vscode.commands.registerCommand('depscan.toggleRouteStrategy', async () => {
       await routeTree.toggleStrategy();
     })
   );
@@ -154,14 +154,14 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   // 层视图：调用树回答「谁调了谁」，层视图先给摘要（第几层、几个步骤、几个文件），
   // 一层太大就分页 —— 大项目里把几百行一次铺开等于又一面墙。
   commands.push(
-    vscode.commands.registerCommand('depscaner.toggleRouteByLayer', async () => {
+    vscode.commands.registerCommand('depscan.toggleRouteByLayer', async () => {
       await routeTree.toggleByLayer();
     })
   );
 
   // 层视图里的「还有 N 个」行（挂在 TreeItem 的 command 上，不出现在命令面板）
   commands.push(
-    vscode.commands.registerCommand('depscaner.expandRouteLayer', (layer: number) => {
+    vscode.commands.registerCommand('depscan.expandRouteLayer', (layer: number) => {
       routeTree.expandLayer(layer);
     })
   );
@@ -170,7 +170,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   // 一堆一行 getter 夹在中间只会把真正要读的那几步冲淡；
   // 但折叠不能是静默的（视图顶部会报「已折叠 N 个」），也要能随时关掉核对。
   commands.push(
-    vscode.commands.registerCommand('depscaner.toggleRouteSkipTrivial', async () => {
+    vscode.commands.registerCommand('depscan.toggleRouteSkipTrivial', async () => {
       await routeTree.toggleSkipTrivial();
       void vscode.window.setStatusBarMessage(
         routeTree.hideTrivial ? s().route.hideTrivial : s().route.showTrivial,
@@ -183,14 +183,14 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   // 大项目的 main 常常在平台相关文件里，真正想读的那条线未必从 main 起头；
   // 库项目则压根没有 main —— 这两种情况都靠「换个起点」解决。
   commands.push(
-    vscode.commands.registerCommand('depscaner.routeFromCursor', async () => {
+    vscode.commands.registerCommand('depscan.routeFromCursor', async () => {
       const active = indexer.activeRelFile();
       if (!active) {
         void vscode.window.showWarningMessage(s().errors.noActiveFile);
         return;
       }
       // 先把视图露出来，再等索引（大项目下构图可能要几秒）
-      await vscode.commands.executeCommand('depscaner.routeView.focus');
+      await vscode.commands.executeCommand('depscan.routeView.focus');
       if (!(await ensureIndex())) return;
       const node = await indexer.nodeAt(active.rel, active.line);
       if (!node?.id) {
@@ -202,14 +202,14 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.resetRouteStart', async () => {
+    vscode.commands.registerCommand('depscan.resetRouteStart', async () => {
       routeTree.setStart(undefined);
     })
   );
 
   // 泳道图：唯一需要画布的那部分 —— 「控制权在哪些文件之间来回」用文字讲不清
   commands.push(
-    vscode.commands.registerCommand('depscaner.showRouteDiagram', async () => {
+    vscode.commands.registerCommand('depscan.showRouteDiagram', async () => {
       if (!(await ensureIndex())) return;
       RoutePanel.createOrShow({ context, indexer, routeTree, logger });
     })
@@ -218,7 +218,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   // 候选切换：这一步的名字在项目里还有别的定义，由用户决定该读哪一个。
   // 参数由 RouteTreeProvider 拼好（见 CandidateArgs）：parentId 为空 = 这是起点。
   commands.push(
-    vscode.commands.registerCommand('depscaner.pickRouteCandidate', async (args?: CandidateArgs) => {
+    vscode.commands.registerCommand('depscan.pickRouteCandidate', async (args?: CandidateArgs) => {
       if (!args) return;
       const nodeId = args.reset ? undefined : args.nodeId || undefined;
       if (!args.parentId) routeTree.setStart(nodeId);
@@ -229,7 +229,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   // 架构边界检查：公开头文件引用了内部实现 / 目录之间成环。
   // 平时索引完就自动跑（结果在「问题」面板），这条命令是「现在再查一遍，并告诉我结论」。
   commands.push(
-    vscode.commands.registerCommand('depscaner.checkBoundaries', async () => {
+    vscode.commands.registerCommand('depscan.checkBoundaries', async () => {
       if (!(await ensureIndex())) return;
       const result = await boundaries.refresh();
       if (!result) {
@@ -247,7 +247,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.indexWorkspace', async () => {
+    vscode.commands.registerCommand('depscan.indexWorkspace', async () => {
       await indexer.scan(true);
       indexTree.refresh();
       dependencyTree.refresh();
@@ -255,27 +255,27 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.cancelIndex', async () => {
+    vscode.commands.registerCommand('depscan.cancelIndex', async () => {
       await indexer.cancel();
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.clearCache', async () => {
+    vscode.commands.registerCommand('depscan.clearCache', async () => {
       const ok = await indexer.clearCache();
       void vscode.window.showInformationMessage(ok ? s().cache.cleared : s().cache.none);
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.refreshDependencyView', () => {
+    vscode.commands.registerCommand('depscan.refreshDependencyView', () => {
       dependencyTree.refresh();
       indexTree.refresh();
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.showIndexStatus', async () => {
+    vscode.commands.registerCommand('depscan.showIndexStatus', async () => {
       const status = indexer.currentStatus;
       const stats = status.stats;
       const lines: string[] = [];
@@ -296,7 +296,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
 
   // 精度诊断：回答「为什么我编译了、刷新了，还是显示近似？」
   commands.push(
-    vscode.commands.registerCommand('depscaner.diagnosePrecision', async () => {
+    vscode.commands.registerCommand('depscan.diagnosePrecision', async () => {
       const d = s().diagnostic;
       const root = indexer.root;
       if (!root) {
@@ -348,24 +348,24 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
         modal: true
       }, d.rescan, d.openGuide, 'OK');
       if (action === d.rescan) await indexer.scan(true);
-      if (action === d.openGuide) await vscode.commands.executeCommand('depscaner.prepareCompileCommands');
+      if (action === d.openGuide) await vscode.commands.executeCommand('depscan.prepareCompileCommands');
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.exportJson', async () => {
+    vscode.commands.registerCommand('depscan.exportJson', async () => {
       await exportWithFormat(indexer, 'json', logger);
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.exportImage', async () => {
-      await vscode.commands.executeCommand('depscaner.showGraph');
+    vscode.commands.registerCommand('depscan.exportImage', async () => {
+      await vscode.commands.executeCommand('depscan.showGraph');
     })
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.prepareCompileCommands', async () => {
+    vscode.commands.registerCommand('depscan.prepareCompileCommands', async () => {
       const doc = await vscode.workspace.openTextDocument({
         content: `## ${s().compile.guideTitle}\n\n\`\`\`\n${s().compile.guideBody}\n\`\`\`\n`,
         language: 'markdown'
@@ -375,7 +375,7 @@ export function registerCommands(deps: CommandDeps): vscode.Disposable[] {
   );
 
   commands.push(
-    vscode.commands.registerCommand('depscaner.openDocs', async () => {
+    vscode.commands.registerCommand('depscan.openDocs', async () => {
       const entry = vscode.Uri.joinPath(context.extensionUri, 'docs', '01-快速开始.md');
       try {
         await vscode.workspace.fs.stat(entry);
@@ -409,7 +409,7 @@ async function exportWithFormat(
   const ext = format === 'mermaid' ? 'mmd' : format;
   const root = indexer.root ?? process.cwd();
   const uri = await vscode.window.showSaveDialog({
-    defaultUri: vscode.Uri.file(path.join(root, `depscaner-deps.${ext}`))
+    defaultUri: vscode.Uri.file(path.join(root, `depscan-deps.${ext}`))
   });
   if (!uri) return;
   try {

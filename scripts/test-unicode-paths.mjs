@@ -22,10 +22,10 @@ import { fileURLToPath } from 'url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const exe = process.platform === 'win32' ? '.exe' : '';
 const CANDIDATES = [
-  `engine/build/bin/Release/depscaner-core${exe}`,
-  `engine/build/bin/RelWithDebInfo/depscaner-core${exe}`,
-  `engine/build/bin/Debug/depscaner-core${exe}`,
-  `engine/build/bin/depscaner-core${exe}`
+  `engine/build/bin/Release/depscan-core${exe}`,
+  `engine/build/bin/RelWithDebInfo/depscan-core${exe}`,
+  `engine/build/bin/Debug/depscan-core${exe}`,
+  `engine/build/bin/depscan-core${exe}`
 ];
 const enginePath = CANDIDATES.map((p) => resolve(root, p)).find((p) => existsSync(p));
 if (!enginePath) {
@@ -46,7 +46,7 @@ function check(condition, message) {
 }
 
 // ── 样例工程：根目录带空格，两个子目录分别是「中文」和「emoji」 ──
-const work = mkdtempSync(join(tmpdir(), 'depscaner-unicode-'));
+const work = mkdtempSync(join(tmpdir(), 'depscan-unicode-'));
 const project = join(work, 'my project');  // 根目录带空格（真实项目很常见）
 const chineseDir = join(project, '中文目录');
 const emojiDir = join(project, 'emoji-😀');  // emoji 不在 GBK 里 → 旧实现必抛异常

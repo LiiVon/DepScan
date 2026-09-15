@@ -4,7 +4,7 @@
 
 namespace demo {
 
-Application::Application() : panel_("DepScaner Demo") {}
+Application::Application() : panel_("DepScan Demo") {}
 
 int Application::start(const std::string& args) {
   logLine(Level::Info, "Application start");

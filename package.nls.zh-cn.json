@@ -19,7 +19,7 @@
   "cmd.exportJson": "导出依赖数据（JSON）",
   "cmd.exportImage": "导出依赖图（PNG / SVG）",
   "cmd.prepareCompileCommands": "如何生成 compile_commands.json？",
-  "cmd.openDocs": "打开 DepScaner 使用文档",
+  "cmd.openDocs": "打开 DepScan 使用文档",
   "cmd.refreshDependencyView": "刷新依赖视图",
   "cmd.showArchitecture": "全局架构视图",
   "cmd.setLanguage": "切换界面语言",
@@ -27,7 +27,7 @@
   "view.route": "阅读路线",
   "view.index": "索引状态",
   "view.dependencies": "依赖",
-  "welcome.dependencies": "尚未建立索引。\n[重建索引](command:depscaner.indexWorkspace)\n生成 `compile_commands.json` 以获得精确解析：[查看方法](command:depscaner.prepareCompileCommands)",
+  "welcome.dependencies": "尚未建立索引。\n[重建索引](command:depscan.indexWorkspace)\n生成 `compile_commands.json` 以获得精确解析：[查看方法](command:depscan.prepareCompileCommands)",
   "cfg.ui.language": "界面语言",
   "cfg.ui.language.auto": "跟随 VS Code 显示语言",
   "cfg.ui.language.zh": "中文",
@@ -54,7 +54,7 @@
   "cfg.graph.maxNodes": "单张图中最多渲染的节点数，超出会启用聚类与折叠。",
   "cfg.graph.clusterByDirectory": "打开面板时启用按目录聚类。超大图（节点数超过 400）会自动启用，无需手动打开。",
   "cfg.cache.enabled": "启用磁盘缓存以加速二次启动。",
-  "cfg.cache.directory": "缓存目录（留空使用工作区 .vscode/depscaner-cache）。",
+  "cfg.cache.directory": "缓存目录（留空使用工作区 .vscode/depscan-cache）。",
   "cfg.checks.enabled": "把架构边界问题（公开头文件引用内部实现、目录之间成环）报到「问题」面板。",
   "cfg.log.level": "日志级别。"
 }

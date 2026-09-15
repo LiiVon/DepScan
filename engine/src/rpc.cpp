@@ -432,7 +432,7 @@ int runStdioServer() {
           r.set("content", json::Value::makeString(session.graphToMermaid(g)));
         } else {
           json::Value payload = json::Value::makeObject();
-          payload.set("generator", json::Value::makeString("DepScaner"));
+          payload.set("generator", json::Value::makeString("DepScan"));
           payload.set("version", json::Value::makeString("0.1.0"));
           payload.set("root", json::Value::makeString(session.root()));
           payload.set("stats", session.statsToJson());
@@ -481,7 +481,7 @@ int runOnce(const std::string& root, bool pretty, int jobs, bool trace, bool vio
     ok = scanner.run(req, [trace](int done, int total, const std::string& file) {
       // --trace：每个文件都打一行，崩溃时 stderr 的最后一行就是元凶文件
       if (trace || done % 50 == 0 || done == total) {
-        std::fprintf(stderr, "[DepScaner] %d/%d %s\n", done, total, file.c_str());
+        std::fprintf(stderr, "[DepScan] %d/%d %s\n", done, total, file.c_str());
         std::fflush(stderr);
       }
       return true;
@@ -494,7 +494,7 @@ int runOnce(const std::string& root, bool pretty, int jobs, bool trace, bool vio
     error = "扫描过程中抛出未知异常";
   }
   if (!ok) {
-    std::fprintf(stderr, "[DepScaner] 扫描失败: %s\n", error.c_str());
+    std::fprintf(stderr, "[DepScan] 扫描失败: %s\n", error.c_str());
     return 1;
   }
   json::Value payload = json::Value::makeObject();

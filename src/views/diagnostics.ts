@@ -18,13 +18,13 @@ function toSeverity(level: 'warning' | 'error'): vscode.DiagnosticSeverity {
  * 为什么用诊断而不是自建列表：
  *  - 点一下就能跳到那一行（自建列表还得自己实现跳转）
  *  - 「问题」面板里能按文件分组、按 code 筛选 —— 这两件都是现成的
- *  - 别人写 CI 时可以直接 grep `depscaner.` 这个 code 前缀
+ *  - 别人写 CI 时可以直接 grep `depscan.` 这个 code 前缀
  *
  * 每次都**整份重算**：增量更新只改了少数文件，但「目录成环」是全局属性 ——
  * 只想更新受影响的那几条，很容易留下幽灵（边没了、诊断还在）。
  */
 export class BoundaryDiagnostics implements vscode.Disposable {
-  private readonly collection = vscode.languages.createDiagnosticCollection('depscaner');
+  private readonly collection = vscode.languages.createDiagnosticCollection('depscan');
   private lastTotal = 0;
 
   constructor(
@@ -60,7 +60,7 @@ export class BoundaryDiagnostics implements vscode.Disposable {
         message: d.message,
         severity: toSeverity(d.severity),
         code: d.code,
-        source: 'DepScaner'
+        source: 'DepScan'
       });
       byFile.set(abs, list);
     }

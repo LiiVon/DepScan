@@ -40,7 +40,7 @@ const CANDIDATES = [
 ];
 
 const MAX_DEPTH = 4;
-const SKIP_DIRS = new Set(['node_modules', '_deps', 'CMakeFiles', 'depscaner-cache']);
+const SKIP_DIRS = new Set(['node_modules', '_deps', 'CMakeFiles', 'depscan-cache']);
 
 /** 文件 mtime（毫秒）；不存在或不是文件返回 0 */
 export function fileMtimeMs(p: string): number {

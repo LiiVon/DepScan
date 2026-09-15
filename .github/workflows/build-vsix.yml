@@ -73,7 +73,7 @@ jobs:
           EXTRA_CMAKE_ARGS: ${{ matrix.extra }}
         run: node scripts/build-core.mjs
 
-      - name: 引擎自测（29 项）
+      - name: 引擎自测
         run: node scripts/test-core.mjs
 
       - name: 归位到 engines/<key>/
@@ -86,7 +86,7 @@ jobs:
           ls -lR engines
 
       # upload-artifact 不保留文件权限位，所以先打成 tar 再上传，
-      # 否则 Linux/macOS 的 depscaner-core 下载回来就没有 +x 了。
+      # 否则 Linux/macOS 的 depscan-core 下载回来就没有 +x 了。
       - name: 打包成 artifact
         shell: bash
         run: |
@@ -131,7 +131,7 @@ jobs:
               tar -xzf "$t" -C "engines/$key"
             done
           done
-          chmod +x engines/*/depscaner-core 2>/dev/null || true
+          chmod +x engines/*/depscan-core 2>/dev/null || true
           ls -lR engines
 
       - name: 安装依赖

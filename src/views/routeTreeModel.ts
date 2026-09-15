@@ -7,7 +7,7 @@
 import type { EntryCandidate, EntriesResult, RouteCandidate, RouteResult, RouteStep } from '../engine/protocol';
 import { s } from '../i18n';
 
-/** 候选条目点击时传给 `depscaner.pickRouteCandidate` 的参数 */
+/** 候选条目点击时传给 `depscan.pickRouteCandidate` 的参数 */
 export interface CandidateArgs {
   /** 父节点 id；空表示这一步是起点（改的是起点本身） */
   parentId: string;
@@ -88,7 +88,7 @@ export function needIndexNode(): RouteTreeNode {
     kind: 'info',
     text: s().route.needIndex,
     icon: 'info',
-    command: { command: 'depscaner.indexWorkspace', title: s().actions.reindex }
+    command: { command: 'depscan.indexWorkspace', title: s().actions.reindex }
   };
 }
 
@@ -136,7 +136,7 @@ function entryCandidateNode(c: EntryCandidate): RouteTreeNode {
     icon: c.mainLike ? 'play' : c.publicApi ? 'symbol-interface' : 'circle-outline',
     tooltip: lines.join('\n'),
     command: {
-      command: 'depscaner.pickRouteCandidate',
+      command: 'depscan.pickRouteCandidate',
       title: s().route.startFromHere,
       // parentId 为空 = 这是**起点**（见 CandidateArgs 的约定），不是纠偏
       arguments: [{ parentId: '', name: c.name, nodeId: c.id, reset: false }]

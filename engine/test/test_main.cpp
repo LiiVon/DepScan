@@ -348,7 +348,7 @@ void testJsonAndUtil() {
 }  // namespace
 
 int main() {
-  std::printf("DepScaner core self-test\n");
+  std::printf("DepScan core self-test\n");
   testLexer();
   testPreprocessor();
   testAnalyzer();

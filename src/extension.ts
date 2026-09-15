@@ -14,12 +14,12 @@ import { StatusBar } from './views/statusBar';
 import { DependencyTreeProvider, IndexTreeProvider } from './views/treeProvider';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const channel = vscode.window.createOutputChannel('DepScaner');
+  const channel = vscode.window.createOutputChannel('DepScan');
   const cfg = readConfig();
   initI18n(cfg.language, vscode.env.language);
 
   const logger = new Logger(channel, cfg.logLevel);
-  logger.info(`DepScaner 激活（VS Code 显示语言: ${vscode.env.language}）`);
+  logger.info(`DepScan 激活（VS Code 显示语言: ${vscode.env.language}）`);
 
   const indexer = new IndexService(context, logger);
   await indexer.initialize();
@@ -31,20 +31,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const boundaries = new BoundaryDiagnostics(indexer, logger);
   const statusBar = new StatusBar(indexer);
 
-  const routeView = vscode.window.createTreeView('depscaner.routeView', {
+  const routeView = vscode.window.createTreeView('depscan.routeView', {
     treeDataProvider: routeTree,
     showCollapseAll: true
   });
   routeTree.attachView(routeView);
 
   // 其余三个视图也拿句柄：标题要在运行期改（见 applyViewTitles）
-  const actionsView = vscode.window.createTreeView('depscaner.actionsView', {
+  const actionsView = vscode.window.createTreeView('depscan.actionsView', {
     treeDataProvider: actionsTree
   });
-  const indexView = vscode.window.createTreeView('depscaner.indexView', {
+  const indexView = vscode.window.createTreeView('depscan.indexView', {
     treeDataProvider: indexTree
   });
-  const dependencyView = vscode.window.createTreeView('depscaner.dependencyView', {
+  const dependencyView = vscode.window.createTreeView('depscan.dependencyView', {
     treeDataProvider: dependencyTree
   });
 
@@ -103,13 +103,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     indexer.onDidChangeStatus.event((status) => {
-      void vscode.commands.executeCommand('setContext', 'depscaner.indexing', status.state === 'indexing');
+      void vscode.commands.executeCommand('setContext', 'depscan.indexing', status.state === 'indexing');
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('depscaner.ui.language')) applyLanguage();
-      if (e.affectsConfiguration('depscaner.log.level')) logger.setLevel(readConfig().logLevel);
+      if (e.affectsConfiguration('depscan.ui.language')) applyLanguage();
+      if (e.affectsConfiguration('depscan.log.level')) logger.setLevel(readConfig().logLevel);
       // 关掉开关时要把已有诊断清掉，否则面板里会留着一堆不会再更新的告警
-      if (e.affectsConfiguration('depscaner.checks.enabled')) void boundaries.refresh();
+      if (e.affectsConfiguration('depscan.checks.enabled')) void boundaries.refresh();
     })
   );
 

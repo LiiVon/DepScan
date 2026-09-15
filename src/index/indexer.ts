@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { readConfig, toEngineConfig, type DepScanerConfig } from '../config';
+import { readConfig, toEngineConfig, type DepScanConfig } from '../config';
 import { findCompileCommands, fileMtimeMs } from './compileDb';
 import { EngineClient } from '../engine/client';
 import { resolveEnginePath, type EngineLocation } from '../engine/locator';
@@ -91,7 +91,7 @@ export class IndexService implements vscode.Disposable {
         this.scheduleUpdate(doc.uri.fsPath);
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('depscaner')) {
+        if (e.affectsConfiguration('depscan')) {
           this.logger.setLevel(readConfig().logLevel);
         }
       })
@@ -158,7 +158,7 @@ export class IndexService implements vscode.Disposable {
     const cfg = readConfig();
     const root = this.root;
     if (!root) return undefined;
-    const dir = cfg.cacheDirectory.trim() ? cfg.cacheDirectory.trim() : path.join(root, '.vscode', 'depscaner-cache');
+    const dir = cfg.cacheDirectory.trim() ? cfg.cacheDirectory.trim() : path.join(root, '.vscode', 'depscan-cache');
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch (err) {
@@ -195,7 +195,7 @@ export class IndexService implements vscode.Disposable {
     }
     if (!(await this.ensureStarted())) return undefined;
 
-    const cfg: DepScanerConfig = readConfig();
+    const cfg: DepScanConfig = readConfig();
     const cachePath = this.cacheFile();
     this.scanning = true;
     this.setStatus({ state: 'indexing', message: s().index.starting, done: 0, total: 0 });

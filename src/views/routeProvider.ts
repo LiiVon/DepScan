@@ -98,7 +98,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
 
   /** 让「起点回到 main」这类按钮只在真的改了起点时才出现 */
   private updateContext(): void {
-    void vscode.commands.executeCommand('setContext', 'depscaner.routeCustomStart', !!this.from);
+    void vscode.commands.executeCommand('setContext', 'depscan.routeCustomStart', !!this.from);
   }
 
   get customStart(): boolean {
@@ -234,7 +234,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       const item = new vscode.TreeItem(element.text, vscode.TreeItemCollapsibleState.Collapsed);
       item.iconPath = new vscode.ThemeIcon('list-selection');
       item.tooltip = element.tooltip;
-      item.contextValue = 'depscaner.routeCandidates';
+      item.contextValue = 'depscan.routeCandidates';
       return item;
     }
     if (element.kind === 'candidate') {
@@ -250,7 +250,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
         .join('\n');
       // 「当前」那一项点了就是撤回纠偏（args.reset）
       item.command = {
-        command: 'depscaner.pickRouteCandidate',
+        command: 'depscan.pickRouteCandidate',
         title: isCurrent
           ? s().route.resetCandidate
           : s().route.useCandidate(candidate.file, candidate.line),
@@ -268,7 +268,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       );
       item.iconPath = new vscode.ThemeIcon('layers');
       item.tooltip = element.tooltip;
-      item.contextValue = 'depscaner.routeLayer';
+      item.contextValue = 'depscan.routeLayer';
       return item;
     }
     if (element.kind === 'more') {
@@ -276,7 +276,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       item.iconPath = new vscode.ThemeIcon('ellipsis');
       item.tooltip = element.tooltip;
       item.command = {
-        command: 'depscaner.expandRouteLayer',
+        command: 'depscan.expandRouteLayer',
         title: element.text,
         arguments: [element.layer]
       };
@@ -318,7 +318,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
 
     if (step.file) {
       item.command = {
-        command: 'depscaner.openNode',
+        command: 'depscan.openNode',
         title: 'open',
         arguments: [step.file, step.line, step.column]
       };
@@ -406,7 +406,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
   }
 }
 
-/** 「候选」条目点击时传给 depscaner.pickRouteCandidate 的参数（定义在纯模型里） */
+/** 「候选」条目点击时传给 depscan.pickRouteCandidate 的参数（定义在纯模型里） */
 export type { CandidateArgs } from './routeTreeModel';
 
 function kindIcon(kind: NodeKind): string {

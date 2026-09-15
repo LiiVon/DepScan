@@ -22,11 +22,11 @@ export interface ViolationDiagnostic {
 /**
  * 诊断 code。
  *
- * 带 `depscaner.` 前缀是有用的：别人的项目里可能同时跑好几个 linter，
+ * 带 `depscan.` 前缀是有用的：别人的项目里可能同时跑好几个 linter，
  * 一眼能看出这条是哪来的；要临时忽略也只需要记住一个字符串。
  */
 export function violationCode(v: Violation): string {
-  return `depscaner.${v.kind}`;
+  return `depscan.${v.kind}`;
 }
 
 /**
@@ -35,7 +35,7 @@ export function violationCode(v: Violation): string {
  * 这两件事都不是「编译不过」—— 公开面泄漏对**本仓库**编译没影响（在本机它找得到
  * 那个内部头），目录成环也只是一种选择。报成 error 会在「问题」面板里制造红色，
  * 而我们没法代替用户判断他愿不愿意为这个红点改架构。想更严的人可以在 CI 里
- * 用 `depscaner-core --violations` 的退出码（有违规即为 1）。
+ * 用 `depscan-core --violations` 的退出码（有违规即为 1）。
  */
 export const VIOLATION_SEVERITY = 'warning' as const;
 

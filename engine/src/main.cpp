@@ -1,4 +1,4 @@
-// DepScaner 分析引擎入口。
+// DepScan 分析引擎入口。
 //
 // 两种运行模式：
 //   1) stdio 服务模式（默认）：VS Code 插件以子进程方式启动，逐行 JSON-RPC 通信。
@@ -22,13 +22,13 @@ namespace {
 
 void printUsage() {
   std::printf(
-      "DepScaner core (依赖分析引擎)\n"
+      "DepScan core (依赖分析引擎)\n"
       "\n"
       "用法：\n"
-      "  depscaner-core                      启动 stdio JSON-RPC 服务（供 VS Code 插件使用）\n"
-      "  depscaner-core --once --root <dir>  扫描一次并输出 JSON\n"
-      "  depscaner-core --version            输出版本\n"
-      "  depscaner-core --help               显示帮助\n"
+      "  depscan-core                      启动 stdio JSON-RPC 服务（供 VS Code 插件使用）\n"
+      "  depscan-core --once --root <dir>  扫描一次并输出 JSON\n"
+      "  depscan-core --version            输出版本\n"
+      "  depscan-core --help               显示帮助\n"
       "\n"
       "选项：\n"
       "  --root <dir>    项目根目录（默认当前目录）\n"
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     } else if (arg == "--root" && i + 1 < argc) {
       root = argv[++i];
     } else if (arg == "--version" || arg == "-v") {
-      std::printf("depscaner-core 0.1.0\n");
+      std::printf("depscan-core 0.1.0\n");
       return 0;
     } else if (arg == "--help" || arg == "-h") {
       printUsage();
@@ -95,11 +95,11 @@ int main(int argc, char** argv) {
     }
     return depscan::runStdioServer();
   } catch (const std::exception& e) {
-    std::fprintf(stderr, "[DepScaner] 致命错误: %s\n", e.what());
+    std::fprintf(stderr, "[DepScan] 致命错误: %s\n", e.what());
     std::fflush(stderr);
     return 2;
   } catch (...) {
-    std::fprintf(stderr, "[DepScaner] 致命错误: 未知异常\n");
+    std::fprintf(stderr, "[DepScan] 致命错误: 未知异常\n");
     std::fflush(stderr);
     return 2;
   }

@@ -62,7 +62,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "depscaner:package",
+			"label": "depscan:package",
 			"type": "shell",
 			"command": "npm",
 			"args": [

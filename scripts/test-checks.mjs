@@ -21,7 +21,7 @@ function check(condition, message) {
   }
 }
 
-const workDir = mkdtempSync(join(tmpdir(), 'depscaner-checks-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscan-checks-'));
 const outfile = join(workDir, 'violationModel.mjs');
 await build({
   entryPoints: [resolve(root, 'src/views/violationModel.ts')],
@@ -53,7 +53,7 @@ const leak = {
 
 // --- 1. 目录环 ---
 const cycleDiag = model.violationDiagnostic(cycle);
-check(cycleDiag.code === 'depscaner.directory-cycle', `code 带前缀，便于筛选与写进 CI：${cycleDiag.code}`);
+check(cycleDiag.code === 'depscan.directory-cycle', `code 带前缀，便于筛选与写进 CI：${cycleDiag.code}`);
 check(
   cycleDiag.severity === 'warning',
   '级别统一 warning —— 架构气味不该报成错误（那是「编译不过」的位置）'
@@ -71,7 +71,7 @@ check(/分层/.test(cycleDiag.message), '说清后果（分层无从谈起），
 // --- 2. 公开面泄漏 ---
 const leakDiag = model.violationDiagnostic(leak);
 check(
-  leakDiag.code === 'depscaner.public-api-leak' && leakDiag.line === 3 && leakDiag.severity === 'warning',
+  leakDiag.code === 'depscan.public-api-leak' && leakDiag.line === 3 && leakDiag.severity === 'warning',
   '泄漏有自己的 code，级别与环一致'
 );
 check(

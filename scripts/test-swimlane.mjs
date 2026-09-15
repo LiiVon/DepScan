@@ -23,7 +23,7 @@ function check(condition, message) {
   }
 }
 
-const workDir = mkdtempSync(join(tmpdir(), 'depscaner-swimlane-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscan-swimlane-'));
 const bundle = async (entry, name) => {
   const outfile = join(workDir, name);
   await build({

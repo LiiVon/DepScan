@@ -10,8 +10,8 @@ const showEdges = process.argv.includes('--edges');
 
 const exe = process.platform === 'win32' ? '.exe' : '';
 const engine = [
-  `engine/build/bin/Release/depscaner-core${exe}`,
-  `engine/build/bin/depscaner-core${exe}`
+  `engine/build/bin/Release/depscan-core${exe}`,
+  `engine/build/bin/depscan-core${exe}`
 ]
   .map((p) => resolve(root, p))
   .find((p) => existsSync(p));

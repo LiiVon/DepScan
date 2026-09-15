@@ -27,7 +27,7 @@ export class IndexTreeProvider implements vscode.TreeDataProvider<IndexTreeEleme
       const item = new vscode.TreeItem(statusLabel(status), vscode.TreeItemCollapsibleState.None);
       item.iconPath = new vscode.ThemeIcon(statusIcon(status));
       item.tooltip = status.message || statusLabel(status);
-      item.contextValue = 'depscaner.status';
+      item.contextValue = 'depscan.status';
       return item;
     }
     if (element.kind === 'warning') {
@@ -162,17 +162,17 @@ export class DependencyTreeProvider implements vscode.TreeDataProvider<Dependenc
       item.description = `${s().kinds[node.kind as NodeKind]}${node.external ? ' · ext' : ''}`;
       item.tooltip = `${node.name}\n${node.file}:${node.line}\n${node.detail}`;
       item.iconPath = new vscode.ThemeIcon('symbol-method', new vscode.ThemeColor('charts.blue'));
-      item.contextValue = 'depscaner.depNode';
+      item.contextValue = 'depscan.depNode';
       if (node.file) {
         item.command = {
-          command: 'depscaner.openNode',
+          command: 'depscan.openNode',
           title: 'open',
           arguments: [node.file, node.line, node.column]
         };
       }
     } else if (element.kind === 'group') {
       item.iconPath = new vscode.ThemeIcon(element.direction === 'upstream' ? 'arrow-up' : 'arrow-down');
-      item.contextValue = 'depscaner.depGroup';
+      item.contextValue = 'depscan.depGroup';
     }
     return item;
   }

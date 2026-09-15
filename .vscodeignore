@@ -11,6 +11,9 @@ scripts/**
 samples/**
 stress/**
 stress1m/**
+# 根目录的 CMake Tools / 手工配置构建目录（引擎自己的在 engine/ 下，已被上面那条排除）
+# 曾经漏掉这一条：vsce 用 .vscodeignore 而不是 .gitignore，于是 67 个构建文件被打进了 vsix
+build/**
 .gitignore
 tsconfig.json
 esbuild.mjs

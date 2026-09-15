@@ -244,7 +244,7 @@ std::string configFingerprint(const std::string& root, const CompileDatabase& db
 // stderr 的最后一行就是它死在哪一步 —— 这是事后唯一能拿到的线索，所以无条件输出。
 // 每次扫描只有几行，代价可忽略。
 static void stage(const std::string& what) {
-  std::fprintf(stderr, "[DepScaner] 阶段: %s\n", what.c_str());
+  std::fprintf(stderr, "[DepScan] 阶段: %s\n", what.c_str());
   std::fflush(stderr);
 }
 
@@ -282,7 +282,7 @@ bool Scanner::run(const ScanRequest& req, const ProgressFn& onProgress, std::str
   std::vector<std::string> includeGlobs = req.includeGlobs;
   if (includeGlobs.empty()) includeGlobs = {"**/*.{c,cc,cpp,cxx,h,hh,hpp,hxx,inl,ipp}"};
   // 未显式给出排除规则时使用安全默认值，避免把构建产物/依赖目录当成项目源码。
-  // 插件侧总会带上 depscaner.files.exclude，这里主要保护 CLI 与 --once 路径
+  // 插件侧总会带上 depscan.files.exclude，这里主要保护 CLI 与 --once 路径
   // （否则 CMake 生成的 CompilerIdCXX.cpp 之类会被当成项目文件索引进来）。
   std::vector<std::string> excludeGlobs = req.excludeGlobs;
   if (excludeGlobs.empty()) {

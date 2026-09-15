@@ -11,7 +11,7 @@ export const en: Strings = {
       )}ms`,
     cancelled: 'Indexing cancelled',
     failed: (message) => `Indexing failed: ${message}`,
-    noWorkspace: 'Open a folder before using DepScaner.',
+    noWorkspace: 'Open a folder before using DepScan.',
     alreadyRunning: 'An indexing task is already running. Cancel it or wait for completion.',
     watchReindex: (file) => `File changed, updating incrementally: ${file}`,
     incremental: (file, changed) => `Updated ${file} incrementally (${changed} affected nodes)`,
@@ -20,16 +20,16 @@ export const en: Strings = {
     precisionNow: (label) => `Re-indexed. Current precision: ${label}`
   },
   engine: {
-    missing: 'DepScaner analysis engine was not found.',
+    missing: 'DepScan analysis engine was not found.',
     missingHint:
-      'Set depscaner.engine.path to your depscaner-core binary, or build it under engine/.',
+      'Set depscan.engine.path to your depscan-core binary, or build it under engine/.',
     startFailed: (message) => `Failed to start engine: ${message}`,
     crashed: (message) => `Engine process exited unexpectedly: ${message}`,
     notStarted: 'Engine not started',
     stopped: 'Engine stopped'
   },
   graph: {
-    title: (label) => `DepScaner Dependency Graph · ${label}`,
+    title: (label) => `DepScan Dependency Graph · ${label}`,
     depth: 'Depth k',
     direction: 'Direction',
     both: 'Both',
@@ -84,7 +84,7 @@ export const en: Strings = {
   },
 
   diagnostic: {
-    title: 'DepScaner precision diagnosis',
+    title: 'DepScan precision diagnosis',
     project: (root) => `Project root: ${root}`,
     engine: (path, source) => `Engine: ${path} (source: ${source})`,
     libclang: (ok) => `Clang semantic analysis: ${ok ? 'enabled' : 'disabled (engine built without libclang)'}`,
@@ -117,7 +117,7 @@ export const en: Strings = {
   },
   errors: {
     noActiveFile: 'No C/C++ file is currently open.',
-    unsupportedFile: 'DepScaner only supports C/C++ sources and headers.',
+    unsupportedFile: 'DepScan only supports C/C++ sources and headers.',
     focusMissing: (message) => `Cannot resolve dependency focus: ${message}`,
     exportFailed: (message) => `Export failed: ${message}`,
     noData: 'No index yet. Run "Rebuild Index (Full)" first.'
@@ -128,7 +128,7 @@ export const en: Strings = {
   compile: {
     guideTitle: 'Generate compile_commands.json',
     guideBody: [
-      'With compile_commands.json DepScaner parses with real compile arguments (includes and links exact);',
+      'With compile_commands.json DepScan parses with real compile arguments (includes and links exact);',
       'without it everything falls back to the built-in structural parser (approximate).',
       '',
       '=== Read this first, it saves you half an hour ===',
@@ -158,10 +158,10 @@ export const en: Strings = {
       '  qmake: qmake -compile-commands     (Qt 5.12+)',
       '  Xcode: xcpretty -r json-compilation-database',
       '',
-      'Place compile_commands.json at the project root, in build/ or out/ and DepScaner finds it automatically;',
-      'or point depscaner.compile.commandsPath straight at it.',
+      'Place compile_commands.json at the project root, in build/ or out/ and DepScan finds it automatically;',
+      'or point depscan.compile.commandsPath straight at it.',
       '',
-      'Then run Reindex (or let DepScaner rescan) to see the precision go up;',
+      'Then run Reindex (or let DepScan rescan) to see the precision go up;',
       'run the "Why is it Approx?" command to check whether it already took effect.'
     ].join('\n'),
     copy: 'Copy command',
@@ -197,7 +197,7 @@ export const en: Strings = {
     languageAuto: 'Follow VS Code',
     languageZh: '中文',
     languageEn: 'English',
-    languageHint: 'Affects DepScaner UI and messages only; command titles follow the VS Code display language',
+    languageHint: 'Affects DepScan UI and messages only; command titles follow the VS Code display language',
     compileGuide: 'How to generate compile_commands.json',
     diagnosePrecision: 'Why is it Approx?',
     checkBoundaries: 'Architecture boundary check (public API / directory cycles)',
@@ -217,7 +217,7 @@ export const en: Strings = {
       'No main() — this looks like a library. Below are its readable entry points (public API first): click one to start reading from there.',
     entryCandidates: (n) => `${n} entry candidate(s): program entry / public API / call-graph roots`,
     entryHint:
-      'Order: program entry → public API with callees → other public API → functions nothing in the project calls. DepScaner never picks for you: a wrong start makes the whole reading order wrong.',
+      'Order: program entry → public API with callees → other public API → functions nothing in the project calls. DepScan never picks for you: a wrong start makes the whole reading order wrong.',
     startFromHere: 'Start reading here',
     publicApiLine: (file, line) => `Public API: ${file}:${line}`,
     entryCallers: (n) =>
@@ -226,7 +226,7 @@ export const en: Strings = {
         : `${n} call site(s) inside the project`,
     entryCallees: (n) =>
       n === 0 ? 'It calls nothing else (nothing to follow)' : `Calls ${n} function(s)`,
-    failed: 'Could not build the reading route — see Output → DepScaner for details.',
+    failed: 'Could not build the reading route — see Output → DepScan for details.',
     from: (name, file) => `Start: ${name} (auto-detected, ${file})`,
     fromPicked: (name, file) => `Start: ${name} (from cursor, ${file})`,
     fromShort: (name) => `Start: ${name}`,
@@ -309,7 +309,7 @@ export const en: Strings = {
       'See the Problems panel; each item jumps to the line.',
     foundTruncated: (total, shown) =>
       `Boundary check: ${total} issue(s), only the first ${shown} are listed (see the Problems panel).`,
-    disabled: 'The boundary check is turned off in settings (depscaner.checks.enabled).'
+    disabled: 'The boundary check is turned off in settings (depscan.checks.enabled).'
   },
 
   edgeKinds: {

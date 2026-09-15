@@ -22,7 +22,7 @@ function check(condition, message) {
   }
 }
 
-const workDir = mkdtempSync(join(tmpdir(), 'depscaner-route-tree-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscan-route-tree-'));
 const bundle = async (entry, name) => {
   const outfile = join(workDir, name);
   await build({
@@ -462,7 +462,7 @@ check(
   '候选行带 file:line（要能看见它定义在哪，而不是只能看见名字）'
 );
 check(
-  firstEntry.command.command === 'depscaner.pickRouteCandidate' &&
+  firstEntry.command.command === 'depscan.pickRouteCandidate' &&
     firstEntry.command.arguments[0].parentId === '',
   '点候选 = 换起点（parentId 为空，与 CandidateArgs 的约定一致）'
 );

@@ -38,7 +38,7 @@ if (existsSync(scriptPath)) {
 }
 
 // --- 2. 用**真实**的 i18n 与 HTML 生成器渲染（不是手写副本）---
-const workDir = mkdtempSync(join(tmpdir(), 'depscaner-check-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscan-check-'));
 const bundle = async (entry, name) => {
   const outfile = join(workDir, name);
   await build({
@@ -69,7 +69,7 @@ const html = htmlMod.renderGraphHtml({
   styleUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.css',
   nonce: 'testnonce123',
   lang: 'zh-CN',
-  title: 'DepScaner 依赖图',
+  title: 'DepScan 依赖图',
   i18n
 });
 
@@ -79,7 +79,7 @@ const htmlEn = htmlMod.renderGraphHtml({
   styleUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.css',
   nonce: 'testnonce123',
   lang: 'en',
-  title: 'DepScaner Dependency Graph',
+  title: 'DepScan Dependency Graph',
   i18n: i18nEn
 });
 
@@ -205,10 +205,14 @@ check(usedNlsKeys.size > 20, `package.json 引用了 ${usedNlsKeys.size} 个 nls
 check(danglingKeys.length === 0, `package.json 引用的 nls 键都已定义${danglingKeys.length ? `（缺 ${danglingKeys.join(', ')}）` : ''}`);
 
 // --- 9. 改名守卫：VS Code 可见面（扩展 ID / 命令 / 配置键）不能残留旧前缀 ---
-// 产品从 DepScan 改名 DepScaner 时踩过：codemod 按「depscan.」这种带分隔符的形式替换，
-// 于是 `getConfiguration('depscan')`、`affectsConfiguration('depscan')`、
-// `package.json` 的 `"name"` 这类**裸词**全被漏掉 —— 表现是设置改了没反应、命令 id 对不上，
-// 而编译、类型检查、其它测试全绿。所以这里把它们变成可断言的。
+// 名字来回改过（DepScan → DepScaner → 回到 DepScan），踩过的两个坑值得钉住：
+//   · codemod 按「depscan.」这种带分隔符的形式替换，于是 `getConfiguration('depscan')`、
+//     `affectsConfiguration('depscan')`、`package.json` 的 `"name"` 这类**裸词**全被漏掉 ——
+//     表现是设置改了没反应、命令 id 对不上，而编译、类型检查、其它测试全绿；
+//   · 反向改回来时，连这个守卫自己都差点被改坏（正则里的旧名字会被替换成新名字，
+//     于是它变成「只要用了 depscan. 就报错」）。
+// 所以这里把可见面变成可断言的：只要还残留 `depscaner` 就失败。
+const OLD_NAME = /depscaner/i;
 const tsFiles = [];
 (function walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -222,24 +226,39 @@ const tsFiles = [];
 })(resolve(root, 'src'));
 
 const tsText = tsFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
-const oldIdHits = [];
+const oldNameHits = [];
 for (const file of tsFiles) {
   readFileSync(file, 'utf8')
     .split('\n')
     .forEach((line, i) => {
-      // `depscan.` / `'depscan'` / `"depscan-` 都算旧 id；`depscaner.` 不匹配
-      if (/(['"`])depscan([.'"-])/.test(line)) oldIdHits.push(`${relative(root, file)}:${i + 1}`);
+      if (OLD_NAME.test(line)) oldNameHits.push(`${relative(root, file)}:${i + 1}`);
     });
 }
-check(pkg.name === 'depscaner', `package.json 的扩展 ID = depscaner（实际 ${pkg.name}）`);
+check(pkg.name === 'depscan', `package.json 的扩展 ID = depscan（实际 ${pkg.name}）`);
 check(
-  oldIdHits.length === 0,
-  `src/ 里没有残留的旧 id 前缀${oldIdHits.length ? `（${oldIdHits.slice(0, 5).join(', ')}）` : ''}`
+  pkg.publisher === 'liivon',
+  `publisher = liivon（改了这个就发不到已有商品页上了，实际 ${pkg.publisher}）`
+);
+check(
+  oldNameHits.length === 0,
+  `src/ 里没有残留的旧名字 depscaner${oldNameHits.length ? `（${oldNameHits.slice(0, 5).join(', ')}）` : ''}`
+);
+// package.json / package.nls 也是「可见面」：命令标题、配置描述都在那儿
+check(
+  !OLD_NAME.test(readFileSync(resolve(root, 'package.json'), 'utf8')),
+  'package.json 里没有残留的旧名字'
+);
+check(
+  !OLD_NAME.test(
+    readFileSync(resolve(root, 'package.nls.json'), 'utf8') +
+      readFileSync(resolve(root, 'package.nls.zh-cn.json'), 'utf8')
+  ),
+  'package.nls*.json 里没有残留的旧名字'
 );
 
 const contributedCommands = new Set((pkg.contributes?.commands ?? []).map((c) => c.command));
 const registeredCommands = new Set(
-  [...tsText.matchAll(/registerCommand\(\s*'(depscaner\.[A-Za-z0-9_.]+)'/g)].map((m) => m[1])
+  [...tsText.matchAll(/registerCommand\(\s*'(depscan\.[A-Za-z0-9_.]+)'/g)].map((m) => m[1])
 );
 const menuCommands = new Set();
 for (const list of Object.values(pkg.contributes?.menus ?? {})) {
@@ -248,8 +267,8 @@ for (const list of Object.values(pkg.contributes?.menus ?? {})) {
 const menuNotRegistered = [...menuCommands].filter((c) => !registeredCommands.has(c));
 const menuNotContributed = [...menuCommands].filter((c) => !contributedCommands.has(c));
 check(
-  [...contributedCommands].every((c) => c.startsWith('depscaner.')),
-  `contributes.commands 的 ${contributedCommands.size} 个 id 全部以 depscaner. 开头`
+  [...contributedCommands].every((c) => c.startsWith('depscan.')),
+  `contributes.commands 的 ${contributedCommands.size} 个 id 全部以 depscan. 开头`
 );
 check(
   menuNotContributed.length === 0,
@@ -262,11 +281,11 @@ check(
 
 // 配置键：既要前缀对，也要真的被代码读到 —— 「写了配置但代码不读」是改名时最容易留下的坑
 const configKeys = Object.keys(pkg.contributes?.configuration?.properties ?? {});
-const badPrefix = configKeys.filter((k) => !k.startsWith('depscaner.'));
+const badPrefix = configKeys.filter((k) => !k.startsWith('depscan.'));
 const unreadKeys = configKeys.filter(
-  (k) => !tsText.includes(`'${k.replace(/^depscaner\./, '')}'`)
+  (k) => !tsText.includes(`'${k.replace(/^depscan\./, '')}'`)
 );
-check(configKeys.length > 10 && badPrefix.length === 0, `配置键全部以 depscaner. 开头（${configKeys.length} 个）`);
+check(configKeys.length > 10 && badPrefix.length === 0, `配置键全部以 depscan. 开头（${configKeys.length} 个）`);
 check(
   unreadKeys.length === 0,
   `每个配置键都在代码里被读到${unreadKeys.length ? `（没人读：${unreadKeys.join(', ')}）` : ''}`

@@ -1,10 +1,10 @@
 # samples/demo —— 故意"有病"的示例项目
 
-15 个文件，用来演示 DepScaner 能发现什么。**它不是一个好项目，是反面教材。**
+15 个文件，用来演示 DepScan 能发现什么。**它不是一个好项目，是反面教材。**
 
 ## 里面埋了什么
 
-| 症状 | 位置 | DepScaner 会怎么显示 |
+| 症状 | 位置 | DepScan 会怎么显示 |
 | --- | --- | --- |
 | 循环包含 | `src/core/engine.h` ↔ `src/core/registry.h` | 依赖图里出现环（红色节点） |
 | 分层违规 | `src/core/registry.h` 反向 `#include "ui/panel.h"` | 架构边界检查会自动报出目录循环（`src/core ↔ src/ui`），见 docs/08 |
@@ -23,7 +23,7 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
-## 生成 compile_commands.json（想让 DepScaner 显示"部分精确"就要做）
+## 生成 compile_commands.json（想让 DepScan 显示"部分精确"就要做）
 
 ⚠ **CMake 的 Visual Studio 生成器永远不产出 `compile_commands.json`**
 （`CMAKE_EXPORT_COMPILE_COMMANDS` 只对 Makefile / Ninja 生成器生效）。

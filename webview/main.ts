@@ -1,4 +1,4 @@
-// DepScaner Webview 主程序：图 / 树 / 表格 三视图联动 + 导出。
+// DepScan Webview 主程序：图 / 树 / 表格 三视图联动 + 导出。
 import {
   ALL_EDGE_KINDS,
   ALL_NODE_KINDS,
@@ -169,7 +169,7 @@ function bindToolbar(): void {
       type: 'exportImage',
       format: 'png',
       data: off.toDataURL('image/png'),
-      suggestedName: 'depscaner-graph.png'
+      suggestedName: 'depscan-graph.png'
     });
   });
   el('btn-export-svg').addEventListener('click', () => {
@@ -177,7 +177,7 @@ function bindToolbar(): void {
       type: 'exportImage',
       format: 'svg',
       data: canvasView.toSvg(),
-      suggestedName: 'depscaner-graph.svg'
+      suggestedName: 'depscan-graph.svg'
     });
   });
   el('btn-export-json').addEventListener('click', () => vscode.postMessage({ type: 'exportData', format: 'json' }));

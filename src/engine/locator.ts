@@ -23,14 +23,14 @@ export function platformKey(): string {
 }
 
 export function engineBinaryName(): string {
-  return process.platform === 'win32' ? 'depscaner-core.exe' : 'depscaner-core';
+  return process.platform === 'win32' ? 'depscan-core.exe' : 'depscan-core';
 }
 
 /**
  * 依次尝试：
- *   1. 用户配置 depscaner.engine.path
- *   2. vsix 内置 engines/<platform>-<arch>/depscaner-core[.exe]
- *   3. 开发态 engine/build/bin/<Config>/depscaner-core[.exe]
+ *   1. 用户配置 depscan.engine.path
+ *   2. vsix 内置 engines/<platform>-<arch>/depscan-core[.exe]
+ *   3. 开发态 engine/build/bin/<Config>/depscan-core[.exe]
  */
 export function resolveEnginePath(
   extensionUri: vscode.Uri,

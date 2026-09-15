@@ -691,7 +691,7 @@ json::Value Session::statsToJson() const {
 
 std::string Session::graphToDot(const Graph& g) const {
   std::ostringstream oss;
-  oss << "digraph DepScaner {\n";
+  oss << "digraph DepScan {\n";
   oss << "  rankdir=LR;\n  node [shape=box, fontname=\"Segoe UI\"];\n";
   for (const Node& n : g.nodes) {
     oss << "  \"" << n.id << "\" [label=\"" << n.name << "\"";

@@ -13,7 +13,10 @@ stress/
 stress1m/
 .idea/
 *.user
-**/.vscode/depscaner-cache/
-# 旧 ID（liivon.depscan）的扩展还装着时，它仍会往这个名字写缓存 —— 一样不该进版本库
+# 缓存目录（产品名没变过，一直叫这个）
 **/.vscode/depscan-cache/
+# 临时用过一段时间的名字（DepScaner）留下的缓存与构建产物 —— 一样不该进版本库
+**/.vscode/depscaner-cache/
+# CMake Tools / 手工配置出来的构建目录（引擎自己的是 engine/build/）
+/build/
 require.md

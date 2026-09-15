@@ -7,7 +7,7 @@
 
 namespace depscan {
 
-// 分析开关与解析上下文（与 package.json 中 depscaner.deps.* 一一对应）
+// 分析开关与解析上下文（与 package.json 中 depscan.deps.* 一一对应）
 struct AnalyzerOptions {
   bool includes = true;
   bool calls = true;

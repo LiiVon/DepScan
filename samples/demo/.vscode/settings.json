@@ -1,6 +1,6 @@
 {
   "cmake.configureOnOpen": false,
-  "depscaner.files.exclude": [
+  "depscan.files.exclude": [
     "**/build/**",
     "**/build-*/**",
     "**/out/**",

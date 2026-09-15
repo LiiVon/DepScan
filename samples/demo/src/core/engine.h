@@ -11,7 +11,7 @@ class Registry;
 }  // namespace demo
 
 // ⚠ 注意：这里故意与 core/registry.h 形成循环包含，
-//   用于验证 DepScaner 对「循环依赖」的识别。
+//   用于验证 DepScan 对「循环依赖」的识别。
 //   为了让循环包含在编译期也成立，成员用指针 + 上面的前置声明 ——
 //   这样「engine.h 先被包含」与「registry.h 先被包含」两种顺序都能编译通过。
 #include "core/registry.h"

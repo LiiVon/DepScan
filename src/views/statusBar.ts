@@ -11,7 +11,7 @@ export class StatusBar implements vscode.Disposable {
 
   constructor(indexer: IndexService) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
-    this.item.command = 'depscaner.showIndexStatus';
+    this.item.command = 'depscan.showIndexStatus';
     this.item.show();
     this.indexer = indexer;
     this.disposable = indexer.onDidChangeStatus.event((status) => this.update(status));
@@ -27,7 +27,7 @@ export class StatusBar implements vscode.Disposable {
     switch (status.state) {
       case 'indexing': {
         const pct = status.total > 0 ? ` ${Math.round((status.done / status.total) * 100)}%` : '';
-        this.item.text = `$(sync~spin) DepScaner${pct}`;
+        this.item.text = `$(sync~spin) DepScan${pct}`;
         this.item.tooltip = status.message;
         break;
       }
@@ -35,18 +35,18 @@ export class StatusBar implements vscode.Disposable {
         const stats = status.stats;
         const label = stats ? precisionLabel(stats.precision) : '';
         this.item.text = stats
-          ? `$(type-hierarchy) DepScaner ${stats.fileCount} 文件 / ${stats.edgeCount} 依赖 · ${label}`
-          : '$(type-hierarchy) DepScaner';
+          ? `$(type-hierarchy) DepScan ${stats.fileCount} 文件 / ${stats.edgeCount} 依赖 · ${label}`
+          : '$(type-hierarchy) DepScan';
         const hint = stats ? precisionHint(stats.precision) : s().precision.approxHint;
         this.item.tooltip = `${status.message}\n${hint}`;
         break;
       }
       case 'error':
-        this.item.text = '$(error) DepScaner';
+        this.item.text = '$(error) DepScan';
         this.item.tooltip = status.message;
         break;
       default:
-        this.item.text = '$(circle-outline) DepScaner';
+        this.item.text = '$(circle-outline) DepScan';
         this.item.tooltip = s().engine.notStarted;
     }
   }

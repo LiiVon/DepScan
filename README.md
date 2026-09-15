@@ -1,4 +1,4 @@
-# DepScaner — see the dependency graph of any C/C++ project
+# DepScan — see the dependency graph of any C/C++ project
 
 **One scan, five kinds of dependencies — includes, calls, inheritance, types, symbols, links — explored through a linked graph / tree / table, inside VS Code.**
 
@@ -6,14 +6,14 @@
   TODO(screenshot): hero image — 建议截「左侧边栏 + 依赖图 + 右侧表格」同屏，
   文件名：media/screenshots/hero.png   （窗口宽度 ≥ 1400px，深色主题）
   拿到图后把下面这行的注释去掉：
-  ![DepScaner overview](media/screenshots/hero.png)
+  ![DepScan overview](media/screenshots/hero.png)
 -->
 
 ---
 
 ## Why
 
-In a large C++ codebase the entry point isn't `main()` — it's a web of dependencies. DepScaner answers these questions in one click:
+In a large C++ codebase the entry point isn't `main()` — it's a web of dependencies. DepScan answers these questions in one click:
 
 - Who includes this header, and what does it pull in? *(module boundaries)*
 - If I change this function, which callers break? *(blast radius)*
@@ -21,7 +21,7 @@ In a large C++ codebase the entry point isn't `main()` — it's a web of depende
 - Where is this macro or global variable used? *(cross references)*
 - Which build target links which library? *(build & link model)*
 
-It also reports two things that are **provable** rather than guessed: **public-API leaks** (a header under `include/` pulling in an internal file, so consumers of your library cannot compile) and **directory cycles** (two or more directories including each other). Both land in the **Problems** panel, jump straight to the offending line, and the same check runs in CI via `depscaner-core --once --violations` (exit code 1 when something is found). See [docs/08](docs/08-架构边界检查.md) — including why DepScaner deliberately does *not* guess layering from folder names.
+It also reports two things that are **provable** rather than guessed: **public-API leaks** (a header under `include/` pulling in an internal file, so consumers of your library cannot compile) and **directory cycles** (two or more directories including each other). Both land in the **Problems** panel, jump straight to the offending line, and the same check runs in CI via `depscan-core --once --violations` (exit code 1 when something is found). See [docs/08](docs/08-架构边界检查.md) — including why DepScan deliberately does *not* guess layering from folder names.
 
 ---
 
@@ -29,19 +29,19 @@ It also reports two things that are **provable** rather than guessed: **public-A
 
 **None.** The analysis engine is a native executable bundled inside the extension — you do **not** need a compiler, Clang, Python or Node.js to use it.
 
-Prebuilt engines ship for **Windows x64**, **Linux x64** and **macOS** (Intel and Apple Silicon). On any other platform, build the engine yourself and point `depscaner.engine.path` at it.
+Prebuilt engines ship for **Windows x64**, **Linux x64** and **macOS** (Intel and Apple Silicon). On any other platform, build the engine yourself and point `depscan.engine.path` at it.
 
 ## Install
 
-- **VS Code Marketplace** — search for `DepScaner`, or run `code --install-extension liivon.depscaner`
+- **VS Code Marketplace** — search for `DepScan`, or run `code --install-extension liivon.depscan`
 - **From a VSIX file** — Extensions view → `⋯` → **Install from VSIX…**
 
 ---
 
 ## Quick start
 
-1. **Open** a folder that contains C/C++ sources. DepScaner indexes it in the background — progress shows in the status bar and in the **Index Status** sidebar view.
-2. **Pick a starting point** — right-click any `.cpp` / `.h` file → **Show Dependency Graph**, or put the cursor inside a function and run `DepScaner: Show Dependency Graph for Symbol`.
+1. **Open** a folder that contains C/C++ sources. DepScan indexes it in the background — progress shows in the status bar and in the **Index Status** sidebar view.
+2. **Pick a starting point** — right-click any `.cpp` / `.h` file → **Show Dependency Graph**, or put the cursor inside a function and run `DepScan: Show Dependency Graph for Symbol`.
 3. **Read the graph** — click a node to jump to its source, double-click it to expand one more level.
 4. **Or follow a route** — see **Reading route** below to get a *numbered reading order* instead of a graph.
 
@@ -57,7 +57,7 @@ Prebuilt engines ship for **Windows x64**, **Linux x64** and **macOS** (Intel an
 
 > A dependency graph answers *“what is related to what”*. When you open a 200-file project you usually want a different question answered: **what do I read first, and what next?** That is what the reading route does.
 
-Sidebar → **DepScaner → Reading Route** (or *Actions → Reading route*):
+Sidebar → **DepScan → Reading Route** (or *Actions → Reading route*):
 
 ```
 Start: main (auto-detected, src/main.cpp)
@@ -83,7 +83,7 @@ The step numbers above are intentionally not contiguous: the **noise filter is o
 
 On a big project, `$(layers)` switches to the **layer view**: layer 1 is the start, each layer shows a one-line summary (steps / files), and a layer with more than 15 steps is shown one page at a time ("N more not listed"). That turns a 300-row wall into a skeleton you can drill into — steps inside a layer still stay in reading order.
 
-For a **library project** (no `main`), the view lists **entry candidates** instead of failing: public API first (declared under `include/`), then call-graph roots — each row states its evidence (callers / callees, where the public declaration is). DepScaner deliberately never picks a start for you: a wrong start makes the whole reading order wrong. See [docs/07](docs/07-阅读路线.md) for the ranking rules.
+For a **library project** (no `main`), the view lists **entry candidates** instead of failing: public API first (declared under `include/`), then call-graph roots — each row states its evidence (callers / callees, where the public declaration is). DepScan deliberately never picks a start for you: a wrong start makes the whole reading order wrong. See [docs/07](docs/07-阅读路线.md) for the ranking rules.
 
 The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tried too) and walks call edges **in source order**, so step numbers are the order you should read in.
 
@@ -102,7 +102,7 @@ The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tri
 
 Steps that are **public API** (declared under `include/`) get an interface icon instead of the kind icon, and their tooltip names the public header — when reading a library, "is this step part of the API" matters more than "what kind of symbol is it".
 
-**Why the ⚠ marks are not decoration.** Without a compile database, call edges are resolved *by name*. A wrong edge in a graph is one extra line; a wrong edge in a route means **everything after it is the wrong reading order**. So whenever the name is defined more than once in the project, DepScaner says so and lets you pick — instead of silently guessing and pretending to be sure. Enabling a compile database is still the real fix (see below).
+**Why the ⚠ marks are not decoration.** Without a compile database, call edges are resolved *by name*. A wrong edge in a graph is one extra line; a wrong edge in a route means **everything after it is the wrong reading order**. So whenever the name is defined more than once in the project, DepScan says so and lets you pick — instead of silently guessing and pretending to be sure. Enabling a compile database is still the real fix (see below).
 
 > Steps are *session state*: a custom start and manual corrections reset when VS Code restarts.
 > To inspect a route without the UI: `npm run route:dump -- --dfs --files` —
@@ -112,7 +112,7 @@ Steps that are **public API** (declared under `include/`) get an interface icon 
 
 ## Getting exact results (recommended)
 
-Out of the box DepScaner uses a built-in structural parser: instant, zero-config, and **approximate** — it resolves references by name. Give it a real compile database and include / link resolution becomes **exact**.
+Out of the box DepScan uses a built-in structural parser: instant, zero-config, and **approximate** — it resolves references by name. Give it a real compile database and include / link resolution becomes **exact**.
 
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -132,9 +132,9 @@ cmake --build build
 > cmake --build build
 > ```
 
-DepScaner looks for `compile_commands.json` at the project root, then in `build/`, `out/`, `cmake-build-*`, `build/Release`, `build/Debug`, and finally anywhere within 4 levels of the root. You can also point straight at it with `depscaner.compile.commandsPath`.
+DepScan looks for `compile_commands.json` at the project root, then in `build/`, `out/`, `cmake-build-*`, `build/Release`, `build/Debug`, and finally anywhere within 4 levels of the root. You can also point straight at it with `depscan.compile.commandsPath`.
 
-**Not sure what it found?** Run **`DepScaner: Why is it Approx?`** — it reports whether a compile database was found and where it looked, whether the on-disk cache was discarded and why, and the concrete next step for your situation.
+**Not sure what it found?** Run **`DepScan: Why is it Approx?`** — it reports whether a compile database was found and where it looked, whether the on-disk cache was discarded and why, and the concrete next step for your situation.
 
 ### Precision levels
 
@@ -184,24 +184,24 @@ Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or *
 
 | Command | Description |
 | --- | --- |
-| `DepScaner: Reading Route (from main)` | Ordered reading list from the program entry point |
-| `DepScaner: Reading Route: Read from Here (cursor)` | Start the route at the function under the cursor |
-| `DepScaner: Reading Route: Start Back at main` | Undo a custom start |
-| `DepScaner: Reading Route: Toggle File Level` | File level ↔ function level |
-| `DepScaner: Reading Route: Swimlane Diagram` | Control flow across files, as a diagram |
-| `DepScaner: Reading Route: Switch Traversal Strategy` | Breadth first ↔ depth first |
-| `DepScaner: Show Dependency Graph` | Graph focused on the current file |
-| `DepScaner: Show Dependency Graph for Symbol` | Graph focused on the symbol under the cursor |
-| `DepScaner: Architecture View` | Whole-project view, aggregated by directory |
-| `DepScaner: Rebuild Index (Full)` | Ignore the cache and rescan everything |
-| `DepScaner: Cancel Indexing` | Abort a running scan |
-| `DepScaner: Clear Index Cache` | Delete the on-disk cache |
-| `DepScaner: Show Index Status` | Counts, precision, engine path, cache path |
-| `DepScaner: Why is it Approx?` | Precision diagnosis with next steps |
-| `DepScaner: Check Architecture Boundaries` | Public-API leaks and directory cycles → Problems panel |
-| `DepScaner: Export Dependency Data (JSON)` | Export the focused subgraph (JSON / DOT / Mermaid) |
-| `DepScaner: How to generate compile_commands.json?` | Setup guide for every build system |
-| `DepScaner: Switch UI Language` | `auto` / Chinese / English |
+| `DepScan: Reading Route (from main)` | Ordered reading list from the program entry point |
+| `DepScan: Reading Route: Read from Here (cursor)` | Start the route at the function under the cursor |
+| `DepScan: Reading Route: Start Back at main` | Undo a custom start |
+| `DepScan: Reading Route: Toggle File Level` | File level ↔ function level |
+| `DepScan: Reading Route: Swimlane Diagram` | Control flow across files, as a diagram |
+| `DepScan: Reading Route: Switch Traversal Strategy` | Breadth first ↔ depth first |
+| `DepScan: Show Dependency Graph` | Graph focused on the current file |
+| `DepScan: Show Dependency Graph for Symbol` | Graph focused on the symbol under the cursor |
+| `DepScan: Architecture View` | Whole-project view, aggregated by directory |
+| `DepScan: Rebuild Index (Full)` | Ignore the cache and rescan everything |
+| `DepScan: Cancel Indexing` | Abort a running scan |
+| `DepScan: Clear Index Cache` | Delete the on-disk cache |
+| `DepScan: Show Index Status` | Counts, precision, engine path, cache path |
+| `DepScan: Why is it Approx?` | Precision diagnosis with next steps |
+| `DepScan: Check Architecture Boundaries` | Public-API leaks and directory cycles → Problems panel |
+| `DepScan: Export Dependency Data (JSON)` | Export the focused subgraph (JSON / DOT / Mermaid) |
+| `DepScan: How to generate compile_commands.json?` | Setup guide for every build system |
+| `DepScan: Switch UI Language` | `auto` / Chinese / English |
 
 ---
 
@@ -209,41 +209,41 @@ Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or *
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `depscaner.deps.includes` / `calls` / `types` / `symbols` / `links` | `true` | Enable each dependency kind |
-| `depscaner.files.include` / `depscaner.files.exclude` | C/C++ globs | Which files participate in indexing |
-| `depscaner.compile.commandsPath` | `""` | Explicit compile database (auto-discovered when empty) |
-| `depscaner.compile.includePaths` / `defines` / `systemIncludePaths` | `[]` | Extra `-I` / `-D` / `-isystem` when you have no compile database |
-| `depscaner.graph.defaultDepth` | `2` | Default expansion depth *k* |
-| `depscaner.graph.direction` | `both` | `both` / `upstream` / `downstream` |
-| `depscaner.graph.maxNodes` | `800` | Rendering cap per graph; clustering kicks in beyond this |
-| `depscaner.graph.clusterByDirectory` | `false` | Cluster by directory when the panel opens |
-| `depscaner.index.onStartup` | `true` | Index in the background when a workspace opens |
-| `depscaner.index.autoRebuildOnSave` | `true` | Incremental rebuild on save |
-| `depscaner.index.parallelism` | `0` | Parser threads; `0` = CPU cores |
-| `depscaner.index.maxFiles` | — | Cap the number of files scanned in one run |
-| `depscaner.index.fileSizeLimitKB` | — | Files larger than this are listed but not deeply parsed |
-| `depscaner.cache.enabled` | `true` | On-disk cache for instant subsequent starts |
-| `depscaner.cache.directory` | `""` | Cache location (defaults to `.vscode/depscaner-cache`) |
-| `depscaner.checks.enabled` | `true` | Report boundary issues (public-API leaks / directory cycles) to the Problems panel |
-| `depscaner.ui.language` | `auto` | `auto` / `zh` / `en` |
-| `depscaner.log.level` | `info` | Set to `debug` to see engine stderr — do this before reporting a crash |
-| `depscaner.engine.path` | `""` | Use your own engine build instead of the bundled one |
+| `depscan.deps.includes` / `calls` / `types` / `symbols` / `links` | `true` | Enable each dependency kind |
+| `depscan.files.include` / `depscan.files.exclude` | C/C++ globs | Which files participate in indexing |
+| `depscan.compile.commandsPath` | `""` | Explicit compile database (auto-discovered when empty) |
+| `depscan.compile.includePaths` / `defines` / `systemIncludePaths` | `[]` | Extra `-I` / `-D` / `-isystem` when you have no compile database |
+| `depscan.graph.defaultDepth` | `2` | Default expansion depth *k* |
+| `depscan.graph.direction` | `both` | `both` / `upstream` / `downstream` |
+| `depscan.graph.maxNodes` | `800` | Rendering cap per graph; clustering kicks in beyond this |
+| `depscan.graph.clusterByDirectory` | `false` | Cluster by directory when the panel opens |
+| `depscan.index.onStartup` | `true` | Index in the background when a workspace opens |
+| `depscan.index.autoRebuildOnSave` | `true` | Incremental rebuild on save |
+| `depscan.index.parallelism` | `0` | Parser threads; `0` = CPU cores |
+| `depscan.index.maxFiles` | — | Cap the number of files scanned in one run |
+| `depscan.index.fileSizeLimitKB` | — | Files larger than this are listed but not deeply parsed |
+| `depscan.cache.enabled` | `true` | On-disk cache for instant subsequent starts |
+| `depscan.cache.directory` | `""` | Cache location (defaults to `.vscode/depscan-cache`) |
+| `depscan.checks.enabled` | `true` | Report boundary issues (public-API leaks / directory cycles) to the Problems panel |
+| `depscan.ui.language` | `auto` | `auto` / `zh` / `en` |
+| `depscan.log.level` | `info` | Set to `debug` to see engine stderr — do this before reporting a crash |
+| `depscan.engine.path` | `""` | Use your own engine build instead of the bundled one |
 
 ---
 
 ## Troubleshooting
 
 **It still says "Approximate" even though I built the project.**
-Almost always the Visual Studio generator issue described [above](#getting-exact-results-recommended). Run `DepScaner: Why is it Approx?` — it will tell you whether the file exists, where DepScaner looked, and what to change.
+Almost always the Visual Studio generator issue described [above](#getting-exact-results-recommended). Run `DepScan: Why is it Approx?` — it will tell you whether the file exists, where DepScan looked, and what to change.
 
 **Indexing fails or the engine exits.**
-Set `depscaner.log.level` to `debug`, reproduce, then open the **DepScaner** output channel. Since 0.1.1 the last lines of engine stderr are printed right next to the exit notice, so the reason is visible by default. If a single file is the culprit it is now **skipped with a warning** instead of failing the whole scan — check the **Index Status** view for `文件解析失败 / parse failed` entries.
+Set `depscan.log.level` to `debug`, reproduce, then open the **DepScan** output channel. Since 0.1.1 the last lines of engine stderr are printed right next to the exit notice, so the reason is visible by default. If a single file is the culprit it is now **skipped with a warning** instead of failing the whole scan — check the **Index Status** view for `文件解析失败 / parse failed` entries.
 
 **"Engine missing".**
-The bundled binary does not match your platform, or `depscaner.engine.path` is invalid. `DepScaner: Show Index Status` prints the resolved engine path and where it came from.
+The bundled binary does not match your platform, or `depscan.engine.path` is invalid. `DepScan: Show Index Status` prints the resolved engine path and where it came from.
 
 **Indexing a huge repository is slow.**
-Extend `depscaner.files.exclude` (build outputs, third-party, generated code), or raise `depscaner.index.parallelism`. For reference, 6,000 files / 1.07 M lines takes ~1.4 s wall clock on a modern desktop.
+Extend `depscan.files.exclude` (build outputs, third-party, generated code), or raise `depscan.index.parallelism`. For reference, 6,000 files / 1.07 M lines takes ~1.4 s wall clock on a modern desktop.
 
 ---
 
@@ -264,7 +264,7 @@ Detailed, example-driven documentation is currently written in Chinese:
 | --- | --- |
 | [01 · Quick start](docs/01-快速开始.md) | Install, prepare `compile_commands.json`, first index |
 | [02 · Interface guide](docs/02-界面与操作指南.md) | Three synced views, export, indexing and caching |
-| [03 · Reading a project with DepScaner](docs/03-如何用%20DepScaner%20学习项目.md) | Copy-paste reading recipes: from the reading route to include / inheritance / reference graphs |
+| [03 · Reading a project with DepScan](docs/03-如何用%20DepScan%20学习项目.md) | Copy-paste reading recipes: from the reading route to include / inheritance / reference graphs |
 | [04 · Parsing and precision](docs/04-解析与精度说明.md) | Exact vs approximate, the boundary of each dependency kind, FAQ |
 | [05 · Performance and settings](docs/05-性能与配置参考.md) | Every setting, tuning for million-line repos |
 | [07 · Reading route](docs/07-阅读路线.md) | Why an ordered list instead of a fourth graph, candidates, acceptance criteria |
@@ -278,7 +278,7 @@ Requires Node.js ≥ 18, CMake ≥ 3.16 and a C++20 compiler (MSVC 2019+ / GCC 1
 
 ```bash
 npm install
-npm run build:core     # C++ engine -> engine/build/bin/<Config>/depscaner-core
+npm run build:core     # C++ engine -> engine/build/bin/<Config>/depscan-core
 npm run build          # typecheck + bundle extension + bundle webview + self-checks
 npm test               # engine self-tests + JSON-RPC smoke + webview checks
 npm run package        # produce a .vsix

@@ -21,7 +21,7 @@ export interface GraphPanelTarget {
   architecture?: boolean;
 }
 
-const STATE_KEY = 'depscaner.graphPanelState';
+const STATE_KEY = 'depscan.graphPanelState';
 
 interface SavedPanelState {
   depth?: number;
@@ -81,7 +81,7 @@ export class GraphPanel {
       GraphPanel.current.applyTarget(target);
       return GraphPanel.current;
     }
-    const panel = vscode.window.createWebviewPanel('depscaner.graph', s().graph.title(target.label), column, {
+    const panel = vscode.window.createWebviewPanel('depscan.graph', s().graph.title(target.label), column, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')]
@@ -214,7 +214,7 @@ export class GraphPanel {
         // 与侧边栏「操作 → 界面语言」走同一条路：只改配置，
         // 真正的刷新由 extension.ts 的配置监听统一处理（含重建本页面）
         await vscode.workspace
-          .getConfiguration('depscaner')
+          .getConfiguration('depscan')
           .update('ui.language', msg.language, vscode.ConfigurationTarget.Global);
         break;
       case 'expand': {
@@ -287,7 +287,7 @@ export class GraphPanel {
     const ext = format === 'mermaid' ? 'mmd' : format;
     try {
       const uri = await vscode.window.showSaveDialog({
-        defaultUri: this.defaultExportUri(`depscaner-graph.${ext}`)
+        defaultUri: this.defaultExportUri(`depscan-graph.${ext}`)
       });
       if (!uri) return;
       await fs.promises.writeFile(uri.fsPath, result.content, 'utf8');

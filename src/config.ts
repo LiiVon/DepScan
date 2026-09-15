@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import type { EngineConfig } from './engine/protocol';
 import type { UiLanguage } from './i18n';
 
-export interface DepScanerConfig {
+export interface DepScanConfig {
   language: UiLanguage;
   enginePath: string;
   onStartup: boolean;
@@ -29,8 +29,8 @@ export interface DepScanerConfig {
   logLevel: 'off' | 'error' | 'warn' | 'info' | 'debug';
 }
 
-export function readConfig(): DepScanerConfig {
-  const c = vscode.workspace.getConfiguration('depscaner');
+export function readConfig(): DepScanConfig {
+  const c = vscode.workspace.getConfiguration('depscan');
   return {
     language: c.get<UiLanguage>('ui.language', 'auto'),
     enginePath: c.get<string>('engine.path', ''),
@@ -71,7 +71,7 @@ export function readConfig(): DepScanerConfig {
 }
 
 /** 转换为引擎配置（字段与 engine/src/rpc.cpp#applyConfig 对齐） */
-export function toEngineConfig(cfg: DepScanerConfig, opts: { cachePath?: string; forceFull?: boolean; includeExternal?: boolean } = {}): EngineConfig {
+export function toEngineConfig(cfg: DepScanConfig, opts: { cachePath?: string; forceFull?: boolean; includeExternal?: boolean } = {}): EngineConfig {
   return {
     includes: cfg.deps.includes,
     calls: cfg.deps.calls,

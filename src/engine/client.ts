@@ -68,10 +68,10 @@ export class EngineClient extends EventEmitter {
         if (this.stderrTail.length > 40) this.stderrTail.shift();
         // 引擎的报错以前只在 debug 级别可见 —— 但崩溃时用户根本不会去开 debug，
         // 于是「引擎进程异常退出」就变成了一条没有原因的报错。
-        // 凡是看起来像错误的行，以及引擎自己的诊断输出（[DepScaner] 前缀，
+        // 凡是看起来像错误的行，以及引擎自己的诊断输出（[DepScan] 前缀，
         // 含阶段日志：崩溃时最后一条就是它死在哪一步），都按 warn 记，
         // 默认日志里就能看到。
-        if (/\[DepScaner\]|error|failed|failure|cannot|unable|异常|失败|错误/i.test(line)) {
+        if (/\[DepScan\]|error|failed|failure|cannot|unable|异常|失败|错误/i.test(line)) {
           this.logger.warn(`[engine] ${line}`);
         } else {
           this.logger.debug(`[engine] ${line}`);
