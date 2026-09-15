@@ -204,15 +204,23 @@ const danglingKeys = [...usedNlsKeys].filter((k) => !nlsKeys.has(k));
 check(usedNlsKeys.size > 20, `package.json 引用了 ${usedNlsKeys.size} 个 nls 键`);
 check(danglingKeys.length === 0, `package.json 引用的 nls 键都已定义${danglingKeys.length ? `（缺 ${danglingKeys.join(', ')}）` : ''}`);
 
-// --- 9. 改名守卫：VS Code 可见面（扩展 ID / 命令 / 配置键）不能残留旧前缀 ---
-// 名字来回改过（DepScan → DepScaner → 回到 DepScan），踩过的两个坑值得钉住：
-//   · codemod 按「depscan.」这种带分隔符的形式替换，于是 `getConfiguration('depscan')`、
-//     `affectsConfiguration('depscan')`、`package.json` 的 `"name"` 这类**裸词**全被漏掉 ——
-//     表现是设置改了没反应、命令 id 对不上，而编译、类型检查、其它测试全绿；
-//   · 反向改回来时，连这个守卫自己都差点被改坏（正则里的旧名字会被替换成新名字，
-//     于是它变成「只要用了 depscan. 就报错」）。
-// 所以这里把可见面变成可断言的：只要还残留 `depscaner` 就失败。
-const OLD_NAME = /depscaner/i;
+// --- 9. 命名守卫：扩展 ID 与「命令 / 配置键前缀」各管一段，别串了 ---
+// 事实：扩展名（package.json 的 name）= `depscaner`，发布 ID = `liivon.depscaner`；
+//   但命令、配置键、视图 id 一律用 `depscan.` 前缀（用户看到的产品名是 DepScan）。
+//   这两者**本来就是独立的**，正因为如此，写串了不会有任何编译错误 —— 只会表现成
+//   「设置改了没反应 / 命令 id 对不上」，必须靠断言兜住。
+//
+// 为什么扩展名不叫 `depscan`：Marketplace 要求 `name` **全局唯一**，而 `depscan`
+//   这个条目曾被「Remove（删除）」掉 —— 官方规则是「移除后名字**永久保留**，
+//   连原发布者也不能再用」。`depscaner` 只是 Unpublish，仍然归我们，所以沿用
+//   （用户看到的名字由 displayName 决定，仍是 DepScan）。
+//
+// 另一个踩过的坑：改名的 codemod 会把这个守卫自己正则里的名字一起替换掉，
+//   于是它变成「只要用了 depscan. 就报错」—— 改名后**必须重跑自检**才发现。
+const FORBIDDEN_PREFIX = /depscaner/i;   // 只允许出现在扩展 name 里
+const EXPECTED_NAME = 'depscaner';
+const PRIVATE_PREFIX = 'depscan.';       // 命令 id / 配置键必须是这个前缀
+
 const tsFiles = [];
 (function walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -226,34 +234,34 @@ const tsFiles = [];
 })(resolve(root, 'src'));
 
 const tsText = tsFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
-const oldNameHits = [];
+const strayHits = [];
 for (const file of tsFiles) {
   readFileSync(file, 'utf8')
     .split('\n')
     .forEach((line, i) => {
-      if (OLD_NAME.test(line)) oldNameHits.push(`${relative(root, file)}:${i + 1}`);
+      if (FORBIDDEN_PREFIX.test(line)) strayHits.push(`${relative(root, file)}:${i + 1}`);
     });
 }
-check(pkg.name === 'depscan', `package.json 的扩展 ID = depscan（实际 ${pkg.name}）`);
+check(pkg.name === EXPECTED_NAME, `扩展 ID = ${EXPECTED_NAME}（实际 ${pkg.name}）`);
 check(
   pkg.publisher === 'liivon',
-  `publisher = liivon（改了这个就发不到已有商品页上了，实际 ${pkg.publisher}）`
+  `publisher = liivon（改了就发不到已占用的那个条目上了，实际 ${pkg.publisher}）`
 );
 check(
-  oldNameHits.length === 0,
-  `src/ 里没有残留的旧名字 depscaner${oldNameHits.length ? `（${oldNameHits.slice(0, 5).join(', ')}）` : ''}`
+  strayHits.length === 0,
+  `src/ 里没有把扩展名当命令前缀用（应该是 ${PRIVATE_PREFIX}）${strayHits.length ? `（${strayHits.slice(0, 5).join(', ')}）` : ''}`
 );
-// package.json / package.nls 也是「可见面」：命令标题、配置描述都在那儿
+// contributes（命令 / 配置键 / 视图 / 菜单）是 VS Code 真正读的那份，也不能串
 check(
-  !OLD_NAME.test(readFileSync(resolve(root, 'package.json'), 'utf8')),
-  'package.json 里没有残留的旧名字'
+  !FORBIDDEN_PREFIX.test(JSON.stringify(pkg.contributes ?? {})),
+  `package.json 的 contributes 里全部是 ${PRIVATE_PREFIX} 前缀`
 );
 check(
-  !OLD_NAME.test(
+  !FORBIDDEN_PREFIX.test(
     readFileSync(resolve(root, 'package.nls.json'), 'utf8') +
       readFileSync(resolve(root, 'package.nls.zh-cn.json'), 'utf8')
   ),
-  'package.nls*.json 里没有残留的旧名字'
+  'package.nls*.json 里没有把扩展名当命令前缀用'
 );
 
 const contributedCommands = new Set((pkg.contributes?.commands ?? []).map((c) => c.command));

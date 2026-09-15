@@ -1,5 +1,5 @@
 {
-  "name": "depscan",
+  "name": "depscaner",
   "displayName": "DepScan - C/C++ 依赖分析与可视化",
   "description": "对大型 C/C++ 项目做 include / 调用 / 继承 / 符号 / 链接 五类依赖分析，并在 Webview 中交互式可视化（图 · 树 · 表格联动、导出 PNG/SVG/JSON、增量索引）。",
   "version": "0.1.1",
