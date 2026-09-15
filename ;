@@ -1,8 +1,0 @@
-$ git add -A && git commit -m " docs/06: PAT 之前先说明「没有 Azure DevOps 组织」这条岔路；修掉预检列表丢的项目符号\ git push origin main ; git log --oneline -1 engine\build\commit-out6.txt
---- stdout ---
-[main 7a82d86]  docs/06: PAT 之前先说明「没有 Azure DevOps 组织」这条岔路；修掉预检列表丢的项目符号\ git push origin main ; git log --oneline -1 engine\build\commit-out6.txt
- 1 file changed, 10 insertions(+), 1 deletion(-)
-
---- stderr ---
-
-exit=0
