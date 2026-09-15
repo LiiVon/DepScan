@@ -15,6 +15,15 @@
   （`depscaner-core`）、索引缓存目录（`.vscode/depscaner-cache`）。
 - **故意没改**：C++ 命名空间与头文件目录（`depscan/`）—— 用户看不见，改它只会给构建添乱。
 
+### 图标
+
+- **扩展图标换成煎蛋，而且是代码画的**：`npm run icon` 一次生成两个产物 ——
+  `media/icon.png`（128×128 PNG，圆角外透明）与 `media/activitybar.svg`
+  （24×24 单色 `currentColor`，深色/浅色主题都看得见）。
+  两个产物的平台要求本来就不同（PNG vs 单色 SVG），塞同一张位图必然顾此失彼；
+  代码画还能让两个产物共用同一套几何，不会「PNG 改了、SVG 忘了改」。
+  自检里加了守卫（PNG 必须是 128×128 RGBA、SVG 不许写死颜色），见 docs/06 §8。
+
 ### 新增
 
 - **阅读路线（Reading Route）**：从程序入口（`main` / `WinMain` / `DllMain` …）出发，

@@ -272,6 +272,51 @@ check(
   `每个配置键都在代码里被读到${unreadKeys.length ? `（没人读：${unreadKeys.join(', ')}）` : ''}`
 );
 
+// --- 10. 图标守卫：两个产物都是 `npm run icon` 用代码画的，且满足平台硬性要求 ---
+// 为什么值得断言：图标是**二进制**，改错了没有任何编译/类型检查会提醒你；
+// 而 Marketplace 对 PNG 的尺寸、活动栏图标对「单色 + currentColor」都有硬要求，
+// 违反了分别表现为「发布被拒」和「深色主题下看不见」——两种都很难在本地发现。
+{
+  const iconPath = resolve(root, 'media/icon.png');
+  const svgPath = resolve(root, 'media/activitybar.svg');
+  check(existsSync(iconPath), 'media/icon.png 存在（npm run icon 生成）');
+  if (existsSync(iconPath)) {
+    const png = readFileSync(iconPath);
+    const magic = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    check(png.subarray(0, 8).equals(magic), 'media/icon.png 是合法 PNG（魔数正确）');
+    check(png.subarray(12, 16).toString('ascii') === 'IHDR', 'media/icon.png 第一个块是 IHDR');
+    const w = png.readUInt32BE(16);
+    const h = png.readUInt32BE(20);
+    check(w === 128 && h === 128, `扩展图标 ${w}x${h}（VS Code / Marketplace 要求 128x128）`);
+    check(png[25] === 6, '扩展图标是 RGBA（圆角外要透明，不能糊成白底方图）');
+  }
+
+  check(existsSync(svgPath), 'media/activitybar.svg 存在（npm run icon 生成）');
+  if (existsSync(svgPath)) {
+    const svg = readFileSync(svgPath, 'utf8');
+    check(/viewBox="0 0 24 24"/.test(svg), '活动栏图标 viewBox 24x24（VS Code 规定的活动栏图标尺寸）');
+    check(svg.includes('currentColor'), '活动栏图标用 currentColor（跟随主题，深浅色都看得见）');
+    check(
+      !/#[0-9a-fA-F]{3,6}\b/.test(svg) && !/fill="(?!none|currentColor)/.test(svg),
+      '活动栏图标不写死颜色（写死颜色在深色/浅色主题下必有一边看不见）'
+    );
+    check(/<path /.test(svg), '活动栏图标有蛋白轮廓（不规则 path，不是正圆）');
+    check(/<circle [^>]*fill="currentColor"/.test(svg), '活动栏图标有蛋黄（实心圆）');
+  }
+
+  check(pkg.icon === 'media/icon.png', 'package.json 的扩展图标指向生成的 PNG');
+  const containers = pkg.contributes?.viewsContainers?.activitybar ?? [];
+  check(
+    containers.length === 1 && containers[0].icon === 'media/activitybar.svg',
+    '活动栏容器只有一个且用生成的 SVG（多一个容器就会多一个侧边栏图标）'
+  );
+  check(
+    (pkg.contributes?.views?.[containers[0]?.id] ?? []).every((v) => v.icon === 'media/activitybar.svg'),
+    '侧边栏视图的图标同样来自生成产物（没有手改的旧图标残留）'
+  );
+  check(pkg.scripts?.icon === 'node scripts/make-icon.mjs', '图标由脚本生成（npm run icon），不手工改二进制');
+}
+
 rmSync(workDir, { recursive: true, force: true });
 
 if (failures.length > 0) {
