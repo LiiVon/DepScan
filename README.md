@@ -81,6 +81,8 @@ The step numbers above are intentionally not contiguous: the **noise filter is o
 
 On a big project, `$(layers)` switches to the **layer view**: layer 1 is the start, each layer shows a one-line summary (steps / files), and a layer with more than 15 steps is shown one page at a time ("N more not listed"). That turns a 300-row wall into a skeleton you can drill into — steps inside a layer still stay in reading order.
 
+For a **library project** (no `main`), the view lists **entry candidates** instead of failing: public API first (declared under `include/`), then call-graph roots — each row states its evidence (callers / callees, where the public declaration is). DepScaner deliberately never picks a start for you: a wrong start makes the whole reading order wrong. See [docs/07](docs/07-阅读路线.md) for the ranking rules.
+
 The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tried too) and walks call edges **in source order**, so step numbers are the order you should read in.
 
 | Control | What it does |

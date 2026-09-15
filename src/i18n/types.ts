@@ -154,6 +154,20 @@ export interface Strings {
   route: {
     /** 空视图提示：还没有索引 */
     needIndex: string;
+    /** 库项目没有 main 时：把「从哪读起」的候选列出来 */
+    noMainHint: string;
+    /** 有 main 时的候选列表标题（调试出口用） */
+    entryCandidates: (n: number) => string;
+    /** 候选列表的排序依据（tooltip） */
+    entryHint: string;
+    /** 候选行的动作 */
+    startFromHere: string;
+    /** 候选是公开接口：它的声明在哪 */
+    entryApi: (file: string, line: number) => string;
+    /** 项目里有多少处调用它（0 = 没人调用，所以它像入口） */
+    entryCallers: (n: number) => string;
+    /** 它会调到多少个函数 */
+    entryCallees: (n: number) => string;
     /** 自动找入口失败（库项目没有 main） */
     noEntry: string;
     /** 查询失败 */

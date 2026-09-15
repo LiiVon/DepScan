@@ -308,6 +308,38 @@ int runStdioServer() {
           break;
         }
         writeResult(id, std::move(node));
+      } else if (method == "entries") {
+        // 起点候选：没有 main 的库项目该从哪读起（有 main 时它永远排第一个）。
+        // 引擎**不猜**起点 —— 挑错了整条阅读顺序都是错的，所以这里只给候选，由用户点一个。
+        std::lock_guard<std::mutex> lock(g_sessionMutex);
+        const size_t limit = static_cast<size_t>(params.getNumber("limit", 50));
+        size_t total = 0;
+        const std::vector<EntryCandidate> cands = findEntryCandidates(session.graph(), limit, total);
+        std::vector<json::Value> items;
+        items.reserve(cands.size());
+        for (const EntryCandidate& c : cands) {
+          const Node& n = session.graph().nodes[c.nodeIndex];
+          json::Value o = json::Value::makeObject();
+          o.set("id", json::Value::makeString(n.id));
+          o.set("name", json::Value::makeString(n.name));
+          o.set("kind", json::Value::makeString(toString(n.kind)));
+          o.set("file", json::Value::makeString(n.file));
+          o.set("line", json::Value::makeInt(n.line));
+          o.set("column", json::Value::makeInt(n.column));
+          o.set("detail", json::Value::makeString(n.detail));
+          o.set("mainLike", json::Value::makeBool(c.mainLike));
+          o.set("publicApi", json::Value::makeBool(c.publicApi));
+          o.set("apiHeader", json::Value::makeString(n.apiHeader));
+          o.set("apiLine", json::Value::makeInt(n.apiLine));
+          o.set("callers", json::Value::makeInt(c.callers));
+          o.set("callees", json::Value::makeInt(c.callees));
+          items.push_back(std::move(o));
+        }
+        json::Value out = json::Value::makeObject();
+        out.set("candidates", json::Value::makeArray(std::move(items)));
+        out.set("total", json::Value::makeInt(static_cast<int>(total)));
+        out.set("hasMain", json::Value::makeBool(!findEntryPoint(session.graph()).empty()));
+        writeResult(id, std::move(out));
       } else if (method == "route") {
         // 阅读路线：从入口（默认 main）出发的有序阅读清单。
         // 与 subgraph 的区别是「有序」—— 遍历在引擎里做，前端只负责渲染，

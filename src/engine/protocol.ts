@@ -119,6 +119,42 @@ export interface NodeAtResult {
   detail: string;
 }
 
+/**
+ * 起点候选（`entries`）。
+ *
+ * 库项目没有 main，「从哪读起」这个问题照样存在 —— 答案是它的**公开接口**。
+ * 引擎只给候选与判据（是不是公开面、有多少调用者/下游），**不替用户挑**：
+ * 路线的全部价值就是顺序，而顺序由起点决定 —— 挑错了后面整条都是错的。
+ */
+export interface EntryCandidate {
+  id: string;
+  name: string;
+  kind: NodeKind;
+  file: string;
+  line: number;
+  column: number;
+  detail: string;
+  /** main / WinMain / DllMain 这类程序入口 */
+  mainLike: boolean;
+  /** 声明或定义落在 include/ 这类公开目录里 */
+  publicApi: boolean;
+  /** 那个公开头文件的位置；空 = 不是公开接口 */
+  apiHeader: string;
+  apiLine: number;
+  /** 项目内的调用者数量（只算 calls 入边） */
+  callers: number;
+  /** 项目内被它调用的函数数量（只算 calls 出边） */
+  callees: number;
+}
+
+export interface EntriesResult {
+  candidates: EntryCandidate[];
+  /** 未截断的候选总数 */
+  total: number;
+  /** 找到程序入口了吗（有的话第一个候选就是它） */
+  hasMain: boolean;
+}
+
 export interface RouteResult {
   from: string;
   steps: RouteStep[];

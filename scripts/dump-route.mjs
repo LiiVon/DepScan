@@ -11,6 +11,8 @@
 //   node scripts/dump-route.mjs --from func:demo::Engine::run
 //   node scripts/dump-route.mjs --svg  out.svg       # 顺便导出泳道图（不打开 VS Code 也能看图）
 //   node scripts/dump-route.mjs --trim               # 开降噪：折叠「短且只调一处」的琐碎步骤
+//   node scripts/dump-route.mjs --entries            # 起点候选（库项目没有 main 时尤其有用）
+//   node scripts/dump-route.mjs --root samples/libdemo --entries   # 库项目：从候选里挑一个起点
 //   node scripts/dump-route.mjs --layers             # 按层打印（大项目下先看摘要的那种看法）
 //   node scripts/dump-route.mjs --layers --all        # 层视图：连被分页藏起来的一起列出
 //   node scripts/dump-route.mjs --html               # 生成泳道图**页面**的离线预览
@@ -143,14 +145,31 @@ try {
     console.error(`[dump-route] 光标 ${args.file}:${args.line ?? 1} → ${at.id}`);
   }
 
-  const route = await request('route', {
-    from,
-    strategy: args.dfs ? 'dfs' : 'bfs',
-    groupByFile: !!args.files,
-    skipTrivial: args.flags.has('trim'),
-    maxDepth: Number(args.depth ?? 6),
-    maxSteps: Number(args.steps ?? 200)
-  });
+  let route;
+  try {
+    route = await request('route', {
+      from,
+      strategy: args.dfs ? 'dfs' : 'bfs',
+      groupByFile: !!args.files,
+      skipTrivial: args.flags.has('trim'),
+      maxDepth: Number(args.depth ?? 6),
+      maxSteps: Number(args.steps ?? 200)
+    });
+  } catch (err) {
+    // 库项目（没有 main）走到这里就会失败 —— 而 `--entries` 恰恰就是要看这种情况，
+    // 所以只吞掉这个错误，把候选列出来（其他情况照旧抛出去）。
+    if (!args.flags.has('entries')) throw err;
+    console.log(`路线生成失败：${err.message}`);
+    route = {
+      from: '',
+      steps: [],
+      truncated: false,
+      frontierNodes: 0,
+      frontierFiles: 0,
+      maxReachedDepth: 0,
+      skippedCount: 0
+    };
+  }
 
   const byOrder = new Map(route.steps.map((s) => [s.order, s]));
   const kids = new Map();
@@ -192,14 +211,32 @@ try {
 
   console.log('');
   console.log(
-    route.truncated
-      ? `未展开：${route.frontierNodes} 个节点 / ${route.frontierFiles} 个文件（到达步数或深度上限）`
-      : '路线已完整生成'
+    route.steps.length === 0
+      ? '还没有起点 —— 库项目没有 main 是正常的，先看 --entries 给出的候选'
+      : route.truncated
+        ? `未展开：${route.frontierNodes} 个节点 / ${route.frontierFiles} 个文件（到达步数或深度上限）`
+        : '路线已完整生成'
   );
   const ambiguous = route.steps.filter((s) => s.ambiguous).length;
   console.log(`同名定义候选：${ambiguous} / ${route.steps.length} 步存在「可能是错边」的情况`);
   if (route.skippedCount > 0) {
     console.log(`降噪折叠：${route.skippedCount} 个琐碎步骤（跳过的不删掉，列在各自的父步骤后面）`);
+  }
+
+  if (args.flags.has('entries')) {
+    // 起点候选：main 优先，其次是库的公开接口与调用图上的「根」。
+    // 引擎不猜起点（挑错了整条顺序都是错的），所以这里把候选摆出来让人自己定。
+    const ent = await request('entries', { limit: 0 });
+    const tag = (c) => (c.mainLike ? '程序入口' : c.publicApi ? '公开接口' : '调用图根');
+    console.log('');
+    console.log(`起点候选（共 ${ent.total} 个，有 main：${ent.hasMain ? '是' : '否'}）：`);
+    for (const c of ent.candidates) {
+      console.log(
+        `  [${tag(c)}] ${c.name}\t${c.file}:${c.line}` +
+          `\t调用者 ${c.callers} / 下游 ${c.callees}` +
+          (c.apiHeader ? `\t公开声明 ${c.apiHeader}:${c.apiLine}` : '')
+      );
+    }
   }
 
   // 需要 TS 纯函数时现打一份（与离线自检脚本同一套路）——

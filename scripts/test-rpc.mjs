@@ -499,6 +499,73 @@ try {
     rmSync(compdbPath, { force: true });
   }
 
+  // --- V3-c：没有 main 的库项目该从哪读起 ---
+  // 起点候选 = 程序入口 → 公开接口（声明在 include/ 下）→ 调用图上的「根」。
+  // 引擎**不替用户挑**：路线的全部价值就是顺序，起点错了后面整条都错。
+  const libRoot = resolve(root, 'samples/libdemo');
+  await request('scan', {
+    root: libRoot,
+    config: { ...config, cachePath: '', useCache: false, forceFull: true }
+  });
+  const libEntries = await request('entries', {});
+  check(libEntries.hasMain === false, '库项目（没有 main）：entries 如实说「没有程序入口」');
+  check(
+    libEntries.candidates.length >= 3 && libEntries.candidates.every((c) => c.publicApi),
+    `库项目的候选都是公开接口：${libEntries.candidates.map((c) => c.name).join('、')}`
+  );
+  check(
+    libEntries.candidates.every((c) => c.apiHeader.startsWith('include/') && c.apiLine > 0),
+    '每个公开接口都带「声明在哪个头文件」（否则用户没法核对）'
+  );
+  check(
+    !libEntries.candidates.some((c) => c.name === 'isBlank' || c.name === 'addImpl'),
+    '内部辅助（声明不在 include/ 下、匿名命名空间）不会被推荐成入口'
+  );
+  check(
+    libEntries.candidates[0].callers === 0,
+    `没人调用的排在前面：第一个候选 ${libEntries.candidates[0].name}（${libEntries.candidates[0].callers} 个调用者）`
+  );
+  const libEntriesAgain = await request('entries', {});
+  check(
+    libEntriesAgain.candidates.map((c) => c.id).join('>') ===
+      libEntries.candidates.map((c) => c.id).join('>'),
+    '同样输入下候选顺序完全确定（否则「推荐哪个」就没法讨论）'
+  );
+  // 库项目 route(from:'') 仍然要失败（引擎不猜），但错误信息得指路
+  let libRouteError = '';
+  try {
+    await request('route', { from: '' });
+  } catch (err) {
+    libRouteError = err.message;
+  }
+  check(/entries/.test(libRouteError), `库项目 route 失败时指向 entries：${libRouteError}`);
+  // 从候选起头，路线照样成立 —— 这才是库项目的正确用法
+  const libRoute = await request('route', {
+    from: libEntries.candidates[0].id,
+    maxDepth: 4,
+    maxSteps: 40
+  });
+  check(
+    libRoute.steps.length > 1 && libRoute.steps[0].id === libEntries.candidates[0].id,
+    `从公开接口起头：${libRoute.steps[0].name} → 共 ${libRoute.steps.length} 步`
+  );
+
+  // 回到 demo：有 main 时它永远是第一个候选（这一条在任何项目上都成立）
+  await request('scan', { root: demoRoot, config: { ...config } });
+  const demoEntries = await request('entries', {});
+  check(
+    demoEntries.hasMain === true &&
+      demoEntries.candidates[0].mainLike &&
+      demoEntries.candidates[0].name === 'main',
+    `有 main 时它排第一：${demoEntries.candidates[0].name}`
+  );
+  check(
+    demoEntries.candidates.some(
+      (c) => c.name === 'config' && c.publicApi && c.apiHeader === 'include/demo/config.h'
+    ),
+    'demo 里 include/demo/config.h 的 config 也被认成公开接口'
+  );
+
   const bye = await request('shutdown');
   check(bye.bye === true, 'shutdown 正常响应');
 } catch (err) {

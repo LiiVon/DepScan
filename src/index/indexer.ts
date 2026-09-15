@@ -9,6 +9,7 @@ import { resolveEnginePath, type EngineLocation } from '../engine/locator';
 import { DEFAULT_TRIVIAL_BODY_LINES } from '../engine/protocol';
 import type {
   Direction,
+  EntriesResult,
   ExportResult,
   NodeAtResult,
   PingResult,
@@ -436,6 +437,20 @@ export class IndexService implements vscode.Disposable {
     } catch (err) {
       // 找不到入口是「可预期」的失败（库项目没有 main），不当成错误刷日志
       this.logger.warn(`阅读路线查询失败：${String(err)}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * 起点候选：main 优先，其次是库的公开接口与调用图上的「根」。
+   * 库项目 `route(from:'')` 会失败（没有 main）—— 界面据此把候选列出来让用户挑一个。
+   */
+  async entries(limit = 50): Promise<EntriesResult | undefined> {
+    if (!(await this.requireStats())) return undefined;
+    try {
+      return await this.client!.request<EntriesResult>('entries', { limit });
+    } catch (err) {
+      this.logger.warn(`起点候选查询失败：${String(err)}`);
       return undefined;
     }
   }

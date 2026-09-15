@@ -411,6 +411,80 @@ check(
   '起点没有父步骤（不会凭空写一行「由 #0 调起」）'
 );
 
+// --- 12. 库项目：起点候选列表（没有 main 时列出来，而不是只丢一句「找不到入口」）---
+// 引擎只给判据，选哪个由读代码的人定 —— 所以每一行都得说清「为什么推荐它」。
+const entries = {
+  candidates: [
+    {
+      id: 'func:libdemo::mean',
+      name: 'mean',
+      kind: 'function',
+      file: 'src/math.cpp',
+      line: 16,
+      column: 1,
+      detail: 'double mean(const int*, int)',
+      mainLike: false,
+      publicApi: true,
+      apiHeader: 'include/libdemo/math.h',
+      apiLine: 10,
+      callers: 0,
+      callees: 1
+    },
+    {
+      id: 'func:libdemo::add',
+      name: 'add',
+      kind: 'function',
+      file: 'src/math.cpp',
+      line: 11,
+      column: 1,
+      detail: 'int add(int, int)',
+      mainLike: false,
+      publicApi: true,
+      apiHeader: 'include/libdemo/math.h',
+      apiLine: 7,
+      callers: 1,
+      callees: 1
+    }
+  ],
+  total: 2,
+  hasMain: false
+};
+const entryRows = model.entryCandidateNodes(entries);
+check(
+  entryRows.length === 3 && entryRows[0].kind === 'info' && entryRows[1].kind === 'info',
+  `起点候选 = 1 行说明 + ${entries.candidates.length} 行候选（实际 ${entryRows.length} 行）`
+);
+const noMainRow = entryRows[0];
+check(/main/.test(noMainRow.text), `说明行直说是库，不绕弯：${noMainRow.text}`);
+const firstEntry = entryRows[1];
+check(
+  firstEntry.description === 'src/math.cpp:16',
+  '候选行带 file:line（要能看见它定义在哪，而不是只能看见名字）'
+);
+check(
+  firstEntry.command.command === 'depscaner.pickRouteCandidate' &&
+    firstEntry.command.arguments[0].parentId === '',
+  '点候选 = 换起点（parentId 为空，与 CandidateArgs 的约定一致）'
+);
+check(
+  firstEntry.command.arguments[0].nodeId === 'func:libdemo::mean' &&
+    firstEntry.command.arguments[0].reset === false,
+  'nodeId 就是候选自己的 id（reset=false，不是「撤回纠偏」）'
+);
+check(
+  /公开接口/.test(firstEntry.tooltip) && /include\/libdemo\/math\.h/.test(firstEntry.tooltip),
+  `tooltip 说清「为什么推荐它」：${firstEntry.tooltip.split('\n').join(' / ')}`
+);
+check(/没有人调用/.test(firstEntry.tooltip), 'tooltip 带上判据「项目里没人调用它」');
+check(
+  model.entryCandidateNodes({ candidates: [], total: 0, hasMain: false }).length === 0,
+  '一个候选都没有时返回空数组（调用方退回「找不到入口」提示）'
+);
+check(
+  model.entryCandidateNodes({ ...entries, hasMain: true })[0].text.includes('起点候选'),
+  '有 main 时文案换成「起点候选」（不再说「这是个库」）'
+);
+
 rmSync(workDir, { recursive: true, force: true });
 
 if (failures.length) {

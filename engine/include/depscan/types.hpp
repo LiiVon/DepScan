@@ -60,6 +60,11 @@ struct Node {
   int bodyLines = 0;
   int inDegree = 0;
   int outDegree = 0;
+  // 「公开面」：声明（或定义）落在 include/ 这类公开目录里时，记下那处位置。
+  // 空 = 不是公开接口。库项目没有 main，想读它就得从公开面起头 ——
+  // 见 route.hpp 的 findEntryCandidates 与 docs/07 §2.1。
+  std::string apiHeader;
+  int apiLine = 0;
 };
 
 struct Edge {
@@ -82,6 +87,21 @@ struct Graph {
 std::string makeNodeId(NodeKind kind, const std::string& key);
 std::string makeExternalId(NodeKind kind, const std::string& name);
 std::string kindPrefix(NodeKind kind);
+
+// 「公开面」的判定约定：include / inc / public / api 这些顶层目录下的文件算公开接口。
+// 这也是安装规则最常见的写法（install(DIRECTORY include/ ...)）。
+//
+// 为什么用**目录**而不是别的信号：没有编译数据库时，「导出符号」这件事在语法层是看不到的
+// （没有 __declspec(dllexport) 判断、也不知道 CMake 的 PUBLIC/PRIVATE）。
+// 而「声明放在 include/ 下」是 C/C++ 项目里最接近「这就是我的公开 API」的约定。
+// 头文件都在 src/ 里的项目就没有公开面 —— 那时只能靠调用图上的「根」来起头。
+inline bool isPublicApiFile(const std::string& relFile) {
+  static const char* kDirs[] = {"include/", "inc/", "public/", "api/"};
+  for (const char* d : kDirs) {
+    if (relFile.rfind(d, 0) == 0) return true;
+  }
+  return false;
+}
 
 // 单文件分析产物：既用于生成图，也用于聚合全局符号表。
 struct SymbolDef {

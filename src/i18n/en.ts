@@ -202,6 +202,19 @@ export const en: Strings = {
     needIndex: 'Not indexed yet. Run "Rebuild Index" first, then come back.',
     noEntry:
       'No entry point found (main / WinMain / DllMain). For a library project, put the cursor on an exported interface and use "Read from here".',
+    noMainHint:
+      'No main() — this looks like a library. Below are its readable entry points (public API first): click one to start reading from there.',
+    entryCandidates: (n) => `${n} entry candidate(s): program entry / public API / call-graph roots`,
+    entryHint:
+      'Order: program entry → public API with callees → other public API → functions nothing in the project calls. DepScaner never picks for you: a wrong start makes the whole reading order wrong.',
+    startFromHere: 'Start reading here',
+    entryApi: (file, line) => `Public API: ${file}:${line}`,
+    entryCallers: (n) =>
+      n === 0
+        ? 'Nothing in the project calls it (that is why it looks like an entry)'
+        : `${n} call site(s) inside the project`,
+    entryCallees: (n) =>
+      n === 0 ? 'It calls nothing else (nothing to follow)' : `Calls ${n} function(s)`,
     failed: 'Could not build the reading route — see Output → DepScaner for details.',
     from: (name, file) => `Start: ${name} (auto-detected, ${file})`,
     fromPicked: (name, file) => `Start: ${name} (from cursor, ${file})`,

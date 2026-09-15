@@ -51,6 +51,70 @@ std::string findEntryPoint(const Graph& g) {
   return fallback;
 }
 
+std::vector<EntryCandidate> findEntryCandidates(const Graph& g, size_t limit, size_t& total) {
+  // 只算 calls 边：被 include / 被当类型用不算「有人调用它」。
+  std::unordered_map<std::string, size_t> index;
+  index.reserve(g.nodes.size() * 2);
+  for (size_t i = 0; i < g.nodes.size(); ++i) index.emplace(g.nodes[i].id, i);
+  std::vector<int> callers(g.nodes.size(), 0);
+  std::vector<int> callees(g.nodes.size(), 0);
+  for (const Edge& e : g.edges) {
+    if (e.kind != EdgeKind::Calls) continue;
+    const auto a = index.find(e.from);
+    const auto b = index.find(e.to);
+    if (a == index.end() || b == index.end()) continue;
+    if (g.nodes[a->second].external || g.nodes[b->second].external) continue;
+    ++callees[a->second];
+    ++callers[b->second];
+  }
+
+  struct Ranked {
+    EntryCandidate c;
+    int tier = 0;
+    std::string file;
+    int line = 0;
+    std::string name;
+  };
+  std::vector<Ranked> ranked;
+  for (size_t i = 0; i < g.nodes.size(); ++i) {
+    const Node& n = g.nodes[i];
+    if (n.kind != NodeKind::Function) continue;
+    // 得先有函数体：没有体的符号（声明 / 外部）不是一个可以「读」的起点
+    if (n.external || n.declaration || n.bodyLines <= 0) continue;
+    const bool mainLike = matchesEntry(n.name);
+    const bool publicApi = !n.apiHeader.empty();
+    int tier = -1;
+    if (mainLike) tier = 0;
+    else if (publicApi && callees[i] > 0) tier = 1;
+    else if (publicApi) tier = 2;
+    else if (callers[i] == 0 && callees[i] > 0) tier = 3;
+    if (tier < 0) continue;
+    EntryCandidate c;
+    c.nodeIndex = i;
+    c.mainLike = mainLike;
+    c.publicApi = publicApi;
+    c.callers = callers[i];
+    c.callees = callees[i];
+    ranked.push_back({c, tier, n.file, n.line, n.name});
+  }
+  std::sort(ranked.begin(), ranked.end(), [](const Ranked& a, const Ranked& b) {
+    if (a.tier != b.tier) return a.tier < b.tier;
+    if (a.c.callees != b.c.callees) return a.c.callees > b.c.callees;  // 下游多的更像入口
+    if (a.c.callers != b.c.callers) return a.c.callers < b.c.callers;  // 没人调用的更像
+    if (a.file != b.file) return a.file < b.file;
+    if (a.line != b.line) return a.line < b.line;
+    return a.name < b.name;
+  });
+
+  total = ranked.size();
+  std::vector<EntryCandidate> out;
+  for (const Ranked& r : ranked) {
+    if (limit > 0 && out.size() >= limit) break;
+    out.push_back(r.c);
+  }
+  return out;
+}
+
 // 光标位置 → 该处所属的函数。读代码时的直觉是「我在这个函数里」，
 // 所以从光标取起点时优先给函数，而不是最近的任意符号。
 std::string functionAtLocation(const Graph& g, const std::string& relFile, int line) {
@@ -89,7 +153,9 @@ RouteResult computeRoute(const Graph& g, const RouteOptions& opt) {
 
   const std::string startId = opt.from.empty() ? findEntryPoint(g) : opt.from;
   if (startId.empty()) {
-    r.error = "找不到入口函数（main / WinMain / DllMain），请显式指定起点。";
+    // 库项目走到这里：没有 main。别自己猜一个起点（猜错了整条顺序都是错的），
+    // 由界面用 `entries` 把候选列出来让用户挑 —— 见 docs/07 §2.1。
+    r.error = "找不到入口函数（main / WinMain / DllMain）；库项目请用 entries 取起点候选，再显式指定 from。";
     return r;
   }
 

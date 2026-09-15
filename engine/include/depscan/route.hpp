@@ -73,6 +73,30 @@ struct RouteResult {
 // 自动寻找程序入口；找不到返回空串
 std::string findEntryPoint(const Graph& g);
 
+// 起点候选：main 之外还有什么值得当起点。
+//
+// 库项目根本没有 main，而「从哪读起」这个问题照样存在 —— 答案是它的**公开接口**：
+// 那些别人会调用、而项目内部往往没人调用的函数。这里把它算出来，
+// 由界面列出来让用户挑一个（**不猜**：挑错了顺序就是错的，所以让人来定）。
+struct EntryCandidate {
+  size_t nodeIndex = 0;
+  bool mainLike = false;   // main / WinMain / DllMain 这类程序入口
+  bool publicApi = false;  // 声明或定义落在 include/ 这类公开目录里
+  int callers = 0;         // 项目内的调用者数量（只算 calls 入边）
+  int callees = 0;         // 项目内被它调用的函数数量（只算 calls 出边）
+};
+
+// 起点候选，已按「该从哪读起」排序：
+//   0. 程序入口（main 等）
+//   1. 公开接口、且自己有下游（读下去有东西）
+//   2. 其余公开接口（能读，但读下去是叶子）
+//   3. 调用图上的「根」：项目里没人调用它，但它会调别人 —— 没有公开面时的兜底
+//
+// 公开面**优先于**调用图根：有 include/ 的项目（就是库），用户想知道的是「你的 API 是什么」，
+// 而不是「哪些函数碰巧没人调」；只有头文件都在 src/ 里的项目才只能靠根来起头。
+// `limit <= 0` = 不截断；`total` 返回未截断的真实数量（与候选上限无关）。
+std::vector<EntryCandidate> findEntryCandidates(const Graph& g, size_t limit, size_t& total);
+
 // 光标位置（相对路径 + 行号）→ 该处「所属函数」的节点 id。
 // 取同文件里行号 <= 给定行的最后一个函数节点；找不到函数时依次退回
 // 「最近的其它符号」→「该文件节点」。都找不到返回空串。

@@ -200,6 +200,14 @@ export const zh: Strings = {
   route: {
     needIndex: '尚未建立索引。先执行「重建索引」再回来看路线。',
     noEntry: '找不到程序入口（main / WinMain / DllMain）。库项目请把光标停在导出接口上，用「从光标处开始读」。',
+    noMainHint: '没有 main —— 这是个库。下面是它的可读入口（公开接口优先），点一个就从那里开始读。',
+    entryCandidates: (n) => `起点候选（${n} 个：程序入口 / 公开接口 / 调用图上的根）`,
+    entryHint:
+      '排序依据：程序入口 → 公开接口（且自己有下游）→ 其余公开接口 → 项目里没人调用的「根」。引擎不替你挑 —— 起点错了，后面整条阅读顺序都是错的。',
+    startFromHere: '从这里开始读',
+    entryApi: (file, line) => `公开接口：${file}:${line}`,
+    entryCallers: (n) => (n === 0 ? '项目里没有人调用它（所以它像是个入口）' : `项目内有 ${n} 处调用`),
+    entryCallees: (n) => (n === 0 ? '它不调用别的函数（读下去就到底了）' : `会调到 ${n} 个函数`),
     failed: '阅读路线生成失败，详情见「输出 → DepScaner」。',
     from: (name, file) => `起点：${name}（自动识别，${file}）`,
     fromPicked: (name, file) => `起点：${name}（来自光标，${file}）`,

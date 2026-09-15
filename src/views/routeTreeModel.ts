@@ -4,7 +4,7 @@
 // 「点开一步，下面应该出现什么」只能靠肉眼看，而肉眼看不出
 // 「有候选的步骤忘了可展开」这种错（写这版时我确实先犯过一次，
 // 表现是候选那一行根本点不出来）。把「结构」抽成纯函数之后，这部分就进得了 CI。
-import type { RouteCandidate, RouteResult, RouteStep } from '../engine/protocol';
+import type { EntryCandidate, EntriesResult, RouteCandidate, RouteResult, RouteStep } from '../engine/protocol';
 import { s } from '../i18n';
 
 /** 候选条目点击时传给 `depscaner.pickRouteCandidate` 的参数 */
@@ -22,8 +22,10 @@ export type RouteTreeNode =
   | {
       kind: 'info';
       text: string;
+      /** 右侧那列（"info" 行大多是提示，但起点候选得显示 file:line） */
+      description?: string;
       icon?: string;
-      command?: { command: string; title: string };
+      command?: { command: string; title: string; arguments?: unknown[] };
       tooltip?: string;
     }
   | { kind: 'step'; step: RouteStep; expandable: boolean }
@@ -96,6 +98,50 @@ export function failedNode(): RouteTreeNode {
 
 export function noEntryNode(): RouteTreeNode {
   return { kind: 'info', text: s().route.noEntry, icon: 'info' };
+}
+
+/**
+ * 没有 main 的库项目：把「从哪读起」的候选列出来。
+ *
+ * 为什么是列出来而不是替用户挑一个：路线的全部价值就是**顺序**，而顺序由起点决定 ——
+ * 挑错了，后面整条都是错的。引擎只给判据（是不是公开面？多少人调用？多少个下游？），
+ * 由读代码的人来定。点一行就是「换起点」（parentId 为空 → 命令知道这是起点不是纠偏）。
+ *
+ * 一条都没有时返回空数组，调用方退回 `noEntryNode()` —— 那时真的没什么可推荐的。
+ */
+export function entryCandidateNodes(result: EntriesResult): RouteTreeNode[] {
+  if (result.candidates.length === 0) return [];
+  const total = result.total || result.candidates.length;
+  return [
+    {
+      kind: 'info',
+      // 有 main 时（调试出口）不必说「没有 main」
+      text: result.hasMain ? s().route.entryCandidates(total) : s().route.noMainHint,
+      icon: result.hasMain ? 'library' : 'info',
+      tooltip: s().route.entryHint
+    },
+    ...result.candidates.map(entryCandidateNode)
+  ];
+}
+
+function entryCandidateNode(c: EntryCandidate): RouteTreeNode {
+  const lines = [c.id, `${c.file}:${c.line}`];
+  if (c.publicApi) lines.push(s().route.entryApi(c.apiHeader, c.apiLine));
+  lines.push(s().route.entryCallers(c.callers));
+  lines.push(s().route.entryCallees(c.callees));
+  return {
+    kind: 'info',
+    text: c.name,
+    description: `${c.file}:${c.line}`,
+    icon: c.mainLike ? 'play' : c.publicApi ? 'symbol-interface' : 'circle-outline',
+    tooltip: lines.join('\n'),
+    command: {
+      command: 'depscaner.pickRouteCandidate',
+      title: s().route.startFromHere,
+      // parentId 为空 = 这是**起点**（见 CandidateArgs 的约定），不是纠偏
+      arguments: [{ parentId: '', name: c.name, nodeId: c.id, reset: false }]
+    }
+  };
 }
 
 /** 尾行：完整 / 被步数或深度上限截断 */

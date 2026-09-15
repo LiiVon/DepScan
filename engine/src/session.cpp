@@ -273,6 +273,11 @@ void Session::rebuild() {
         // 体量取最大：声明那次是 0，定义那次才是真值
         if (d.bodyLines > n.bodyLines) n.bodyLines = d.bodyLines;
       }
+      // 公开面：只要有一处出现在 include/ 这类公开目录里就算（声明或定义都算）
+      if (n.apiHeader.empty() && isPublicApiFile(d.file)) {
+        n.apiHeader = d.file;
+        n.apiLine = d.line;
+      }
       if (!d.signature.empty() && n.detail.empty()) n.detail = d.signature;
       n.precision = fa.fromCompileCommand ? Precision::Exact : Precision::Approximate;
       fileSymbols_[d.file].push_back(d.id);

@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 
-import type { RouteOptions, RouteResult } from '../engine/protocol';
+import type { EntriesResult, RouteOptions, RouteResult } from '../engine/protocol';
 import type { NodeKind } from '../graph/model';
 import { s } from '../i18n';
 import type { IndexService } from '../index/indexer';
 import {
   buildRouteTree,
+  entryCandidateNodes,
   failedNode,
   LAYER_PAGE_SIZE,
   layerChildren,
@@ -61,6 +62,8 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
    * 引擎那边 `maxSteps` 得重新遍历，而这里要的是「同一份路线先少看一点」。
    */
   private readonly shownByLayer = new Map<number, number>();
+  /** 起点候选（库项目用）：跟着图一起作废，避免拿到上一份索引的候选 */
+  private entriesCache: EntriesResult | undefined;
   private view: vscode.TreeView<RouteNode> | undefined;
   /** 手工指定的起点节点 id；undefined = 自动找入口 */
   private from: string | undefined;
@@ -143,6 +146,7 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
    */
   private invalidate(): void {
     this.stale = true;
+    this.entriesCache = undefined;
   }
 
   get groupByFile(): boolean {
@@ -315,7 +319,12 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
         // 正在加载：不要返回 [] 去覆盖上一次的内容
         return this.loading ? [] : [failedNode()];
       }
-      if (this.tree.result.steps.length === 0) return [noEntryNode()];
+      if (this.tree.result.steps.length === 0) {
+        // 库项目（没有 main）：把「从哪读起」的候选列出来，而不是只丢一句「找不到入口」
+        const entries = await this.loadEntries();
+        const nodes = entries ? entryCandidateNodes(entries) : [];
+        return nodes.length > 0 ? nodes : [noEntryNode()];
+      }
       return this.childrenOf(undefined);
     }
     return this.childrenOf(element);
@@ -327,6 +336,12 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
     return this.byLayer
       ? layerChildren(this.tree, element, this.overrides, { shown: this.shownByLayer })
       : treeChildren(this.tree, element, this.overrides);
+  }
+
+  /** 起点候选只问一次（它跟着索引走，图一变就作废） */
+  private async loadEntries(): Promise<EntriesResult | undefined> {
+    if (!this.entriesCache) this.entriesCache = await this.indexer.entries();
+    return this.entriesCache;
   }
 
   private async load(): Promise<void> {
