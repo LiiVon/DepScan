@@ -131,6 +131,17 @@ export interface Strings {
   edgeKinds: Record<EdgeKind, string>;
   precisionLabel: (p: Precision) => string;
   /** 侧边栏「操作」视图 */
+  /**
+   * 侧边栏视图标题。
+   * 清单里的标题只跟 VS Code 显示语言走（平台限制），但 `TreeView.title` 能在运行期改 ——
+   * 所以这四个标题跟着「界面语言」设置走，别再出现「界面中文、标题英文」。
+   */
+  views: {
+    actions: string;
+    route: string;
+    dependencies: string;
+    index: string;
+  };
   actions: {
     graph: string;
     symbolGraph: string;
@@ -267,6 +278,13 @@ export interface Strings {
     toggleGroupByFile: string;
     /** 切换「按层分组」的按钮文案 */
     toggleByLayer: string;
+    /** 视图副标题里的「当前策略」—— 要短（BFS / 函数级 / 降噪…） */
+    modeBfs: string;
+    modeDfs: string;
+    modeFunction: string;
+    modeFile: string;
+    modeLayer: string;
+    modeTrimmed: string;
     /** 切换遍历策略的按钮文案 */
     toggleStrategy: string;
     /** 策略当前值 */

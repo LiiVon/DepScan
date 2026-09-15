@@ -14,6 +14,7 @@ import {
   noEntryNode,
   overrideKey,
   parentOf,
+  routeModeLabel,
   startLabel,
   stepDetailLines,
   treeChildren,
@@ -81,7 +82,18 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
   }
 
   private updateMessage(): void {
-    if (this.view) this.view.message = this.statusMessage();
+    if (!this.view) return;
+    // 标题从**运行期文案**来：清单里的标题只跟 VS Code 显示语言走（见 docs/02 §1.2），
+    // 而 TreeView.title 能在运行期改 —— 不这样就会出现「界面中文、标题英文」。
+    this.view.title = s().views.route;
+    // 副标题摆「当前是什么策略」：四个开关都是无状态图标，不写出来根本看不出来
+    this.view.description = routeModeLabel({
+      strategy: this.strategy,
+      groupByFile: this.byFile,
+      skipTrivial: this.skipTrivial,
+      byLayer: this.byLayer
+    });
+    this.view.message = this.statusMessage();
   }
 
   /** 让「起点回到 main」这类按钮只在真的改了起点时才出现 */

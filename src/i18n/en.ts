@@ -177,6 +177,12 @@ export const en: Strings = {
     target: 'Target',
     unknown: 'Unknown'
   },
+  views: {
+    actions: 'Actions',
+    route: 'Reading Route',
+    dependencies: 'Dependencies',
+    index: 'Index Status'
+  },
   actions: {
     graph: 'Show dependency graph (current file)',
     symbolGraph: 'Show dependency graph (current symbol)',
@@ -278,6 +284,12 @@ export const en: Strings = {
     showTrivial: 'Noise filter off: every step is listed',
     toggleGroupByFile: 'Only first entry per file',
     toggleByLayer: 'Group by layer (summary first)',
+    modeBfs: 'BFS',
+    modeDfs: 'DFS',
+    modeFunction: 'Functions',
+    modeFile: 'Files',
+    modeLayer: 'Layers',
+    modeTrimmed: 'Noise filtered',
     toggleStrategy: 'Switch traversal strategy',
     bfs: 'Breadth first (outline first)',
     dfs: 'Depth first (follow one chain)',

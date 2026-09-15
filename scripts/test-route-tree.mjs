@@ -517,6 +517,24 @@ check(
   '层视图里同样换成接口图标（两个视图不该各说各话）'
 );
 
+// --- 14. 副标题：当前是什么策略 ---
+// 四个开关都是**无状态图标按钮**：点完只看到列表变了，看不出现在是 bfs 还是 dfs、
+// 是函数级还是文件级 —— 所以副标题必须把当前状态写出来。
+const baseMode = { strategy: 'bfs', groupByFile: false, skipTrivial: false, byLayer: false };
+check(
+  model.routeModeLabel(baseMode) === '广度优先 · 函数级',
+  `默认状态就把策略与粒度写清楚：${model.routeModeLabel(baseMode)}`
+);
+check(
+  model.routeModeLabel({ ...baseMode, strategy: 'dfs', groupByFile: true }) === '深度优先 · 文件级',
+  '切了策略与粒度后跟着变（不是固定文案）'
+);
+const allOn = { strategy: 'bfs', groupByFile: false, skipTrivial: true, byLayer: true };
+check(
+  model.routeModeLabel(allOn) === '广度优先 · 函数级 · 已降噪 · 层视图',
+  `开关只在开启时出现，顺序固定：${model.routeModeLabel(allOn)}`
+);
+
 rmSync(workDir, { recursive: true, force: true });
 
 if (failures.length) {

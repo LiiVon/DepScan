@@ -195,6 +195,32 @@ export function trimmedLine(result: RouteResult): string | undefined {
   return result.skippedCount > 0 ? s().route.trimmed(result.skippedCount) : undefined;
 }
 
+/** 路线视图副标题要显示的开关状态 */
+export interface RouteModeState {
+  strategy: 'bfs' | 'dfs';
+  groupByFile: boolean;
+  skipTrivial: boolean;
+  byLayer: boolean;
+}
+
+/**
+ * 标题右边那行「当前是什么策略」。
+ *
+ * 为什么要有它：策略 / 粒度 / 降噪 / 层视图都是**无状态图标按钮** —— 点完只看到列表变了，
+ * 却看不出现在是 bfs 还是 dfs、是函数级还是文件级。顺序固定（策略 → 粒度 → 降噪 → 层视图），
+ * 前两个永远显示（它们必然有值），后两个只在开启时出现。
+ */
+export function routeModeLabel(state: RouteModeState): string {
+  const t = s().route;
+  const parts = [
+    state.strategy === 'dfs' ? t.modeDfs : t.modeBfs,
+    state.groupByFile ? t.modeFile : t.modeFunction
+  ];
+  if (state.skipTrivial) parts.push(t.modeTrimmed);
+  if (state.byLayer) parts.push(t.modeLayer);
+  return parts.join(' · ');
+}
+
 /**
  * 取某个节点的子节点。`element` 为 undefined 时返回根。
  *

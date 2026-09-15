@@ -176,6 +176,12 @@ export const zh: Strings = {
     target: '构建目标',
     unknown: '未知'
   },
+  views: {
+    actions: '操作',
+    route: '阅读路线',
+    dependencies: '依赖',
+    index: '索引状态'
+  },
   actions: {
     graph: '查看依赖图（当前文件）',
     symbolGraph: '查看依赖图（当前符号）',
@@ -265,6 +271,12 @@ export const zh: Strings = {
     showTrivial: '降噪已关：所有步骤都列出来了',
     toggleGroupByFile: '只显示每个文件首次进入',
     toggleByLayer: '按层分组（先看摘要，再逐层展开）',
+    modeBfs: '广度优先',
+    modeDfs: '深度优先',
+    modeFunction: '函数级',
+    modeFile: '文件级',
+    modeLayer: '层视图',
+    modeTrimmed: '已降噪',
     toggleStrategy: '切换遍历策略',
     bfs: '广度优先（先看骨架）',
     dfs: '深度优先（先追一条链）',

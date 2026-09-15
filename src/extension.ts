@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { readConfig } from './config';
-import { initI18n } from './i18n';
+import { initI18n, s } from './i18n';
 import { IndexService } from './index/indexer';
 import { Logger } from './util/log';
 import { ActionsTreeProvider } from './views/actionsProvider';
@@ -37,6 +37,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
   routeTree.attachView(routeView);
 
+  // 其余三个视图也拿句柄：标题要在运行期改（见 applyViewTitles）
+  const actionsView = vscode.window.createTreeView('depscaner.actionsView', {
+    treeDataProvider: actionsTree
+  });
+  const indexView = vscode.window.createTreeView('depscaner.indexView', {
+    treeDataProvider: indexTree
+  });
+  const dependencyView = vscode.window.createTreeView('depscaner.dependencyView', {
+    treeDataProvider: dependencyTree
+  });
+
+  /**
+   * 视图标题跟着**界面语言设置**走。
+   *
+   * 清单里的 `%view.x%` 只跟随 VS Code 显示语言（平台限制），但 `TreeView.title` 可以在运行期改 ——
+   * 不这么做就会出现「界面全中文、只有视图标题是英文」这种半截翻译。
+   * 命令面板里的命令标题仍然只能跟显示语言，那是平台行为，无法绕过。
+   */
+  const applyViewTitles = (): void => {
+    actionsView.title = s().views.actions;
+    indexView.title = s().views.index;
+    dependencyView.title = s().views.dependencies;
+    routeView.title = s().views.route;
+  };
+  applyViewTitles();
+
   context.subscriptions.push(
     channel,
     indexer,
@@ -47,9 +73,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     boundaries,
     statusBar,
     routeView,
-    vscode.window.registerTreeDataProvider('depscaner.actionsView', actionsTree),
-    vscode.window.registerTreeDataProvider('depscaner.indexView', indexTree),
-    vscode.window.registerTreeDataProvider('depscaner.dependencyView', dependencyTree),
+    actionsView,
+    indexView,
+    dependencyView,
     // 图变了（重新索引 / 增量更新）→ 重算边界违规：这条检查是全局属性，不能只跟增量
     indexer.onDidUpdateGraph.event(() => void boundaries.refresh())
   );
@@ -65,6 +91,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const applyLanguage = (): void => {
     const resolved = initI18n(readConfig().language, vscode.env.language);
     logger.info(`界面语言切换为: ${resolved}`);
+    applyViewTitles();
     actionsTree.refresh();
     indexTree.refresh();
     dependencyTree.refresh();
