@@ -141,6 +141,24 @@ for (const [selector, row] of [['#toolbar', 1], ['#tabs', 2], ['main', 3], ['asi
 }
 check(/min-height:\s*0/.test(cssBlock('main')), 'main 设置 min-height: 0（防止内容把网格行撑破）');
 
+// --- 6.1 公开面（V4）：表格 / 树 / 详情 / 图例共用同一个角标 ---
+// 判定只在引擎（types.hpp 的 isPublicApiFile），前端只读 apiHeader；
+// 画布上刻意**不**画环 —— 大项目里公开面往往是大多数，画上去就是噪声（见 docs/02）。
+{
+  const bundle = readFileSync(resolve(root, 'media/webview.js'), 'utf8');
+  check(/\.badge-api\s*\{/.test(css), '样式里有「公开面」角标 .badge-api');
+  check(bundle.includes('badge-api'), '前端用上了这个角标（表格 / 树 / 图例共用）');
+  check(bundle.includes('apiHeader'), '前端读的是引擎给的 apiHeader（判定只有一处）');
+  check(
+    i18n['graph.apiBadge'] === '公开' && i18nEn['graph.apiBadge'] === 'API',
+    `角标文案跟随语言且尽量短（${i18n['graph.apiBadge']} / ${i18nEn['graph.apiBadge']}）`
+  );
+  check(
+    /graph\.apiLegend/.test(bundle) || i18n['graph.apiLegend'].includes('include/'),
+    '图例里说明公开面的判定依据（声明在 include/ 下）'
+  );
+}
+
 // --- 7. 中英双语：键集合必须完全一致，且英文字面量真的出现 ---
 const flattenKeys = (obj, prefix = '') =>
   Object.entries(obj).flatMap(([k, v]) =>

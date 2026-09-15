@@ -98,6 +98,8 @@ The route starts at `main` (`wmain` / `WinMain` / `wWinMain` / `DllMain` are tri
 | Title bar `$(home)` | Back to `main` (appears only once you changed the start) |
 | Expand a ⚠ step → **Candidates** | Same-named definitions this call could have meant — pick another one, or click the current one to undo |
 
+Steps that are **public API** (declared under `include/`) get an interface icon instead of the kind icon, and their tooltip names the public header — when reading a library, "is this step part of the API" matters more than "what kind of symbol is it".
+
 **Why the ⚠ marks are not decoration.** Without a compile database, call edges are resolved *by name*. A wrong edge in a graph is one extra line; a wrong edge in a route means **everything after it is the wrong reading order**. So whenever the name is defined more than once in the project, DepScaner says so and lets you pick — instead of silently guessing and pretending to be sure. Enabling a compile database is still the real fix (see below).
 
 > Steps are *session state*: a custom start and manual corrections reset when VS Code restarts.
@@ -169,6 +171,8 @@ Three views of the same subgraph, **selection-synced**: select a node in any one
 - **Toolbar** — direction (both / upstream / downstream), depth *k*, cluster by directory, show external symbols, export PNG / SVG, and the interface language switch
 - **Tree** — hierarchical view rooted at the current focus
 - **Table** — node, kind, in/out degree, file:line, precision; searchable by name and path
+
+The tree and table rows carry a `API` badge for **public API** — symbols declared under `include/` (or `inc/` / `public/` / `api/`). The details panel names the exact public header. This is deliberately *not* painted onto the canvas: in a library project most nodes are public, so rings everywhere would hide the relations you actually opened the graph for.
 
 Export the current subgraph as **PNG**, **SVG** (vector), **JSON**, **DOT** or **Mermaid**.
 

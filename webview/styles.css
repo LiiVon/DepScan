@@ -323,6 +323,13 @@ tbody tr.selected {
   color: var(--muted);
 }
 
+/* 「公开面」角标：跟 ext 角标同样的形状，但用一点强调色，
+   因为它说的是“这个符号是给别人用的”，而不是“这个符号没解析到”。 */
+.badge-api {
+  border-color: var(--accent, #0e639c);
+  color: var(--accent, #0e639c);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

@@ -228,6 +228,22 @@ try {
     );
   }
 
+  // 公开面：路线步骤要能看出「这一步是公开接口」（声明落在 include/ 这类目录里）。
+  // 判定完全在引擎侧（types.hpp 的 isPublicApiFile），插件只负责显示。
+  {
+    const configStep = route.steps.find((s) => s.name === 'config');
+    check(
+      !!configStep && configStep.apiHeader === 'include/demo/config.h' && configStep.apiLine > 0,
+      `路线步骤带公开面：config → ${configStep?.apiHeader}:${configStep?.apiLine}`
+    );
+    // 公开面看的是「**声明**在哪」，不是「定义在哪」—— 公开接口定义在 src/ 里很正常
+    const runStepInRoute = route.steps.find((s) => s.name === 'run');
+    check(
+      !!runStepInRoute && !runStepInRoute.apiHeader,
+      `${runStepInRoute?.name} 声明在 src/core/engine.h，不该被标成公开接口`
+    );
+  }
+
   // 层视图（插件侧按 `depth` 分组）靠这条不变量：非起点步骤的深度 = 父步骤深度 + 1。
   // 它同时也是 BFS 距离 —— 层号就是 depth + 1。不成立的话层视图会漏层或错层。
   check(
@@ -548,6 +564,27 @@ try {
   check(
     libRoute.steps.length > 1 && libRoute.steps[0].id === libEntries.candidates[0].id,
     `从公开接口起头：${libRoute.steps[0].name} → 共 ${libRoute.steps.length} 步`
+  );
+  // 图里也要能看出哪些节点是公开面（界面在表格 / 树 / 详情里标出来）
+  const libGraph = await request('subgraph', {
+    focus: 'func:libdemo::add',
+    depth: 2,
+    direction: 'both',
+    maxNodes: 200
+  });
+  const libNode = (name) => libGraph.graph.nodes.find((n) => n.name === name);
+  const apiNodes = libGraph.graph.nodes.filter((n) => n.apiHeader);
+  check(
+    apiNodes.length >= 1 && apiNodes.every((n) => n.apiHeader.startsWith('include/')),
+    `图里标出公开接口节点：${apiNodes.map((n) => n.name).join('、')}`
+  );
+  check(
+    libNode('add')?.apiHeader === 'include/libdemo/math.h' && libNode('add')?.apiLine > 0,
+    `公开接口节点带着声明位置：add → ${libNode('add')?.apiHeader}:${libNode('add')?.apiLine}`
+  );
+  check(
+    !!libNode('addImpl') && !libNode('addImpl').apiHeader,
+    '内部实现（匿名命名空间）不会被标成公开接口'
   );
 
   // 回到 demo：有 main 时它永远是第一个候选（这一条在任何项目上都成立）

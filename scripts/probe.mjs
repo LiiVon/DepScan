@@ -33,7 +33,10 @@ console.log('nodeKinds:', JSON.stringify(payload.stats.nodeKindCounts));
 console.log('unresolvedRefs:', payload.stats.unresolvedRefs);
 console.log('--- nodes ---');
 for (const n of payload.graph.nodes) {
-  console.log(`  ${n.id}  [${n.kind}] ${n.file}:${n.line}${n.declaration ? ' (decl)' : ''}`);
+  console.log(
+    `  ${n.id}  [${n.kind}] ${n.file}:${n.line}${n.declaration ? ' (decl)' : ''}` +
+      (n.apiHeader ? `  〔公开接口：${n.apiHeader}:${n.apiLine}〕` : '')
+  );
 }
 if (showEdges) {
   console.log('--- edges ---');

@@ -28,7 +28,7 @@ export type RouteTreeNode =
       command?: { command: string; title: string; arguments?: unknown[] };
       tooltip?: string;
     }
-  | { kind: 'step'; step: RouteStep; expandable: boolean }
+  | { kind: 'step'; step: RouteStep; expandable: boolean; /** 公开接口换成接口图标（由模型决定，便于断言） */ icon?: string }
   | { kind: 'candidates'; step: RouteStep; text: string; tooltip: string }
   | { kind: 'candidate'; step: RouteStep; candidate: RouteCandidate; isCurrent: boolean; args: CandidateArgs }
   /** 层视图里的「第 N 层」分组；默认展开与否由这一层的步骤数决定 */
@@ -126,7 +126,7 @@ export function entryCandidateNodes(result: EntriesResult): RouteTreeNode[] {
 
 function entryCandidateNode(c: EntryCandidate): RouteTreeNode {
   const lines = [c.id, `${c.file}:${c.line}`];
-  if (c.publicApi) lines.push(s().route.entryApi(c.apiHeader, c.apiLine));
+  if (c.publicApi) lines.push(s().route.publicApiLine(c.apiHeader, c.apiLine));
   lines.push(s().route.entryCallers(c.callers));
   lines.push(s().route.entryCallees(c.callees));
   return {
@@ -170,10 +170,11 @@ export function foldedNames(step: RouteStep): string[] {
   return step.skipped ?? [];
 }
 
-/** 步骤 tooltip 的附加行：函数体大小、被折叠掉的名字、由谁调起 */
+/** 步骤 tooltip 的附加行：函数体大小、被折叠掉的名字、由谁调起、是不是公开接口 */
 export function stepDetailLines(step: RouteStep, parent?: RouteStep): string[] {
   const out: string[] = [];
   if (step.bodyLines > 0) out.push(s().route.bodyLines(step.bodyLines));
+  if (step.apiHeader) out.push(s().route.publicApiLine(step.apiHeader, step.apiLine ?? 0));
   const folded = foldedNames(step);
   if (folded.length > 0) out.push(s().route.skippedNames(folded));
   // 层视图里没有缩进，这一行就是「它从哪来」——树视图里顺带也给（便于跳到调用方）
@@ -216,7 +217,17 @@ export function treeChildren(
 
 function stepNode(tree: RouteTree, step: RouteStep): RouteTreeNode {
   const hasChildren = (tree.childrenByParent.get(step.order) ?? []).length > 0;
-  return { kind: 'step', step, expandable: hasChildren || step.ambiguous };
+  return {
+    kind: 'step',
+    step,
+    expandable: hasChildren || step.ambiguous,
+    icon: publicApiIcon(step)
+  };
+}
+
+/** 公开接口在列表里换成「接口」图标：读库时「这一步是不是 API」比它是什么种类更重要 */
+function publicApiIcon(step: RouteStep): string | undefined {
+  return step.apiHeader ? 'symbol-interface' : undefined;
 }
 
 function stepChildren(tree: RouteTree, step: RouteStep, onlyCandidates = false): RouteTreeNode[] {
@@ -387,5 +398,5 @@ function layerNode(group: LayerGroup, pageSize: number): RouteTreeNode {
 
 /** 层视图里的步骤行：子步骤在下一层，所以只有候选可展开 */
 function layerStepNode(step: RouteStep): RouteTreeNode {
-  return { kind: 'step', step, expandable: step.ambiguous };
+  return { kind: 'step', step, expandable: step.ambiguous, icon: publicApiIcon(step) };
 }

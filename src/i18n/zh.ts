@@ -57,6 +57,9 @@ export const zh: Strings = {
     exported: (path) => `已导出：${path}`,
     expandHint: '双击展开下一层',
     legend: '图例',
+    publicApi: '公开接口',
+    apiBadge: '公开',
+    apiLegend: '公开接口（声明在 include/ 下）',
     fit: '适应窗口',
     architecture: '全局架构视图（按目录聚合）',
     clickToOpen: '点击跳转源码',
@@ -205,7 +208,7 @@ export const zh: Strings = {
     entryHint:
       '排序依据：程序入口 → 公开接口（且自己有下游）→ 其余公开接口 → 项目里没人调用的「根」。引擎不替你挑 —— 起点错了，后面整条阅读顺序都是错的。',
     startFromHere: '从这里开始读',
-    entryApi: (file, line) => `公开接口：${file}:${line}`,
+    publicApiLine: (file, line) => `公开接口：${file}:${line}`,
     entryCallers: (n) => (n === 0 ? '项目里没有人调用它（所以它像是个入口）' : `项目内有 ${n} 处调用`),
     entryCallees: (n) => (n === 0 ? '它不调用别的函数（读下去就到底了）' : `会调到 ${n} 个函数`),
     failed: '阅读路线生成失败，详情见「输出 → DepScaner」。',

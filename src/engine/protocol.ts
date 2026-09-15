@@ -104,6 +104,9 @@ export interface RouteStep {
    * 折叠**不是静默删除**：名字挂到最近的那个保留祖先上，由 UI 如实展示。
    */
   skipped?: string[];
+  /** 公开面：这一步的声明落在哪个公开头文件（`include/` 这类目录下）；缺失 = 不是公开接口 */
+  apiHeader?: string;
+  apiLine?: number;
 }
 
 /** 编辑器里「这个符号是什么」—— 供「从光标处开始读」用 */

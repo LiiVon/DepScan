@@ -297,6 +297,9 @@ export class RouteTreeProvider implements vscode.TreeDataProvider<RouteNode>, vs
       item.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('charts.yellow'));
     } else if (step.external) {
       item.iconPath = new vscode.ThemeIcon('globe');
+    } else if (element.icon) {
+      // 公开接口：图标由模型给（读库时「是不是 API」比「是不是函数」更需要一眼看见）
+      item.iconPath = new vscode.ThemeIcon(element.icon);
     } else {
       item.iconPath = new vscode.ThemeIcon(kindIcon(step.kind));
     }

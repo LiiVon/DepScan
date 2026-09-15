@@ -475,6 +475,12 @@ json::Value routeToJson(const Graph& g, const RouteResult& r) {
     o.set("precision", json::Value::makeString(toString(n.precision)));
     o.set("bodyLines", json::Value::makeInt(s.bodyLines));
     o.set("candidateTotal", json::Value::makeInt(s.candidateTotal));
+    // 公开面：这一步是不是库的公开接口（声明落在 include/ 这类目录下）。
+    // 读库时「哪些是 API、哪些是实现」比「谁调了谁」更需要一眼看见。
+    if (!n.apiHeader.empty()) {
+      o.set("apiHeader", json::Value::makeString(n.apiHeader));
+      o.set("apiLine", json::Value::makeInt(n.apiLine));
+    }
     if (!s.skipped.empty()) {
       json::Value sk = json::Value::makeArray({});
       for (const std::string& name : s.skipped) sk.arrayValue.push_back(json::Value::makeString(name));

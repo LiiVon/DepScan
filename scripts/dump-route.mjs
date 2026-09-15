@@ -190,9 +190,10 @@ try {
   const walk = (step, depth) => {
     const mark = step.ambiguous ? ' ⚠' : step.newFile ? ' ·' : '';
     const size = step.bodyLines > 0 ? ` <${step.bodyLines}行>` : '';
+    const api = step.apiHeader ? '〔公开接口〕' : '';
     const skipped = step.skipped?.length ? `〔跳过：${step.skipped.join('、')}〕` : '';
     console.log(
-      `${String(step.order).padStart(pad)} ${'  '.repeat(depth)}${step.name}${mark}${size}` +
+      `${String(step.order).padStart(pad)} ${'  '.repeat(depth)}${step.name}${mark}${size}${api}` +
         `\t${step.file}:${step.line}${skipped}`
     );
     if (step.ambiguous) {

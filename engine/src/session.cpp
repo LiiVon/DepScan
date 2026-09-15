@@ -626,6 +626,12 @@ json::Value Session::graphToJson(const Graph& g) const {
     o.set("external", json::Value::makeBool(n.external));
     o.set("declaration", json::Value::makeBool(n.declaration));
     o.set("bodyLines", json::Value::makeInt(n.bodyLines));
+    // 公开面：声明或定义落在 include/ 这类目录里。界面在表格 / 详情里标出来，
+    // 但**不在画布上画环** —— 大项目里公开面往往是大多数，画上去就是噪声。
+    if (!n.apiHeader.empty()) {
+      o.set("apiHeader", json::Value::makeString(n.apiHeader));
+      o.set("apiLine", json::Value::makeInt(n.apiLine));
+    }
     o.set("inDegree", json::Value::makeInt(n.inDegree));
     o.set("outDegree", json::Value::makeInt(n.outDegree));
     nodes.arrayValue.push_back(std::move(o));

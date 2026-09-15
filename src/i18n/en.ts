@@ -58,6 +58,9 @@ export const en: Strings = {
     exported: (path) => `Exported: ${path}`,
     expandHint: 'Double-click to expand',
     legend: 'Legend',
+    publicApi: 'Public API',
+    apiBadge: 'API',
+    apiLegend: 'Public API (declared under include/)',
     fit: 'Fit to view',
     architecture: 'Architecture view (grouped by directory)',
     clickToOpen: 'Click to open',
@@ -208,7 +211,7 @@ export const en: Strings = {
     entryHint:
       'Order: program entry → public API with callees → other public API → functions nothing in the project calls. DepScaner never picks for you: a wrong start makes the whole reading order wrong.',
     startFromHere: 'Start reading here',
-    entryApi: (file, line) => `Public API: ${file}:${line}`,
+    publicApiLine: (file, line) => `Public API: ${file}:${line}`,
     entryCallers: (n) =>
       n === 0
         ? 'Nothing in the project calls it (that is why it looks like an entry)'

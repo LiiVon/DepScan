@@ -54,6 +54,12 @@ export interface Strings {
     exported: (path: string) => string;
     expandHint: string;
     legend: string;
+    /** 详情里的「公开接口」字段标签 */
+    publicApi: string;
+    /** 节点上的角标（要短，表格/树里都会用） */
+    apiBadge: string;
+    /** 图例里的说明 */
+    apiLegend: string;
     fit: string;
     architecture: string;
     clickToOpen: string;
@@ -163,7 +169,7 @@ export interface Strings {
     /** 候选行的动作 */
     startFromHere: string;
     /** 候选是公开接口：它的声明在哪 */
-    entryApi: (file: string, line: number) => string;
+    publicApiLine: (file: string, line: number) => string;
     /** 项目里有多少处调用它（0 = 没人调用，所以它像入口） */
     entryCallers: (n: number) => string;
     /** 它会调到多少个函数 */

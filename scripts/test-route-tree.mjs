@@ -485,6 +485,38 @@ check(
   '有 main 时文案换成「起点候选」（不再说「这是个库」）'
 );
 
+// --- 13. 公开接口：步骤换成「接口」图标，tooltip 里写明声明在哪 ---
+// 读库的时候「这一步是不是 API」比「它是什么种类」更需要一眼看见。
+const apiStep = step(9, 0, 'add', 'src/math.cpp', 11, {
+  apiHeader: 'include/libdemo/math.h',
+  apiLine: 7
+});
+const apiTree = model.buildRouteTree({
+  from: 'func:libdemo::add',
+  steps: [apiStep],
+  truncated: false,
+  frontierNodes: 0,
+  frontierFiles: 0,
+  maxReachedDepth: 0,
+  skippedCount: 0
+});
+const apiRow = model.treeChildren(apiTree, undefined, noOverrides)[0];
+check(apiRow.icon === 'symbol-interface', `公开接口步骤换成接口图标（${apiRow.icon}）`);
+const apiLines = model.stepDetailLines(apiStep);
+check(
+  apiLines.some((t) => t.includes('公开接口') && t.includes('include/libdemo/math.h:7')),
+  `tooltip 写出声明在哪：${apiLines.join(' / ')}`
+);
+check(
+  model.stepDetailLines(result.steps[0]).every((t) => !t.includes('公开接口')),
+  '不是公开接口的步骤不会多写一行（头部里不该出现空话）'
+);
+const apiLayerNode = model.layerChildren(apiTree, undefined, noOverrides)[0];
+check(
+  model.layerChildren(apiTree, apiLayerNode, noOverrides)[0].icon === 'symbol-interface',
+  '层视图里同样换成接口图标（两个视图不该各说各话）'
+);
+
 rmSync(workDir, { recursive: true, force: true });
 
 if (failures.length) {

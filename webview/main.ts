@@ -6,6 +6,7 @@ import {
   NODE_COLORS,
   NODE_RADIUS,
   clusterByModule,
+  isPublicApi,
   recomputeDegrees,
   type EdgeKind,
   type GraphData,
@@ -326,6 +327,13 @@ function showDetails(node: GraphNode | undefined): void {
   rows.push(`<div class="detail-grid">`);
   rows.push(`<span class="k">${I18N['table.kind'] ?? 'Kind'}</span><span>${escapeHtml(kind)}</span>`);
   if (node.file) rows.push(`<span class="k">${I18N['table.file'] ?? 'File'}</span><span>${escapeHtml(node.file)}:${node.line}</span>`);
+  if (node.apiHeader) {
+    // 公开面：声明在哪。读库时这一行跟“定义在哪”是两件事。
+    const at = node.apiLine ? `${node.apiHeader}:${node.apiLine}` : node.apiHeader;
+    rows.push(
+      `<span class="k">${I18N['graph.publicApi'] ?? 'Public API'}</span><span>${escapeHtml(at)}</span>`
+    );
+  }
   rows.push(`<span class="k">${I18N['table.precision'] ?? 'Precision'}</span><span>${escapeHtml(precision)}</span>`);
   rows.push(`<span class="k">${I18N['table.outDeps'] ?? 'Out'}</span><span>${node.outDegree}</span>`);
   rows.push(`<span class="k">${I18N['table.inDeps'] ?? 'In'}</span><span>${node.inDegree}</span>`);
@@ -347,6 +355,12 @@ function updateLegend(): void {
   for (const k of edgeKinds) {
     parts.push(
       `<span class="legend-item"><span class="line" style="background:${EDGE_COLORS[k]}"></span>${escapeHtml(I18N[`edge.${k}`] ?? k)}</span>`
+    );
+  }
+  // 公开面角标只在真有公开接口时才进图例 —— 每条都写一行会把图例撑成说明书
+  if (state.view.nodes.some(isPublicApi)) {
+    parts.push(
+      `<span class="legend-item"><span class="badge badge-api">${escapeHtml(I18N['graph.apiBadge'] ?? 'API')}</span>${escapeHtml(I18N['graph.apiLegend'] ?? '')}</span>`
     );
   }
   legend.innerHTML = parts.join('');
@@ -429,6 +443,9 @@ function renderTree(): void {
         `<span class="dot" style="background:${NODE_COLORS[t.node.kind as NodeKind] ?? '#999'}"></span>` +
         `<span class="tree-name" title="${escapeHtml(t.node.name)}\n${escapeHtml(kind)}">${escapeHtml(t.node.name)}</span>` +
         edgeBadge +
+        (isPublicApi(t.node)
+          ? `<span class="badge badge-api">${escapeHtml(I18N['graph.apiBadge'] ?? 'API')}</span>`
+          : '') +
         (t.node.external ? '<span class="badge">ext</span>' : '') +
         `</div>`
     );
@@ -484,7 +501,11 @@ function renderTable(): void {
           : `<span class="pill approx">${escapeHtml(I18N['precision.approx'] ?? 'approx')}</span>`;
       return (
         `<tr data-id="${escapeHtml(n.id)}">` +
-        `<td><span class="dot" style="background:${NODE_COLORS[n.kind as NodeKind] ?? '#999'}"></span>${escapeHtml(n.name)}</td>` +
+        `<td><span class="dot" style="background:${NODE_COLORS[n.kind as NodeKind] ?? '#999'}"></span>${escapeHtml(n.name)}` +
+        (isPublicApi(n)
+          ? `<span class="badge badge-api">${escapeHtml(I18N['graph.apiBadge'] ?? 'API')}</span>`
+          : '') +
+        `</td>` +
         `<td>${escapeHtml(kind)}</td>` +
         `<td class="num">${n.outDegree}</td>` +
         `<td class="num">${n.inDegree}</td>` +

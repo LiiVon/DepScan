@@ -40,8 +40,25 @@ export interface GraphNode {
    * 聚合出来的目录节点没有函数体，所以是可选的。
    */
   bodyLines?: number;
+  /**
+   * 公开面：声明（或定义）落在 `include/` 这类公开目录里时，这里是那个头文件的路径。
+   * 缺失 = 不是公开接口。判定完全在引擎侧（见 engine/include/depscan/types.hpp
+   * 的 isPublicApiFile），这里只负责显示。
+   */
+  apiHeader?: string;
+  apiLine?: number;
   inDegree: number;
   outDegree: number;
+}
+
+/**
+ * 这个节点是不是「公开接口」。
+ *
+ * 只认 `apiHeader` 这一个事实（引擎给的那处公开声明），**不在这里重新判路径** ——
+ * 判定规则只能有一处，否则界面与引擎迟会各说各话。
+ */
+export function isPublicApi(node: { apiHeader?: string }): boolean {
+  return !!node.apiHeader;
 }
 
 export interface GraphEdge {
