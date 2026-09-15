@@ -1,4 +1,4 @@
-# DepScan — see the dependency graph of any C/C++ project
+# DepScaner — see the dependency graph of any C/C++ project
 
 **One scan, five kinds of dependencies — includes, calls, inheritance, types, symbols, links — explored through a linked graph / tree / table, inside VS Code.**
 
