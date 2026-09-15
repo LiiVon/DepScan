@@ -15,7 +15,7 @@
   "cmd.exportJson": "Export Dependency Data (JSON)",
   "cmd.exportImage": "Export Dependency Graph (PNG / SVG)",
   "cmd.prepareCompileCommands": "How to generate compile_commands.json?",
-  "cmd.openDocs": "Open DepScan Docs",
+  "cmd.openDocs": "Open DepScaner Docs",
   "cmd.refreshDependencyView": "Refresh Dependency View",
   "cmd.showArchitecture": "Architecture View",
   "cmd.setLanguage": "Switch UI Language",
@@ -23,7 +23,7 @@
   "view.route": "Reading Route",
   "view.index": "Index Status",
   "view.dependencies": "Dependencies",
-  "welcome.dependencies": "No index yet.\n[Rebuild Index](command:depscan.indexWorkspace)\nGenerate `compile_commands.json` for precise results: [how](command:depscan.prepareCompileCommands)",
+  "welcome.dependencies": "No index yet.\n[Rebuild Index](command:depscaner.indexWorkspace)\nGenerate `compile_commands.json` for precise results: [how](command:depscaner.prepareCompileCommands)",
   "cfg.ui.language": "UI language",
   "cfg.ui.language.auto": "Follow VS Code display language",
   "cfg.ui.language.zh": "Chinese",
@@ -50,6 +50,6 @@
   "cfg.graph.maxNodes": "Maximum number of nodes rendered in one graph; clustering kicks in beyond this.",
   "cfg.graph.clusterByDirectory": "Enable directory clustering when the panel opens. Very large graphs (>400 nodes) cluster automatically.",
   "cfg.cache.enabled": "Enable on-disk cache to speed up subsequent startups.",
-  "cfg.cache.directory": "Cache directory (defaults to .vscode/depscan-cache in the workspace).",
+  "cfg.cache.directory": "Cache directory (defaults to .vscode/depscaner-cache in the workspace).",
   "cfg.log.level": "Log level."
 }

@@ -10,10 +10,10 @@ import { fileURLToPath } from 'url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const exe = process.platform === 'win32' ? '.exe' : '';
 const CANDIDATES = [
-  `engine/build/bin/Release/depscan-core${exe}`,
-  `engine/build/bin/RelWithDebInfo/depscan-core${exe}`,
-  `engine/build/bin/Debug/depscan-core${exe}`,
-  `engine/build/bin/depscan-core${exe}`
+  `engine/build/bin/Release/depscaner-core${exe}`,
+  `engine/build/bin/RelWithDebInfo/depscaner-core${exe}`,
+  `engine/build/bin/Debug/depscaner-core${exe}`,
+  `engine/build/bin/depscaner-core${exe}`
 ];
 
 const enginePath = CANDIDATES.map((p) => resolve(root, p)).find((p) => existsSync(p));
@@ -34,7 +34,7 @@ function check(condition, message) {
   }
 }
 
-const cacheDir = mkdtempSync(join(tmpdir(), 'depscan-rpc-'));
+const cacheDir = mkdtempSync(join(tmpdir(), 'depscaner-rpc-'));
 const child = spawn(enginePath, [], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
 const rl = createInterface({ input: child.stdout });
 

@@ -22,7 +22,7 @@ function check(condition, message) {
   }
 }
 
-const workDir = mkdtempSync(join(tmpdir(), 'depscan-route-tree-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscaner-route-tree-'));
 const bundle = async (entry, name) => {
   const outfile = join(workDir, name);
   await build({

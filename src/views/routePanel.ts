@@ -67,7 +67,7 @@ export class RoutePanel {
       return RoutePanel.current;
     }
     const panel = vscode.window.createWebviewPanel(
-      'depscan.routeDiagram',
+      'depscaner.routeDiagram',
       s().route.diagram,
       column,
       {
@@ -158,7 +158,7 @@ export class RoutePanel {
 
   private async onMessage(msg: SwimlaneToHost): Promise<void> {
     if (msg.type === 'open') {
-      await vscode.commands.executeCommand('depscan.openNode', msg.file, msg.line, msg.column);
+      await vscode.commands.executeCommand('depscaner.openNode', msg.file, msg.line, msg.column);
     } else if (msg.type === 'refresh') {
       await this.reload();
     } else if (msg.type === 'export') {

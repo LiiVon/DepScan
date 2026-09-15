@@ -30,10 +30,10 @@ import { fileURLToPath, pathToFileURL } from 'url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const exe = process.platform === 'win32' ? '.exe' : '';
 const enginePath = [
-  `engine/build/bin/Release/depscan-core${exe}`,
-  `engine/build/bin/RelWithDebInfo/depscan-core${exe}`,
-  `engine/build/bin/Debug/depscan-core${exe}`,
-  `engine/build/bin/depscan-core${exe}`
+  `engine/build/bin/Release/depscaner-core${exe}`,
+  `engine/build/bin/RelWithDebInfo/depscaner-core${exe}`,
+  `engine/build/bin/Debug/depscaner-core${exe}`,
+  `engine/build/bin/depscaner-core${exe}`
 ]
   .map((p) => resolve(root, p))
   .find((p) => existsSync(p));
@@ -116,7 +116,7 @@ function request(method, params = {}) {
   });
 }
 
-const cacheDir = mkdtempSync(join(tmpdir(), 'depscan-dump-'));
+const cacheDir = mkdtempSync(join(tmpdir(), 'depscaner-dump-'));
 
 try {
   await request('scan', {
@@ -196,7 +196,7 @@ try {
   if (args.svg !== undefined || args.flags.has('svg') || args.flags.has('html')) {
     // 需要 TS 纯函数时现打一份（与离线自检脚本同一套路）
     const bundleModule = async (entry, name) => {
-      const outfile = join(tmpdir(), `depscan-swimlane-${name}-${Date.now()}.mjs`);
+      const outfile = join(tmpdir(), `depscaner-swimlane-${name}-${Date.now()}.mjs`);
       await build({
         entryPoints: [resolve(root, entry)],
         bundle: true,

@@ -1,9 +1,9 @@
 // Webview 离线自检：语法 + 元素 id 对齐 + 内嵌 JSON 可解析。
 // 这类错误（模板字符串生成的 HTML 与前端脚本不匹配）编译期发现不了，只能在运行时表现为"页面空白"。
 import { build } from 'esbuild';
-import { readFileSync, existsSync, mkdtempSync, rmSync } from 'fs';
+import { readdirSync, readFileSync, existsSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, relative, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import vm from 'vm';
 
@@ -38,7 +38,7 @@ if (existsSync(scriptPath)) {
 }
 
 // --- 2. 用**真实**的 i18n 与 HTML 生成器渲染（不是手写副本）---
-const workDir = mkdtempSync(join(tmpdir(), 'depscan-check-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscaner-check-'));
 const bundle = async (entry, name) => {
   const outfile = join(workDir, name);
   await build({
@@ -69,7 +69,7 @@ const html = htmlMod.renderGraphHtml({
   styleUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.css',
   nonce: 'testnonce123',
   lang: 'zh-CN',
-  title: 'DepScan 依赖图',
+  title: 'DepScaner 依赖图',
   i18n
 });
 
@@ -79,7 +79,7 @@ const htmlEn = htmlMod.renderGraphHtml({
   styleUri: 'https://file+.vscode-resource.vscode-cdn.net/media/webview.css',
   nonce: 'testnonce123',
   lang: 'en',
-  title: 'DepScan Dependency Graph',
+  title: 'DepScaner Dependency Graph',
   i18n: i18nEn
 });
 
@@ -185,6 +185,74 @@ const usedNlsKeys = new Set([...JSON.stringify(pkg).matchAll(/%([A-Za-z0-9_.]+)%
 const danglingKeys = [...usedNlsKeys].filter((k) => !nlsKeys.has(k));
 check(usedNlsKeys.size > 20, `package.json 引用了 ${usedNlsKeys.size} 个 nls 键`);
 check(danglingKeys.length === 0, `package.json 引用的 nls 键都已定义${danglingKeys.length ? `（缺 ${danglingKeys.join(', ')}）` : ''}`);
+
+// --- 9. 改名守卫：VS Code 可见面（扩展 ID / 命令 / 配置键）不能残留旧前缀 ---
+// 产品从 DepScan 改名 DepScaner 时踩过：codemod 按「depscan.」这种带分隔符的形式替换，
+// 于是 `getConfiguration('depscan')`、`affectsConfiguration('depscan')`、
+// `package.json` 的 `"name"` 这类**裸词**全被漏掉 —— 表现是设置改了没反应、命令 id 对不上，
+// 而编译、类型检查、其它测试全绿。所以这里把它们变成可断言的。
+const tsFiles = [];
+(function walk(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== 'node_modules') walk(full);
+      continue;
+    }
+    if (entry.name.endsWith('.ts')) tsFiles.push(full);
+  }
+})(resolve(root, 'src'));
+
+const tsText = tsFiles.map((f) => readFileSync(f, 'utf8')).join('\n');
+const oldIdHits = [];
+for (const file of tsFiles) {
+  readFileSync(file, 'utf8')
+    .split('\n')
+    .forEach((line, i) => {
+      // `depscan.` / `'depscan'` / `"depscan-` 都算旧 id；`depscaner.` 不匹配
+      if (/(['"`])depscan([.'"-])/.test(line)) oldIdHits.push(`${relative(root, file)}:${i + 1}`);
+    });
+}
+check(pkg.name === 'depscaner', `package.json 的扩展 ID = depscaner（实际 ${pkg.name}）`);
+check(
+  oldIdHits.length === 0,
+  `src/ 里没有残留的旧 id 前缀${oldIdHits.length ? `（${oldIdHits.slice(0, 5).join(', ')}）` : ''}`
+);
+
+const contributedCommands = new Set((pkg.contributes?.commands ?? []).map((c) => c.command));
+const registeredCommands = new Set(
+  [...tsText.matchAll(/registerCommand\(\s*'(depscaner\.[A-Za-z0-9_.]+)'/g)].map((m) => m[1])
+);
+const menuCommands = new Set();
+for (const list of Object.values(pkg.contributes?.menus ?? {})) {
+  for (const item of list) menuCommands.add(item.command);
+}
+const menuNotRegistered = [...menuCommands].filter((c) => !registeredCommands.has(c));
+const menuNotContributed = [...menuCommands].filter((c) => !contributedCommands.has(c));
+check(
+  [...contributedCommands].every((c) => c.startsWith('depscaner.')),
+  `contributes.commands 的 ${contributedCommands.size} 个 id 全部以 depscaner. 开头`
+);
+check(
+  menuNotContributed.length === 0,
+  `菜单引用的命令都在 contributes.commands 里声明过${menuNotContributed.length ? `（缺 ${menuNotContributed.join(', ')}）` : ''}`
+);
+check(
+  menuNotRegistered.length === 0,
+  `菜单引用的命令都真的注册了${menuNotRegistered.length ? `（缺 ${menuNotRegistered.join(', ')}）` : ''}`
+);
+
+// 配置键：既要前缀对，也要真的被代码读到 —— 「写了配置但代码不读」是改名时最容易留下的坑
+const configKeys = Object.keys(pkg.contributes?.configuration?.properties ?? {});
+const badPrefix = configKeys.filter((k) => !k.startsWith('depscaner.'));
+const unreadKeys = configKeys.filter(
+  (k) => !tsText.includes(`'${k.replace(/^depscaner\./, '')}'`)
+);
+check(configKeys.length > 10 && badPrefix.length === 0, `配置键全部以 depscaner. 开头（${configKeys.length} 个）`);
+check(
+  unreadKeys.length === 0,
+  `每个配置键都在代码里被读到${unreadKeys.length ? `（没人读：${unreadKeys.join(', ')}）` : ''}`
+);
 
 rmSync(workDir, { recursive: true, force: true });
 

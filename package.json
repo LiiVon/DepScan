@@ -1,6 +1,6 @@
 {
-  "name": "depscan",
-  "displayName": "DepScan - C/C++ 依赖分析与可视化",
+  "name": "depscaner",
+  "displayName": "DepScaner - C/C++ 依赖分析与可视化",
   "description": "对大型 C/C++ 项目做 include / 调用 / 继承 / 符号 / 链接 五类依赖分析，并在 Webview 中交互式可视化（图 · 树 · 表格联动、导出 PNG/SVG/JSON、增量索引）。",
   "version": "0.1.0",
   "publisher": "liivon",
@@ -39,117 +39,117 @@
   "contributes": {
     "commands": [
       {
-        "command": "depscan.indexWorkspace",
+        "command": "depscaner.indexWorkspace",
         "title": "%cmd.indexWorkspace%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(refresh)"
       },
       {
-        "command": "depscan.cancelIndex",
+        "command": "depscaner.cancelIndex",
         "title": "%cmd.cancelIndex%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(stop)"
       },
       {
-        "command": "depscan.clearCache",
+        "command": "depscaner.clearCache",
         "title": "%cmd.clearCache%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(trash)"
       },
       {
-        "command": "depscan.showIndexStatus",
+        "command": "depscaner.showIndexStatus",
         "title": "%cmd.showIndexStatus%",
-        "category": "DepScan"
+        "category": "DepScaner"
       },
       {
-        "command": "depscan.diagnosePrecision",
+        "command": "depscaner.diagnosePrecision",
         "title": "%cmd.diagnosePrecision%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(question)"
       },
       {
-        "command": "depscan.showRoute",
+        "command": "depscaner.showRoute",
         "title": "%cmd.showRoute%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(list-ordered)"
       },
       {
-        "command": "depscan.toggleRouteGroupByFile",
+        "command": "depscaner.toggleRouteGroupByFile",
         "title": "%cmd.toggleRouteGroupByFile%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(file-code)"
       },
       {
-        "command": "depscan.toggleRouteStrategy",
+        "command": "depscaner.toggleRouteStrategy",
         "title": "%cmd.toggleRouteStrategy%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(arrow-both)"
       },
       {
-        "command": "depscan.routeFromCursor",
+        "command": "depscaner.routeFromCursor",
         "title": "%cmd.routeFromCursor%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(target)"
       },
       {
-        "command": "depscan.resetRouteStart",
+        "command": "depscaner.resetRouteStart",
         "title": "%cmd.resetRouteStart%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(home)"
       },
       {
-        "command": "depscan.showRouteDiagram",
+        "command": "depscaner.showRouteDiagram",
         "title": "%cmd.showRouteDiagram%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(graph)"
       },
       {
-        "command": "depscan.showGraph",
+        "command": "depscaner.showGraph",
         "title": "%cmd.showGraph%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(type-hierarchy)"
       },
       {
-        "command": "depscan.showGraphForSymbol",
+        "command": "depscaner.showGraphForSymbol",
         "title": "%cmd.showGraphForSymbol%",
-        "category": "DepScan"
+        "category": "DepScaner"
       },
       {
-        "command": "depscan.exportJson",
+        "command": "depscaner.exportJson",
         "title": "%cmd.exportJson%",
-        "category": "DepScan"
+        "category": "DepScaner"
       },
       {
-        "command": "depscan.exportImage",
+        "command": "depscaner.exportImage",
         "title": "%cmd.exportImage%",
-        "category": "DepScan"
+        "category": "DepScaner"
       },
       {
-        "command": "depscan.prepareCompileCommands",
+        "command": "depscaner.prepareCompileCommands",
         "title": "%cmd.prepareCompileCommands%",
-        "category": "DepScan"
+        "category": "DepScaner"
       },
       {
-        "command": "depscan.showArchitecture",
+        "command": "depscaner.showArchitecture",
         "title": "%cmd.showArchitecture%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(list-tree)"
       },
       {
-        "command": "depscan.setLanguage",
+        "command": "depscaner.setLanguage",
         "title": "%cmd.setLanguage%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(globe)"
       },
       {
-        "command": "depscan.openDocs",
+        "command": "depscaner.openDocs",
         "title": "%cmd.openDocs%",
-        "category": "DepScan"
+        "category": "DepScaner"
       },
       {
-        "command": "depscan.refreshDependencyView",
+        "command": "depscaner.refreshDependencyView",
         "title": "%cmd.refreshDependencyView%",
-        "category": "DepScan",
+        "category": "DepScaner",
         "icon": "$(refresh)"
       }
     ],
@@ -157,7 +157,7 @@
       "activitybar": [
         {
           "id": "depscan",
-          "title": "DepScan",
+          "title": "DepScaner",
           "icon": "media/activitybar.svg"
         }
       ]
@@ -165,22 +165,22 @@
     "views": {
       "depscan": [
         {
-          "id": "depscan.actionsView",
+          "id": "depscaner.actionsView",
           "name": "%view.actions%",
           "icon": "media/activitybar.svg"
         },
         {
-          "id": "depscan.routeView",
+          "id": "depscaner.routeView",
           "name": "%view.route%",
           "icon": "media/activitybar.svg"
         },
         {
-          "id": "depscan.dependencyView",
+          "id": "depscaner.dependencyView",
           "name": "%view.dependencies%",
           "icon": "media/activitybar.svg"
         },
         {
-          "id": "depscan.indexView",
+          "id": "depscaner.indexView",
           "name": "%view.index%",
           "icon": "media/activitybar.svg"
         }
@@ -188,124 +188,124 @@
     },
     "viewsWelcome": [
       {
-        "view": "depscan.dependencyView",
+        "view": "depscaner.dependencyView",
         "contents": "%welcome.dependencies%"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "depscan.indexWorkspace",
-          "when": "view == depscan.actionsView || view == depscan.indexView || view == depscan.dependencyView || view == depscan.routeView",
+          "command": "depscaner.indexWorkspace",
+          "when": "view == depscaner.actionsView || view == depscaner.indexView || view == depscaner.dependencyView || view == depscaner.routeView",
           "group": "navigation@1"
         },
         {
-          "command": "depscan.showGraph",
-          "when": "view == depscan.actionsView",
+          "command": "depscaner.showGraph",
+          "when": "view == depscaner.actionsView",
           "group": "navigation@2"
         },
         {
-          "command": "depscan.cancelIndex",
-          "when": "view == depscan.indexView && depscan.indexing",
+          "command": "depscaner.cancelIndex",
+          "when": "view == depscaner.indexView && depscaner.indexing",
           "group": "navigation@2"
         },
         {
-          "command": "depscan.clearCache",
-          "when": "view == depscan.indexView",
+          "command": "depscaner.clearCache",
+          "when": "view == depscaner.indexView",
           "group": "navigation@3"
         },
         {
-          "command": "depscan.refreshDependencyView",
-          "when": "view == depscan.dependencyView",
+          "command": "depscaner.refreshDependencyView",
+          "when": "view == depscaner.dependencyView",
           "group": "navigation@2"
         },
         {
-          "command": "depscan.showRoute",
-          "when": "view == depscan.routeView",
+          "command": "depscaner.showRoute",
+          "when": "view == depscaner.routeView",
           "group": "navigation@1"
         },
         {
-          "command": "depscan.showRouteDiagram",
-          "when": "view == depscan.routeView",
+          "command": "depscaner.showRouteDiagram",
+          "when": "view == depscaner.routeView",
           "group": "navigation@2"
         },
         {
-          "command": "depscan.toggleRouteStrategy",
-          "when": "view == depscan.routeView",
+          "command": "depscaner.toggleRouteStrategy",
+          "when": "view == depscaner.routeView",
           "group": "navigation@3"
         },
         {
-          "command": "depscan.toggleRouteGroupByFile",
-          "when": "view == depscan.routeView",
+          "command": "depscaner.toggleRouteGroupByFile",
+          "when": "view == depscaner.routeView",
           "group": "navigation@4"
         },
         {
-          "command": "depscan.routeFromCursor",
-          "when": "view == depscan.routeView && editorLangId == cpp",
+          "command": "depscaner.routeFromCursor",
+          "when": "view == depscaner.routeView && editorLangId == cpp",
           "group": "navigation@5"
         },
         {
-          "command": "depscan.resetRouteStart",
-          "when": "view == depscan.routeView && depscan.routeCustomStart",
+          "command": "depscaner.resetRouteStart",
+          "when": "view == depscaner.routeView && depscaner.routeCustomStart",
           "group": "navigation@6"
         }
       ],
       "explorer/context": [
         {
-          "command": "depscan.showGraph",
+          "command": "depscaner.showGraph",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@1"
         },
         {
-          "command": "depscan.routeFromCursor",
+          "command": "depscaner.routeFromCursor",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@2"
         }
       ],
       "editor/context": [
         {
-          "command": "depscan.showGraph",
+          "command": "depscaner.showGraph",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@1"
         },
         {
-          "command": "depscan.showGraphForSymbol",
+          "command": "depscaner.showGraphForSymbol",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@2"
         },
         {
-          "command": "depscan.routeFromCursor",
+          "command": "depscaner.routeFromCursor",
           "when": "resourceExtname =~ /\\.(cpp|cxx|cc|c\\+\\+|h|hpp|hh|hxx|inl)$/",
           "group": "depscan@3"
         }
       ],
       "commandPalette": [
         {
-          "command": "depscan.showGraphForSymbol",
+          "command": "depscaner.showGraphForSymbol",
           "when": "editorLangId == cpp || editorLangId == c"
         },
         {
-          "command": "depscan.routeFromCursor",
+          "command": "depscaner.routeFromCursor",
           "when": "editorLangId == cpp || editorLangId == c"
         },
         {
-          "command": "depscan.resetRouteStart",
-          "when": "depscan.routeCustomStart"
+          "command": "depscaner.resetRouteStart",
+          "when": "depscaner.routeCustomStart"
         },
         {
-          "command": "depscan.showRouteDiagram",
+          "command": "depscaner.showRouteDiagram",
           "when": "true"
         },
         {
-          "command": "depscan.setLanguage",
+          "command": "depscaner.setLanguage",
           "when": "false"
         }
       ]
     },
     "configuration": {
-      "title": "DepScan",
+      "title": "DepScaner",
       "properties": {
-        "depscan.ui.language": {
+        "depscaner.ui.language": {
           "type": "string",
           "enum": [
             "auto",
@@ -320,40 +320,40 @@
           "default": "auto",
           "description": "%cfg.ui.language%"
         },
-        "depscan.engine.path": {
+        "depscaner.engine.path": {
           "type": "string",
           "default": "",
           "description": "%cfg.engine.path%"
         },
-        "depscan.index.onStartup": {
+        "depscaner.index.onStartup": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.index.onStartup%"
         },
-        "depscan.index.autoRebuildOnSave": {
+        "depscaner.index.autoRebuildOnSave": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.index.autoRebuildOnSave%"
         },
-        "depscan.index.parallelism": {
+        "depscaner.index.parallelism": {
           "type": "number",
           "default": 0,
           "minimum": 0,
           "description": "%cfg.index.parallelism%"
         },
-        "depscan.index.maxFiles": {
+        "depscaner.index.maxFiles": {
           "type": "number",
           "default": 20000,
           "minimum": 1,
           "description": "%cfg.index.maxFiles%"
         },
-        "depscan.index.fileSizeLimitKB": {
+        "depscaner.index.fileSizeLimitKB": {
           "type": "number",
           "default": 2048,
           "minimum": 1,
           "description": "%cfg.index.fileSizeLimitKB%"
         },
-        "depscan.files.include": {
+        "depscaner.files.include": {
           "type": "array",
           "items": {
             "type": "string"
@@ -363,7 +363,7 @@
           ],
           "description": "%cfg.files.include%"
         },
-        "depscan.files.exclude": {
+        "depscaner.files.exclude": {
           "type": "array",
           "items": {
             "type": "string"
@@ -381,12 +381,12 @@
           ],
           "description": "%cfg.files.exclude%"
         },
-        "depscan.compile.commandsPath": {
+        "depscaner.compile.commandsPath": {
           "type": "string",
           "default": "",
           "description": "%cfg.compile.commandsPath%"
         },
-        "depscan.compile.includePaths": {
+        "depscaner.compile.includePaths": {
           "type": "array",
           "items": {
             "type": "string"
@@ -394,7 +394,7 @@
           "default": [],
           "description": "%cfg.compile.includePaths%"
         },
-        "depscan.compile.defines": {
+        "depscaner.compile.defines": {
           "type": "array",
           "items": {
             "type": "string"
@@ -402,7 +402,7 @@
           "default": [],
           "description": "%cfg.compile.defines%"
         },
-        "depscan.compile.systemIncludePaths": {
+        "depscaner.compile.systemIncludePaths": {
           "type": "array",
           "items": {
             "type": "string"
@@ -410,39 +410,39 @@
           "default": [],
           "description": "%cfg.compile.systemIncludePaths%"
         },
-        "depscan.deps.includes": {
+        "depscaner.deps.includes": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.deps.includes%"
         },
-        "depscan.deps.calls": {
+        "depscaner.deps.calls": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.deps.calls%"
         },
-        "depscan.deps.types": {
+        "depscaner.deps.types": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.deps.types%"
         },
-        "depscan.deps.symbols": {
+        "depscaner.deps.symbols": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.deps.symbols%"
         },
-        "depscan.deps.links": {
+        "depscaner.deps.links": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.deps.links%"
         },
-        "depscan.graph.defaultDepth": {
+        "depscaner.graph.defaultDepth": {
           "type": "number",
           "default": 2,
           "minimum": 1,
           "maximum": 6,
           "description": "%cfg.graph.defaultDepth%"
         },
-        "depscan.graph.direction": {
+        "depscaner.graph.direction": {
           "type": "string",
           "enum": [
             "both",
@@ -452,28 +452,28 @@
           "default": "both",
           "description": "%cfg.graph.direction%"
         },
-        "depscan.graph.maxNodes": {
+        "depscaner.graph.maxNodes": {
           "type": "number",
           "default": 800,
           "minimum": 50,
           "description": "%cfg.graph.maxNodes%"
         },
-        "depscan.graph.clusterByDirectory": {
+        "depscaner.graph.clusterByDirectory": {
           "type": "boolean",
           "default": false,
           "description": "%cfg.graph.clusterByDirectory%"
         },
-        "depscan.cache.enabled": {
+        "depscaner.cache.enabled": {
           "type": "boolean",
           "default": true,
           "description": "%cfg.cache.enabled%"
         },
-        "depscan.cache.directory": {
+        "depscaner.cache.directory": {
           "type": "string",
           "default": "",
           "description": "%cfg.cache.directory%"
         },
-        "depscan.log.level": {
+        "depscaner.log.level": {
           "type": "string",
           "enum": [
             "off",
@@ -489,12 +489,12 @@
     },
     "languages": [
       {
-        "id": "depscan-dot",
+        "id": "depscaner-dot",
         "extensions": [
           ".depscan"
         ],
         "aliases": [
-          "DepScan"
+          "DepScaner"
         ]
       }
     ]

@@ -11,8 +11,8 @@ const reportPath = resolve(process.argv[3] ?? 'engine/build/stress-report.md');
 
 const exe = process.platform === 'win32' ? '.exe' : '';
 const engine = [
-  `engine/build/bin/Release/depscan-core${exe}`,
-  `engine/build/bin/depscan-core${exe}`
+  `engine/build/bin/Release/depscaner-core${exe}`,
+  `engine/build/bin/depscaner-core${exe}`
 ]
   .map((p) => resolve(root, p))
   .find((p) => existsSync(p));
@@ -69,7 +69,7 @@ const s = payload.stats;
 const jsonMb = run.stdout.length / 1048576;
 
 const lines = [];
-lines.push(`# DepScan 压力测试报告`);
+lines.push(`# DepScaner 压力测试报告`);
 lines.push('');
 lines.push(`- 生成时间: ${new Date().toISOString().replace('T', ' ').slice(0, 19)}`);
 lines.push(`- 测试工程: \`${project}\`（合成生成，非真实项目）`);
@@ -91,7 +91,7 @@ lines.push(`| 输出 JSON 体积 | ${jsonMb.toFixed(1)} MB |`);
 lines.push(`| 吞吐（墙钟） | ${Math.round(loc.lines / (wallMs / 1000) / 1000)} K 行/秒 |`);
 lines.push('');
 lines.push('> 说明：v0.1 未对峰值内存插桩，因此这里不报告内存数字（避免给出没有依据的估算）。');
-lines.push('> 自行测量：Windows 用任务管理器观察 `depscan-core.exe` 工作集；Linux 用 `/usr/bin/time -v <engine> --once --root <dir>` 看 Maximum resident set size。');
+lines.push('> 自行测量：Windows 用任务管理器观察 `depscaner-core.exe` 工作集；Linux 用 `/usr/bin/time -v <engine> --once --root <dir>` 看 Maximum resident set size。');
 lines.push('> 另外：合成代码高度重复（无模板元编程、无深层嵌套），因此吞吐好于真实项目，数字应视为**上限参考**。');
 lines.push('');
 lines.push('## 依赖分布');

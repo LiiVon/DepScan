@@ -1,8 +1,8 @@
 // 把构建出来的引擎二进制归位到 engines/<platform>-<arch>/<exe>。
 //
 // 为什么需要单独一个脚本：不同 CMake 生成器的输出路径不一样 ——
-//   Visual Studio / Xcode（多配置）：engine/build/bin/<Config>/depscan-core[.exe]
-//   Makefiles / Ninja（单配置）   ：engine/build/bin/depscan-core[.exe]
+//   Visual Studio / Xcode（多配置）：engine/build/bin/<Config>/depscaner-core[.exe]
+//   Makefiles / Ninja（单配置）   ：engine/build/bin/depscaner-core[.exe]
 // CI 里还要按指定平台（而不是当前机器）归位，所以不写死路径，改成递归查找。
 //
 // 本地用法：npm run build:core && node scripts/collect-engine.mjs
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const keyIndex = process.argv.indexOf('--key');
 const key = (keyIndex >= 0 ? process.argv[keyIndex + 1] : undefined) ?? `${process.platform}-${process.arch}`;
-const exe = key.startsWith('win32') ? 'depscan-core.exe' : 'depscan-core';
+const exe = key.startsWith('win32') ? 'depscaner-core.exe' : 'depscaner-core';
 
 /** 在 bin 目录下递归找引擎可执行文件（先看当前层，再往下钻） */
 function findBinary(dir, depth = 0) {
@@ -54,7 +54,7 @@ try {
   if (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES') {
     console.error(`[collect-engine] 无法覆盖 engines/${key}/${exe} —— 文件正被占用。`);
     console.error('[collect-engine] 原因：正在运行的 VS Code 扩展宿主加载了这个引擎（Windows 不允许覆盖运行中的 exe）。');
-    console.error('[collect-engine] 处理：禁用 DepScan 扩展或关掉那个 VS Code 窗口后重试。');
+    console.error('[collect-engine] 处理：禁用 DepScaner 扩展或关掉那个 VS Code 窗口后重试。');
     process.exit(1);
   }
   throw err;

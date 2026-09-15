@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-/** 输出通道日志（受 depscan.log.level 控制） */
+/** 输出通道日志（受 depscaner.log.level 控制） */
 export class Logger {
   private level: 'off' | 'error' | 'warn' | 'info' | 'debug';
 

@@ -40,7 +40,7 @@ const bundleModule = async (entry, name) => {
 
 // ---- 扫描真实项目 ----
 const exe = process.platform === 'win32' ? '.exe' : '';
-const engine = [`engine/build/bin/Release/depscan-core${exe}`, `engine/build/bin/depscan-core${exe}`]
+const engine = [`engine/build/bin/Release/depscaner-core${exe}`, `engine/build/bin/depscaner-core${exe}`]
   .map((p) => resolve(root, p))
   .find((p) => existsSync(p));
 if (!engine) {

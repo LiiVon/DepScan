@@ -11,7 +11,7 @@ export const zh: Strings = {
       )}ms`,
     cancelled: '已取消索引',
     failed: (message) => `索引失败：${message}`,
-    noWorkspace: '请先打开一个文件夹（工作区）再使用 DepScan。',
+    noWorkspace: '请先打开一个文件夹（工作区）再使用 DepScaner。',
     alreadyRunning: '已有索引任务在执行，请先取消或等待完成。',
     watchReindex: (file) => `文件变更，正在增量更新：${file}`,
     incremental: (file, changed) => `已增量更新 ${file}（受影响子图 ${changed} 处）`,
@@ -20,15 +20,15 @@ export const zh: Strings = {
     precisionNow: (label) => `重新索引完成，当前精度：${label}`
   },
   engine: {
-    missing: '未找到 DepScan 分析引擎可执行文件。',
-    missingHint: '请在 settings.json 中设置 depscan.engine.path 指向 depscan-core，或在 engine/ 下编译引擎。',
+    missing: '未找到 DepScaner 分析引擎可执行文件。',
+    missingHint: '请在 settings.json 中设置 depscaner.engine.path 指向 depscaner-core，或在 engine/ 下编译引擎。',
     startFailed: (message) => `引擎启动失败：${message}`,
     crashed: (message) => `引擎进程异常退出：${message}`,
     notStarted: '引擎尚未启动',
     stopped: '引擎已停止'
   },
   graph: {
-    title: (label) => `DepScan 依赖图 · ${label}`,
+    title: (label) => `DepScaner 依赖图 · ${label}`,
     depth: '层级 k',
     direction: '方向',
     both: '双向',
@@ -80,7 +80,7 @@ export const zh: Strings = {
   },
 
   diagnostic: {
-    title: 'DepScan 精度诊断',
+    title: 'DepScaner 精度诊断',
     project: (root) => `项目根目录：${root}`,
     engine: (path, source) => `引擎：${path}（来源 ${source}）`,
     libclang: (ok) => `Clang 语义分析：${ok ? '已启用' : '未启用（引擎编译时未链接 libclang）'}`,
@@ -113,7 +113,7 @@ export const zh: Strings = {
   },
   errors: {
     noActiveFile: '当前没有打开的 C/C++ 文件。',
-    unsupportedFile: 'DepScan 只支持 C/C++ 源文件与头文件。',
+    unsupportedFile: 'DepScaner 只支持 C/C++ 源文件与头文件。',
     focusMissing: (message) => `无法定位依赖焦点：${message}`,
     exportFailed: (message) => `导出失败：${message}`,
     noData: '尚未建立索引，请先执行「重建索引」。'
@@ -124,7 +124,7 @@ export const zh: Strings = {
   compile: {
     guideTitle: '生成 compile_commands.json',
     guideBody: [
-      '有 compile_commands.json 时，DepScan 使用真实编译参数做精确解析（包含关系与链接关系精确）；',
+      '有 compile_commands.json 时，DepScaner 使用真实编译参数做精确解析（包含关系与链接关系精确）；',
       '没有时自动降级为内置结构解析（全部近似）。',
       '',
       '━━━ 先看这一条，能省下你半小时 ━━━',
@@ -154,10 +154,10 @@ export const zh: Strings = {
       '  qmake：qmake -compile-commands     (Qt 5.12+)',
       '  Xcode：xcpretty -r json-compilation-database',
       '',
-      '生成后把 compile_commands.json 放到项目根目录、build/、out/ 下（DepScan 会自动找），',
-      '也可用 depscan.compile.commandsPath 直接指定绝对路径。',
+      '生成后把 compile_commands.json 放到项目根目录、build/、out/ 下（DepScaner 会自动找），',
+      '也可用 depscaner.compile.commandsPath 直接指定绝对路径。',
       '',
-      '放好之后执行一次「重建索引」（或让 DepScan 自动重扫）即可看到精度提升；',
+      '放好之后执行一次「重建索引」（或让 DepScaner 自动重扫）即可看到精度提升；',
       '当前是不是已经生效，用命令「为什么是近似？」一查就知道。'
     ].join('\n'),
     copy: '复制命令',
@@ -200,7 +200,7 @@ export const zh: Strings = {
   route: {
     needIndex: '尚未建立索引。先执行「重建索引」再回来看路线。',
     noEntry: '找不到程序入口（main / WinMain / DllMain）。库项目请把光标停在导出接口上，用「从光标处开始读」。',
-    failed: '阅读路线生成失败，详情见「输出 → DepScan」。',
+    failed: '阅读路线生成失败，详情见「输出 → DepScaner」。',
     from: (name, file) => `起点：${name}（自动识别，${file}）`,
     fromPicked: (name, file) => `起点：${name}（来自光标，${file}）`,
     fromShort: (name) => `起点：${name}`,

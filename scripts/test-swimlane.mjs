@@ -23,7 +23,7 @@ function check(condition, message) {
   }
 }
 
-const workDir = mkdtempSync(join(tmpdir(), 'depscan-swimlane-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscaner-swimlane-'));
 const bundle = async (entry, name) => {
   const outfile = join(workDir, name);
   await build({
@@ -339,13 +339,12 @@ if (existsSync(scriptPath)) {
     '页面脚本里没有画布绘制代码（绘制全在插件侧，SVG 由宿主生成）'
   );
   check(code.includes('ds-step'), '页面脚本认得 ds-step（点击跳源码用的）');
-  check(
-    code.includes('elementFromPoint') && code.includes('finishPan'),
-    '点击在 pointerup 里用坐标反查 —— 指针被 setPointerCapture 捕获后，click 委托收不到圆点'
-  );
 
-  // 导航：拖拽平移 + 滚轮缩放。这几条只能用浏览器真跑一遍才算数（下面还有一条说明），
-  // 但至少先钉住「别哪天把其中一条交互删了」。
+  // --- 导航：拖拽平移 + 滚轮缩放 ---
+  // 注意分两层断言：**标识符（局部变量/函数名）只能对源码断言** ——
+  // 生产构建会 minify，esbuild 会把 movedSinceDown / clampPan 这类局部名改成 a、b，
+  // 对着 media/swimlane.js 找它们只会在开发构建下通过（这里踩过一次）。
+  // 产物里只断言「字符串字面量 / 属性名」这类压缩不会动的东西。
   check(code.includes('wheel'), '滚轮处理存在（滚轮缩放）');
   check(
     code.includes('pointerdown') && code.includes('pointermove') && code.includes('pointerup'),
@@ -356,12 +355,21 @@ if (existsSync(scriptPath)) {
     code.includes('translate(') && code.includes('scale('),
     '平移与缩放都走 transform（不是改 svg 尺寸 —— 那样做不到以鼠标为锚点缩放）'
   );
-  check(code.includes('movedSinceDown'), '区分「拖拽」与「点一下」，拖完不会误跳源码');
-  check(code.includes('clampPan'), '平移有边界保护（不会把图拖飞）');
   check(
     code.includes('deltaMode') && code.includes('1.0013'),
     '滚轮缩放量随 deltaY 连续变化（鼠标滚轮一格 ≈1.17 倍，触控板小步才是平滑的）'
   );
+
+  const source = readFileSync(resolve(root, 'webview/swimlane.ts'), 'utf8');
+  check(
+    source.includes('elementFromPoint') && source.includes('finishPan'),
+    '点击在 pointerup 里用坐标反查 —— 指针被 setPointerCapture 捕获后，click 委托收不到圆点'
+  );
+  check(
+    source.includes('movedSinceDown'),
+    '区分「拖拽」与「点一下」，拖完不会误跳源码'
+  );
+  check(source.includes('clampPan'), '平移有边界保护（不会把图拖飞）');
 }
 
 // 页面骨架里那几条「画布式导航」的样式：不是装饰，缺了就拖不动

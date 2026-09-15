@@ -13,12 +13,12 @@ import { StatusBar } from './views/statusBar';
 import { DependencyTreeProvider, IndexTreeProvider } from './views/treeProvider';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const channel = vscode.window.createOutputChannel('DepScan');
+  const channel = vscode.window.createOutputChannel('DepScaner');
   const cfg = readConfig();
   initI18n(cfg.language, vscode.env.language);
 
   const logger = new Logger(channel, cfg.logLevel);
-  logger.info(`DepScan 激活（VS Code 显示语言: ${vscode.env.language}）`);
+  logger.info(`DepScaner 激活（VS Code 显示语言: ${vscode.env.language}）`);
 
   const indexer = new IndexService(context, logger);
   await indexer.initialize();
@@ -29,7 +29,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const dependencyTree = new DependencyTreeProvider(indexer);
   const statusBar = new StatusBar(indexer);
 
-  const routeView = vscode.window.createTreeView('depscan.routeView', {
+  const routeView = vscode.window.createTreeView('depscaner.routeView', {
     treeDataProvider: routeTree,
     showCollapseAll: true
   });
@@ -44,9 +44,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     routeTree,
     statusBar,
     routeView,
-    vscode.window.registerTreeDataProvider('depscan.actionsView', actionsTree),
-    vscode.window.registerTreeDataProvider('depscan.indexView', indexTree),
-    vscode.window.registerTreeDataProvider('depscan.dependencyView', dependencyTree)
+    vscode.window.registerTreeDataProvider('depscaner.actionsView', actionsTree),
+    vscode.window.registerTreeDataProvider('depscaner.indexView', indexTree),
+    vscode.window.registerTreeDataProvider('depscaner.dependencyView', dependencyTree)
   );
 
   context.subscriptions.push(
@@ -71,11 +71,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     indexer.onDidChangeStatus.event((status) => {
-      void vscode.commands.executeCommand('setContext', 'depscan.indexing', status.state === 'indexing');
+      void vscode.commands.executeCommand('setContext', 'depscaner.indexing', status.state === 'indexing');
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('depscan.ui.language')) applyLanguage();
-      if (e.affectsConfiguration('depscan.log.level')) logger.setLevel(readConfig().logLevel);
+      if (e.affectsConfiguration('depscaner.ui.language')) applyLanguage();
+      if (e.affectsConfiguration('depscaner.log.level')) logger.setLevel(readConfig().logLevel);
     })
   );
 

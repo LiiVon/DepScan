@@ -38,7 +38,7 @@ for (const rel of ['media/webview.js.map', 'media/swimlane.js.map', 'dist/extens
 }
 
 const engineKey = target ?? hostKey;
-const exe = engineKey.startsWith('win32') ? 'depscan-core.exe' : 'depscan-core';
+const exe = engineKey.startsWith('win32') ? 'depscaner-core.exe' : 'depscaner-core';
 
 let copied = 0;
 if (target && target !== hostKey) {
@@ -75,7 +75,7 @@ if (target && target !== hostKey) {
       if (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES') {
         console.error(`[package] 无法覆盖 engines/${engineKey}/${exe} —— 文件正被占用。`);
         console.error('[package] 原因：正在运行的 VS Code 扩展宿主加载了这个引擎二进制（Windows 不允许覆盖运行中的 exe）。');
-        console.error('[package] 处理：在「扩展」面板禁用 DepScan，或关闭该 VS Code 窗口，然后重跑本条命令。');
+        console.error('[package] 处理：在「扩展」面板禁用 DepScaner，或关闭该 VS Code 窗口，然后重跑本条命令。');
         console.error('          （打出来的包会带旧引擎，这正是必须「先 package 再 publish」的原因）');
         process.exit(1);
       }

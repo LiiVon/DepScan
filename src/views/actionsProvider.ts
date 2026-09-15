@@ -59,7 +59,7 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionNode>,
     item.iconPath = new vscode.ThemeIcon(active ? 'check' : 'blank');
     if (active) item.description = s().actions.current;
     item.command = {
-      command: 'depscan.setLanguage',
+      command: 'depscaner.setLanguage',
       title: element.value,
       arguments: [element.value]
     };
@@ -86,37 +86,37 @@ function topNodes(indexer: IndexService, route?: RouteTreeProvider): ActionNode[
   const t = s().actions;
   const stats = indexer.currentStatus.stats;
   return [
-    { kind: 'command', id: 'depscan.showRoute', label: t.route, icon: 'list-ordered' },
-    { kind: 'command', id: 'depscan.routeFromCursor', label: t.routeFromCursor, icon: 'target' },
-    { kind: 'command', id: 'depscan.showRouteDiagram', label: t.routeDiagram, icon: 'graph' },
+    { kind: 'command', id: 'depscaner.showRoute', label: t.route, icon: 'list-ordered' },
+    { kind: 'command', id: 'depscaner.routeFromCursor', label: t.routeFromCursor, icon: 'target' },
+    { kind: 'command', id: 'depscaner.showRouteDiagram', label: t.routeDiagram, icon: 'graph' },
     // 只有起点真的被改过才显示「回去」，否则这一行是噪音
     ...(route?.customStart
-      ? [{ kind: 'command', id: 'depscan.resetRouteStart', label: t.resetRouteStart, icon: 'home' } as ActionNode]
+      ? [{ kind: 'command', id: 'depscaner.resetRouteStart', label: t.resetRouteStart, icon: 'home' } as ActionNode]
       : []),
-    { kind: 'command', id: 'depscan.showGraph', label: t.graph, icon: 'type-hierarchy' },
-    { kind: 'command', id: 'depscan.showGraphForSymbol', label: t.symbolGraph, icon: 'symbol-method' },
-    { kind: 'command', id: 'depscan.showArchitecture', label: t.architecture, icon: 'list-tree' },
+    { kind: 'command', id: 'depscaner.showGraph', label: t.graph, icon: 'type-hierarchy' },
+    { kind: 'command', id: 'depscaner.showGraphForSymbol', label: t.symbolGraph, icon: 'symbol-method' },
+    { kind: 'command', id: 'depscaner.showArchitecture', label: t.architecture, icon: 'list-tree' },
     {
       kind: 'command',
-      id: 'depscan.indexWorkspace',
+      id: 'depscaner.indexWorkspace',
       label: t.reindex,
       icon: 'refresh',
       // 把当前精度直接摆在侧边栏，不必打开面板才知道是精确还是近似
       description: stats ? precisionLabel(stats.precision) : undefined
     },
-    { kind: 'command', id: 'depscan.cancelIndex', label: t.cancelIndex, icon: 'stop' },
-    { kind: 'command', id: 'depscan.clearCache', label: t.clearCache, icon: 'trash' },
-    { kind: 'command', id: 'depscan.exportJson', label: t.exportJson, icon: 'export' },
+    { kind: 'command', id: 'depscaner.cancelIndex', label: t.cancelIndex, icon: 'stop' },
+    { kind: 'command', id: 'depscaner.clearCache', label: t.clearCache, icon: 'trash' },
+    { kind: 'command', id: 'depscaner.exportJson', label: t.exportJson, icon: 'export' },
     {
       kind: 'command',
-      id: 'depscan.exportImage',
+      id: 'depscaner.exportImage',
       label: t.exportImage,
       icon: 'file-media',
       description: t.exportImageHint
     },
     { kind: 'language' },
-    { kind: 'command', id: 'depscan.prepareCompileCommands', label: t.compileGuide, icon: 'book' },
-    { kind: 'command', id: 'depscan.diagnosePrecision', label: t.diagnosePrecision, icon: 'question' },
-    { kind: 'command', id: 'depscan.openDocs', label: t.docs, icon: 'book' }
+    { kind: 'command', id: 'depscaner.prepareCompileCommands', label: t.compileGuide, icon: 'book' },
+    { kind: 'command', id: 'depscaner.diagnosePrecision', label: t.diagnosePrecision, icon: 'question' },
+    { kind: 'command', id: 'depscaner.openDocs', label: t.docs, icon: 'book' }
   ];
 }

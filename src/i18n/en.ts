@@ -11,7 +11,7 @@ export const en: Strings = {
       )}ms`,
     cancelled: 'Indexing cancelled',
     failed: (message) => `Indexing failed: ${message}`,
-    noWorkspace: 'Open a folder before using DepScan.',
+    noWorkspace: 'Open a folder before using DepScaner.',
     alreadyRunning: 'An indexing task is already running. Cancel it or wait for completion.',
     watchReindex: (file) => `File changed, updating incrementally: ${file}`,
     incremental: (file, changed) => `Updated ${file} incrementally (${changed} affected nodes)`,
@@ -20,16 +20,16 @@ export const en: Strings = {
     precisionNow: (label) => `Re-indexed. Current precision: ${label}`
   },
   engine: {
-    missing: 'DepScan analysis engine was not found.',
+    missing: 'DepScaner analysis engine was not found.',
     missingHint:
-      'Set depscan.engine.path to your depscan-core binary, or build it under engine/.',
+      'Set depscaner.engine.path to your depscaner-core binary, or build it under engine/.',
     startFailed: (message) => `Failed to start engine: ${message}`,
     crashed: (message) => `Engine process exited unexpectedly: ${message}`,
     notStarted: 'Engine not started',
     stopped: 'Engine stopped'
   },
   graph: {
-    title: (label) => `DepScan Dependency Graph · ${label}`,
+    title: (label) => `DepScaner Dependency Graph · ${label}`,
     depth: 'Depth k',
     direction: 'Direction',
     both: 'Both',
@@ -81,7 +81,7 @@ export const en: Strings = {
   },
 
   diagnostic: {
-    title: 'DepScan precision diagnosis',
+    title: 'DepScaner precision diagnosis',
     project: (root) => `Project root: ${root}`,
     engine: (path, source) => `Engine: ${path} (source: ${source})`,
     libclang: (ok) => `Clang semantic analysis: ${ok ? 'enabled' : 'disabled (engine built without libclang)'}`,
@@ -114,7 +114,7 @@ export const en: Strings = {
   },
   errors: {
     noActiveFile: 'No C/C++ file is currently open.',
-    unsupportedFile: 'DepScan only supports C/C++ sources and headers.',
+    unsupportedFile: 'DepScaner only supports C/C++ sources and headers.',
     focusMissing: (message) => `Cannot resolve dependency focus: ${message}`,
     exportFailed: (message) => `Export failed: ${message}`,
     noData: 'No index yet. Run "Rebuild Index (Full)" first.'
@@ -125,7 +125,7 @@ export const en: Strings = {
   compile: {
     guideTitle: 'Generate compile_commands.json',
     guideBody: [
-      'With compile_commands.json DepScan parses with real compile arguments (includes and links exact);',
+      'With compile_commands.json DepScaner parses with real compile arguments (includes and links exact);',
       'without it everything falls back to the built-in structural parser (approximate).',
       '',
       '=== Read this first, it saves you half an hour ===',
@@ -155,10 +155,10 @@ export const en: Strings = {
       '  qmake: qmake -compile-commands     (Qt 5.12+)',
       '  Xcode: xcpretty -r json-compilation-database',
       '',
-      'Place compile_commands.json at the project root, in build/ or out/ and DepScan finds it automatically;',
-      'or point depscan.compile.commandsPath straight at it.',
+      'Place compile_commands.json at the project root, in build/ or out/ and DepScaner finds it automatically;',
+      'or point depscaner.compile.commandsPath straight at it.',
       '',
-      'Then run Reindex (or let DepScan rescan) to see the precision go up;',
+      'Then run Reindex (or let DepScaner rescan) to see the precision go up;',
       'run the "Why is it Approx?" command to check whether it already took effect.'
     ].join('\n'),
     copy: 'Copy command',
@@ -188,7 +188,7 @@ export const en: Strings = {
     languageAuto: 'Follow VS Code',
     languageZh: '中文',
     languageEn: 'English',
-    languageHint: 'Affects DepScan UI and messages only; command titles follow the VS Code display language',
+    languageHint: 'Affects DepScaner UI and messages only; command titles follow the VS Code display language',
     compileGuide: 'How to generate compile_commands.json',
     diagnosePrecision: 'Why is it Approx?',
     route: 'Reading Route (from main)',
@@ -202,7 +202,7 @@ export const en: Strings = {
     needIndex: 'Not indexed yet. Run "Rebuild Index" first, then come back.',
     noEntry:
       'No entry point found (main / WinMain / DllMain). For a library project, put the cursor on an exported interface and use "Read from here".',
-    failed: 'Could not build the reading route — see Output → DepScan for details.',
+    failed: 'Could not build the reading route — see Output → DepScaner for details.',
     from: (name, file) => `Start: ${name} (auto-detected, ${file})`,
     fromPicked: (name, file) => `Start: ${name} (from cursor, ${file})`,
     fromShort: (name) => `Start: ${name}`,

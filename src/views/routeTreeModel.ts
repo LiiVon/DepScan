@@ -7,7 +7,7 @@
 import type { RouteCandidate, RouteResult, RouteStep } from '../engine/protocol';
 import { s } from '../i18n';
 
-/** 候选条目点击时传给 `depscan.pickRouteCandidate` 的参数 */
+/** 候选条目点击时传给 `depscaner.pickRouteCandidate` 的参数 */
 export interface CandidateArgs {
   /** 父节点 id；空表示这一步是起点（改的是起点本身） */
   parentId: string;
@@ -82,7 +82,7 @@ export function needIndexNode(): RouteTreeNode {
     kind: 'info',
     text: s().route.needIndex,
     icon: 'info',
-    command: { command: 'depscan.indexWorkspace', title: s().actions.reindex }
+    command: { command: 'depscaner.indexWorkspace', title: s().actions.reindex }
   };
 }
 

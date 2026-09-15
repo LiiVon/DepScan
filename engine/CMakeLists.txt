@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
-project(depscan-core LANGUAGES CXX VERSION 0.1.0)
+project(depscaner-core LANGUAGES CXX VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 让引擎自身的构建也产出 compile_commands.json：
-# 一来便于用 DepScan 分析 DepScan 自己（dogfooding），
+# 一来便于用 DepScaner 分析 DepScaner 自己（dogfooding），
 # 二来让 include/链接依赖走精确解析路径（精度：部分精确）。
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -19,38 +19,38 @@ file(GLOB DEPS_CORE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*
 list(FILTER DEPS_CORE_SOURCES EXCLUDE REGEX "clang_analyzer\\.cpp$")
 list(FILTER DEPS_CORE_SOURCES EXCLUDE REGEX "main\\.cpp$")
 
-add_library(depscan_lib STATIC ${DEPS_CORE_SOURCES})
-target_include_directories(depscan_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
-set_target_properties(depscan_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_library(depscaner_lib STATIC ${DEPS_CORE_SOURCES})
+target_include_directories(depscaner_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set_target_properties(depscaner_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 find_package(Threads REQUIRED)
-target_link_libraries(depscan_lib PUBLIC Threads::Threads)
+target_link_libraries(depscaner_lib PUBLIC Threads::Threads)
 
 if(DEPS_USE_LIBCLANG)
   find_package(Clang QUIET)
   if(Clang_FOUND)
-    message(STATUS "DepScan: libclang found -> exact semantic analysis enabled")
-    target_sources(depscan_lib PRIVATE src/clang_analyzer.cpp)
-    target_compile_definitions(depscan_lib PUBLIC DEPS_HAVE_LIBCLANG=1)
-    target_link_libraries(depscan_lib PUBLIC clang-cpp libclang)
-    target_include_directories(depscan_lib PUBLIC ${Clang_INCLUDE_DIRS})
+    message(STATUS "DepScaner: libclang found -> exact semantic analysis enabled")
+    target_sources(depscaner_lib PRIVATE src/clang_analyzer.cpp)
+    target_compile_definitions(depscaner_lib PUBLIC DEPS_HAVE_LIBCLANG=1)
+    target_link_libraries(depscaner_lib PUBLIC clang-cpp libclang)
+    target_include_directories(depscaner_lib PUBLIC ${Clang_INCLUDE_DIRS})
   else()
-    message(WARNING "DepScan: DEPS_USE_LIBCLANG=ON but Clang was not found; falling back to the built-in parser")
+    message(WARNING "DepScaner: DEPS_USE_LIBCLANG=ON but Clang was not found; falling back to the built-in parser")
   endif()
 endif()
 
-add_executable(depscan-core src/main.cpp)
-target_link_libraries(depscan-core PRIVATE depscan_lib)
+add_executable(depscaner-core src/main.cpp)
+target_link_libraries(depscaner-core PRIVATE depscaner_lib)
 
 if(MSVC)
-  target_compile_options(depscan_lib PUBLIC /utf-8 /W3 /EHsc)
-  target_compile_options(depscan-core PRIVATE /utf-8)
+  target_compile_options(depscaner_lib PUBLIC /utf-8 /W3 /EHsc)
+  target_compile_options(depscaner-core PRIVATE /utf-8)
 else()
-  target_compile_options(depscan_lib PUBLIC -Wall -Wextra)
+  target_compile_options(depscaner_lib PUBLIC -Wall -Wextra)
 endif()
 
 # 产物统一放到 <build>/bin/<Config>/，与插件端 locator 约定一致
-foreach(target depscan-core)
+foreach(target depscaner-core)
   set_target_properties(${target} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
@@ -61,11 +61,11 @@ endforeach()
 
 if(DEPS_BUILD_TESTS)
   enable_testing()
-  add_executable(depscan-core-test test/test_main.cpp)
-  target_link_libraries(depscan-core-test PRIVATE depscan_lib)
-  set_target_properties(depscan-core-test PROPERTIES
+  add_executable(depscaner-core-test test/test_main.cpp)
+  target_link_libraries(depscaner-core-test PRIVATE depscaner_lib)
+  set_target_properties(depscaner-core-test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/Release")
-  add_test(NAME depscan-core-test COMMAND depscan-core-test)
+  add_test(NAME depscaner-core-test COMMAND depscaner-core-test)
 endif()

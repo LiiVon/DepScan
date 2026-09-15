@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "configurations": [
     {
-      "name": "运行 DepScan 扩展",
+      "name": "运行 DepScaner 扩展",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -16,7 +16,7 @@
       "name": "调试 C++ 引擎（对 samples/demo 扫描）",
       "type": "cppvsdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/engine/build/bin/Release/depscan-core.exe",
+      "program": "${workspaceFolder}/engine/build/bin/Release/depscaner-core.exe",
       "args": ["--once", "--root", "${workspaceFolder}/samples/demo", "--pretty"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",

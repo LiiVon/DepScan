@@ -9,23 +9,23 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const exe = process.platform === 'win32' ? '.exe' : '';
 
 const CORE_CANDIDATES = [
-  `engine/build/bin/Release/depscan-core${exe}`,
-  `engine/build/bin/RelWithDebInfo/depscan-core${exe}`,
-  `engine/build/bin/Debug/depscan-core${exe}`,
-  `engine/build/bin/depscan-core${exe}`,
-  `engines/${process.platform}-${process.arch}/depscan-core${exe}`
+  `engine/build/bin/Release/depscaner-core${exe}`,
+  `engine/build/bin/RelWithDebInfo/depscaner-core${exe}`,
+  `engine/build/bin/Debug/depscaner-core${exe}`,
+  `engine/build/bin/depscaner-core${exe}`,
+  `engines/${process.platform}-${process.arch}/depscaner-core${exe}`
 ];
 
 function findBinary(base) {
   for (const rel of CORE_CANDIDATES) {
-    const p = resolve(root, rel.replace('depscan-core', base));
+    const p = resolve(root, rel.replace('depscaner-core', base));
     if (existsSync(p)) return p;
   }
   return undefined;
 }
 
-const core = findBinary('depscan-core');
-const testExe = findBinary('depscan-core-test');
+const core = findBinary('depscaner-core');
+const testExe = findBinary('depscaner-core-test');
 
 if (!core || !testExe) {
   console.error('[test-core] 未找到引擎产物，请先运行 npm run build:core');
@@ -39,7 +39,7 @@ const unit = spawnSync(testExe, [], { stdio: 'inherit' });
 if (unit.status !== 0) failed = true;
 
 console.log(`[test-core] 端到端扫描: samples/demo`);
-const workDir = mkdtempSync(join(tmpdir(), 'depscan-e2e-'));
+const workDir = mkdtempSync(join(tmpdir(), 'depscaner-e2e-'));
 const outFile = join(workDir, 'graph.json');
 const scan = spawnSync(core, ['--once', '--root', resolve(root, 'samples/demo')], {
   encoding: 'buffer',

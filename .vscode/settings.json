@@ -1,15 +1,15 @@
 {
   "terminal.integrated.profiles.windows": {
-    "DepScan PowerShell": {
+    "DepScaner PowerShell": {
       "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
       "args": ["-NoLogo", "-NoProfile"]
     },
-    "DepScan Cmd": {
+    "DepScaner Cmd": {
       "path": "C:\\Windows\\System32\\cmd.exe",
       "args": []
     }
   },
-  "terminal.integrated.defaultProfile.windows": "DepScan PowerShell",
+  "terminal.integrated.defaultProfile.windows": "DepScaner PowerShell",
   "terminal.integrated.automationProfile.windows": {
     "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
     "args": ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass"]
