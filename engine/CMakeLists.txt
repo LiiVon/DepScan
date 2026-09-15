@@ -45,6 +45,14 @@ target_link_libraries(depscaner-core PRIVATE depscaner_lib)
 if(MSVC)
   target_compile_options(depscaner_lib PUBLIC /utf-8 /W3 /EHsc)
   target_compile_options(depscaner-core PRIVATE /utf-8)
+
+  # UTF-8 活动代码页清单：没有它，项目里只要有一个文件名不是合法 GBK 字节序列，
+  # 扫描就会抛 "No mapping for the Unicode character exists in the target multi-byte
+  # code page"（真实项目上必现，自造的 ASCII 样例永远踩不到）。
+  # 详见 resources/utf8-app.manifest 的注释；代码侧另有 util::toFsPath 兜底。
+  target_link_options(depscaner-core PRIVATE
+    "/MANIFEST:EMBED"
+    "/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/resources/utf8-app.manifest")
 else()
   target_compile_options(depscaner_lib PUBLIC -Wall -Wextra)
 endif()

@@ -85,14 +85,14 @@ void extractArgs(const std::vector<std::string>& args, std::vector<std::string>&
 
 long long fileStampMs(const std::string& abs, long long* sizeOut) {
   std::error_code ec;
-  const auto t = fs::last_write_time(fs::path(abs), ec);
+  const auto t = fs::last_write_time(util::toFsPath(abs), ec);
   if (ec) {
     if (sizeOut) *sizeOut = -1;
     return 0;
   }
   if (sizeOut) {
     std::error_code ec2;
-    const auto s = fs::file_size(fs::path(abs), ec2);
+    const auto s = fs::file_size(util::toFsPath(abs), ec2);
     *sizeOut = ec2 ? -1 : static_cast<long long>(s);
   }
   return std::chrono::duration_cast<std::chrono::milliseconds>(t.time_since_epoch()).count();
@@ -109,14 +109,14 @@ std::string findCompileCommands(const std::string& root) {
   }
   // 广度受限的递归搜索（跳过 .git / node_modules）
   std::error_code ec;
-  fs::recursive_directory_iterator it(fs::path(root), fs::directory_options::skip_permission_denied, ec);
+  fs::recursive_directory_iterator it(util::toFsPath(root), fs::directory_options::skip_permission_denied, ec);
   if (ec) return {};
   const fs::recursive_directory_iterator end;
   for (; it != end; it.increment(ec)) {
     if (ec) { ec.clear(); continue; }
     const fs::directory_entry& entry = *it;
     std::error_code ec2;
-    const std::string rel = util::relativeTo(root, util::normalizePath(entry.path().generic_string()));
+    const std::string rel = util::relativeTo(root, util::normalizePath(util::fromFsPath(entry.path())));
     const int depth = static_cast<int>(std::count(rel.begin(), rel.end(), '/'));
     if (entry.is_directory(ec2)) {
       const std::string base = util::baseName(rel);
@@ -126,7 +126,7 @@ std::string findCompileCommands(const std::string& root) {
       continue;
     }
     if (util::baseName(rel) == "compile_commands.json") {
-      return util::normalizePath(entry.path().generic_string());
+      return util::normalizePath(util::fromFsPath(entry.path()));
     }
   }
   return {};

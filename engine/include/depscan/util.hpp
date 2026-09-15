@@ -1,10 +1,22 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <cstdint>
 
 namespace depscan::util {
+
+// ── 路径字符串 ↔ std::filesystem::path：**只走 UTF-8** ──
+// 引擎内部所有路径字符串都是 UTF-8（跨进程协议也是 UTF-8），而 Windows 上
+// std::filesystem::path 存的是宽字符、MSVC 默认按**进程 ANSI 代码页**（中文机器 = 936/GBK）
+// 与窄字符串互转。于是名字里只要有一个 GBK 表示不了的字符（emoji / 日文 / 部分中文组合），
+// 轻则 fs::exists 与 ifstream 静默失败，重则直接抛
+// "No mapping for the Unicode character exists in the target multi-byte code page"。
+// 所以**所有**碰文件系统的地方都要过这两个函数，不要直接写 fs::path(str) / path.string()。
+// 另有第二道保险：resources/utf8-app.manifest 把进程的 ANSI 代码页设成 UTF-8。
+std::filesystem::path toFsPath(const std::string& utf8Path);
+std::string fromFsPath(const std::filesystem::path& p);
 
 std::string readFile(const std::string& path);
 bool writeFile(const std::string& path, const std::string& data);

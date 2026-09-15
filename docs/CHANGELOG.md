@@ -72,6 +72,14 @@
 
 ### 修复
 
+- **真实项目上在「1/5 发现文件」就失败**：`No mapping for the Unicode character exists in the
+  target multi-byte code page`（用户在公司大项目上实测发现；自造的 ASCII 样例永远踩不到）。
+  引擎内部路径都是 UTF-8，而 MSVC 的 `std::filesystem::path` / `std::ifstream` 在窄字符串与
+  宽字符互转时用的是**进程 ANSI 代码页**（中文机器 = 936/GBK）——项目里只要有一个文件名
+  不是合法 GBK 字节序列（emoji、日文、韩文、部分中文组合），轻则文件静默读不到、
+  重则直接抛上面这句。两处一起修：① exe 链接 `activeCodePage=UTF-8` 清单；
+  ② 所有路径转换改走显式 `CP_UTF8` 的 `util::toFsPath` / `util::fromFsPath`。
+  新增回归测试 `npm run test:unicode`（带空格的根目录 + `中文目录/` + `emoji-😀/`，已接进 `npm test`）。
 - **界面语言是中文、侧边栏视图标题却是英文**：清单里的 `%view.x%` 只跟随 VS Code 显示语言，
   而「界面语言」设置管不到它 —— 两个语言不一致时就是半截翻译。
   现在四个视图标题改从运行期文案取（`TreeView.title` 能在运行期改），跟着设置走。

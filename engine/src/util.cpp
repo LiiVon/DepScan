@@ -8,7 +8,12 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <system_error>
+
+#ifdef _WIN32
+#include <windows.h>  // MultiByteToWideChar / WideCharToMultiByte（见 toFsPath 的说明）
+#endif
 
 namespace fs = std::filesystem;
 
@@ -110,8 +115,52 @@ bool isHeaderExtension(const std::string& ext) {
 
 namespace depscan::util {
 
+namespace {
+
+#ifdef _WIN32
+// UTF-8 ↔ UTF-16：**明确指定 CP_UTF8**，绝不依赖进程 ANSI 代码页。
+std::wstring utf8ToWide(const std::string& s) {
+  if (s.empty()) return {};
+  const int len = static_cast<int>(s.size());
+  const int n = ::MultiByteToWideChar(CP_UTF8, 0, s.data(), len, nullptr, 0);
+  if (n <= 0) return {};
+  std::wstring w(static_cast<size_t>(n), L'\0');
+  ::MultiByteToWideChar(CP_UTF8, 0, s.data(), len, w.data(), n);
+  return w;
+}
+
+std::string wideToUtf8(const std::wstring& w) {
+  if (w.empty()) return {};
+  const int len = static_cast<int>(w.size());
+  const int n = ::WideCharToMultiByte(CP_UTF8, 0, w.data(), len, nullptr, 0, nullptr, nullptr);
+  if (n <= 0) return {};
+  std::string s(static_cast<size_t>(n), '\0');
+  ::WideCharToMultiByte(CP_UTF8, 0, w.data(), len, s.data(), n, nullptr, nullptr);
+  return s;
+}
+#endif
+
+}  // namespace
+
+fs::path toFsPath(const std::string& utf8Path) {
+#ifdef _WIN32
+  return fs::path(utf8ToWide(utf8Path));
+#else
+  return fs::path(utf8Path);  // POSIX 上 path 就是字节串，本来就是 UTF-8
+#endif
+}
+
+std::string fromFsPath(const fs::path& p) {
+#ifdef _WIN32
+  return wideToUtf8(p.native());
+#else
+  return p.native();
+#endif
+}
+
 std::string readFile(const std::string& path) {
-  std::ifstream in(path, std::ios::binary);
+  // 用 path 重载打开（Windows 上走宽字符 API），窄字符串重载是按 ANSI 打开的
+  std::ifstream in(toFsPath(path), std::ios::binary);
   if (!in) return {};
   std::ostringstream ss;
   ss << in.rdbuf();
@@ -119,7 +168,7 @@ std::string readFile(const std::string& path) {
 }
 
 bool writeFile(const std::string& path, const std::string& data) {
-  std::ofstream out(path, std::ios::binary | std::ios::trunc);
+  std::ofstream out(toFsPath(path), std::ios::binary | std::ios::trunc);
   if (!out) return false;
   out.write(data.data(), static_cast<std::streamsize>(data.size()));
   return static_cast<bool>(out);
@@ -127,17 +176,17 @@ bool writeFile(const std::string& path, const std::string& data) {
 
 bool fileExists(const std::string& path) {
   std::error_code ec;
-  return fs::exists(fs::path(path), ec);
+  return fs::exists(toFsPath(path), ec);
 }
 
 bool isDirectory(const std::string& path) {
   std::error_code ec;
-  return fs::is_directory(fs::path(path), ec);
+  return fs::is_directory(toFsPath(path), ec);
 }
 
 int64_t fileSize(const std::string& path) {
   std::error_code ec;
-  auto s = fs::file_size(fs::path(path), ec);
+  auto s = fs::file_size(toFsPath(path), ec);
   return ec ? -1 : static_cast<int64_t>(s);
 }
 
@@ -372,14 +421,14 @@ std::vector<std::string> listFilesRecursive(const std::string& root,
   std::vector<std::string> files;
   const std::string rootNorm = normalizePath(root);
   std::error_code ec;
-  fs::recursive_directory_iterator it(fs::path(rootNorm), fs::directory_options::skip_permission_denied, ec);
+  fs::recursive_directory_iterator it(toFsPath(rootNorm), fs::directory_options::skip_permission_denied, ec);
   if (ec) return files;
   const fs::recursive_directory_iterator end;
   for (; it != end; it.increment(ec)) {
     if (ec) { ec.clear(); continue; }
     const fs::directory_entry& entry = *it;
     std::error_code ec2;
-    const std::string abs = normalizePath(entry.path().generic_string());
+    const std::string abs = normalizePath(fromFsPath(entry.path()));
     const std::string rel = relativeTo(rootNorm, abs);
     if (entry.is_directory(ec2)) {
       const std::string name = baseName(rel);

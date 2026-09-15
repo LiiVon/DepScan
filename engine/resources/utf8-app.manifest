@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Windows 应用清单（片段）：把进程的 ANSI 代码页设成 UTF-8（Win10 1903+ 支持）。
+  由 CMakeLists.txt 用 /MANIFESTINPUT 合并进 exe。
+
+  ★ 为什么必须有 ★
+  引擎内部所有路径都是 UTF-8 的 std::string（跨进程协议也是 UTF-8），而 MSVC 的
+  std::filesystem::path / std::ifstream 在窄字符串与宽字符之间转换时用的是
+  **进程 ANSI 代码页** —— 中文机器上是 936（GBK）。于是项目里只要有一个名字不是
+  合法 GBK 字节序列（emoji、日文、韩文、部分中文组合……）就会：
+    · fs::path(utf8)             → MultiByteToWideChar(CP_ACP) 直接抛异常
+    · path.generic_string()      → WideCharToMultiByte(CP_ACP) 直接抛异常
+    · std::ifstream(utf8)        → 找不到文件（静默失败）
+  报错原文：No mapping for the Unicode character exists in the target multi-byte code page.
+  ASCII 名的项目永远踩不到，所以自造样例一路绿灯，一上真实项目就炸。
+
+  设成 UTF-8 之后：GetACP() = 65001，窄↔宽转换、argv、控制台输出全部按 UTF-8 解释。
+
+  代码里还有第二道保险：util::toFsPath / util::fromFsPath 显式走 CP_UTF8，
+  不依赖本清单，也不依赖操作系统版本（见 engine/include/depscan/util.hpp）。
+
+  注：以后可以考虑加 <longPathAware>（超 260 字符路径），但那要看机器的
+  LongPathsEnabled 开关，行为不好在本机自检覆盖，所以先不加。
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <!-- 故意不写 assemblyIdentity：链接器已经生成一份默认清单，
+       带 identity 的片段会在 mt.exe 合并时报重复元素 -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+    </windowsSettings>
+  </application>
+</assembly>

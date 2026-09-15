@@ -109,14 +109,14 @@ BuildModel parseBuildModel(const std::string& root) {
   const std::string rootNorm = util::normalizePath(root);
 
   std::vector<std::string> cmakeFiles;
-  fs::recursive_directory_iterator it(fs::path(rootNorm), fs::directory_options::skip_permission_denied, ec);
+  fs::recursive_directory_iterator it(util::toFsPath(rootNorm), fs::directory_options::skip_permission_denied, ec);
   if (ec) return model;
   const fs::recursive_directory_iterator end;
   for (; it != end; it.increment(ec)) {
     if (ec) { ec.clear(); continue; }
     const fs::directory_entry& entry = *it;
     std::error_code ec2;
-    const std::string abs = util::normalizePath(entry.path().generic_string());
+    const std::string abs = util::normalizePath(util::fromFsPath(entry.path()));
     const std::string rel = util::relativeTo(rootNorm, abs);
     if (entry.is_directory(ec2)) {
       const std::string base = util::baseName(rel);
